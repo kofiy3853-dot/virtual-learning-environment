@@ -93,8 +93,13 @@ exports.getMyGrades = asyncHandler(async (req, res, next) => {
 // @access  Private (Student)
 exports.getMyCourseGrades = asyncHandler(async (req, res, next) => {
   const gradeBook = await GradeBook.findOne({ course: req.params.courseId });
+
+  // FIX: Don't 404 on a fresh course — return empty state with 200
   if (!gradeBook) {
-    return res.status(404).json({ success: false, message: 'Gradebook not found' });
+    return res.status(200).json({
+      success: true,
+      data: { items: [], finalPercentage: 0, assignmentAverage: 0, quizAverage: 0 }
+    });
   }
 
   const gradeItems = await GradeItem.find({ 

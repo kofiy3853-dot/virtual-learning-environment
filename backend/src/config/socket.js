@@ -11,6 +11,11 @@ const socketConfig = (io) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.user = await User.findById(decoded.id);
+
+      if (!socket.user || socket.user.status === 'suspended') {
+        return next(new Error('Account suspended or not found'));
+      }
+
       next();
     } catch (err) {
       next(new Error('Authentication error'));
@@ -34,18 +39,27 @@ const socketConfig = (io) => {
     });
 
     socket.on('send_message', async ({ receiverId, body }) => {
-      const message = await Message.create({
-        sender: socket.user.id,
-        receiver: receiverId,
-        body
-      });
+      try {
+        const message = await Message.create({
+          sender: socket.user.id,
+          receiver: receiverId,
+          body
+        });
 
-      // Emit to receiver's personal room
-      io.to(receiverId).emit('new_message', {
-        senderId: socket.user.id,
-        body,
-        createdAt: message.createdAt
-      });
+        // Emit to receiver's personal room
+        io.to(receiverId).emit('new_message', {
+          senderId: socket.user.id,
+          senderName: socket.user.name,
+          body,
+          createdAt: message.createdAt
+        });
+
+        // Confirm delivery to sender
+        socket.emit('message_sent', { messageId: message._id, createdAt: message.createdAt });
+      } catch (err) {
+        console.error('send_message error:', err.message);
+        socket.emit('message_error', { message: 'Failed to send message. Please try again.' });
+      }
     });
 
     socket.on('disconnect', () => {

@@ -29,8 +29,11 @@ app.use(mongoSanitize());
 // Set security headers
 app.use(helmet());
 
-// Enable CORS
-app.use(cors());
+// Enable CORS — restrict to allowed origin
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
 
 // Mount routers
 app.use('/api/auth', require('./routes/auth'));
@@ -42,6 +45,9 @@ app.use('/api/content', require('./routes/content'));
 app.use('/api/assignments', require('./routes/assignments'));
 app.use('/api/submissions', require('./routes/submissions'));
 app.use('/api/admin', require('./routes/admin'));
+// NOTE: /api/communication is handled as a nested router under /api/courses/:id
+// for course-scoped announcements/discussions, and standalone routes (messages,
+// notifications) are accessed directly via /api/communication for global access.
 app.use('/api/communication', require('./routes/communication'));
 
 // Error handler
@@ -66,7 +72,7 @@ const server = httpServer.listen(PORT, () => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close server & exit process
-  // server.close(() => process.exit(1));
+  console.log(`Unhandled Rejection: ${err.message}`);
+  // Close server & exit process cleanly
+  server.close(() => process.exit(1));
 });

@@ -45,4 +45,8 @@ GradeItemSchema.pre('save', function(next) {
   next();
 });
 
+GradeItemSchema.index({ student: 1 });
+GradeItemSchema.index({ gradeBook: 1 });
+GradeItemSchema.index({ student: 1, sourceId: 1 }, { unique: true });
+
 module.exports = mongoose.model('GradeItem', GradeItemSchema);

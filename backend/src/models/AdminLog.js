@@ -43,4 +43,8 @@ const AdminLogSchema = new mongoose.Schema({
   },
 });
 
+AdminLogSchema.index({ createdAt: -1 });
+AdminLogSchema.index({ adminId: 1 });
+AdminLogSchema.index({ targetId: 1, targetModel: 1 });
+
 module.exports = mongoose.model('AdminLog', AdminLogSchema);

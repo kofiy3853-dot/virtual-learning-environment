@@ -25,4 +25,8 @@ const MessageSchema = new mongoose.Schema({
   },
 });
 
+// Compound index for conversation queries (find messages between two users)
+MessageSchema.index({ sender: 1, receiver: 1 });
+MessageSchema.index({ createdAt: 1 });
+
 module.exports = mongoose.model('Message', MessageSchema);

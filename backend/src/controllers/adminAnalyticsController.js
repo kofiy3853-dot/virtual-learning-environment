@@ -213,3 +213,70 @@ exports.getEnrollmentTrends = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ success: true, data: trends });
 });
+
+// @desc    Course analytics — status breakdown and enrollment stats
+// @route   GET /api/admin/analytics/courses
+// @access  Private (Admin)
+exports.getCourseAnalytics = asyncHandler(async (req, res, next) => {
+  const [totalCourses, activeCourses, archivedCourses, draftCourses] = await Promise.all([
+    Course.countDocuments(),
+    Course.countDocuments({ status: 'active' }),
+    Course.countDocuments({ status: 'archived' }),
+    Course.countDocuments({ status: 'draft' })
+  ]);
+
+  // Average enrollment per active course
+  const enrollmentStats = await Enrollment.aggregate([
+    {
+      $group: {
+        _id: '$course',
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        avgEnrollment: { $avg: '$count' },
+        maxEnrollment: { $max: '$count' },
+        minEnrollment: { $min: '$count' }
+      }
+    }
+  ]);
+
+  // Top 5 most enrolled courses
+  const topCourses = await Enrollment.aggregate([
+    { $group: { _id: '$course', enrollmentCount: { $sum: 1 } } },
+    { $sort: { enrollmentCount: -1 } },
+    { $limit: 5 },
+    {
+      $lookup: {
+        from: 'courses',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'course'
+      }
+    },
+    { $unwind: '$course' },
+    {
+      $project: {
+        courseId: '$_id',
+        courseTitle: '$course.title',
+        courseCode: '$course.code',
+        enrollmentCount: 1
+      }
+    }
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      totalCourses,
+      activeCourses,
+      archivedCourses,
+      draftCourses,
+      avgEnrollment: enrollmentStats[0] ? parseFloat(enrollmentStats[0].avgEnrollment.toFixed(1)) : 0,
+      maxEnrollment: enrollmentStats[0] ? enrollmentStats[0].maxEnrollment : 0,
+      topCourses
+    }
+  });
+});

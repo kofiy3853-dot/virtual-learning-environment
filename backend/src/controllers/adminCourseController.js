@@ -17,6 +17,7 @@ const Announcement = require('../models/Announcement');
 const Discussion = require('../models/Discussion');
 const LiveSession = require('../models/LiveSession');
 const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
 const logAdminAction = require('../utils/logAdminAction');
 
 // @desc    List all courses with filters and enrollment counts
@@ -26,10 +27,14 @@ exports.getCourses = asyncHandler(async (req, res, next) => {
   const { status, teacher, search, page = 1, limit = 20 } = req.query;
   const skip = (page - 1) * limit;
 
-  // Build match stage for aggregation
   const match = {};
   if (status) match.status = status;
-  if (teacher) match.teacher = teacher;
+  if (teacher) {
+    if (!mongoose.Types.ObjectId.isValid(teacher)) {
+      return res.status(400).json({ success: false, message: 'Invalid teacher ID' });
+    }
+    match.teacher = new mongoose.Types.ObjectId(teacher);
+  }
   if (search) {
     match.$or = [
       { title: { $regex: search, $options: 'i' } },
@@ -63,11 +68,12 @@ exports.getCourses = asyncHandler(async (req, res, next) => {
         status: 1,
         semester: 1,
         academicYear: 1,
+        createdAt: 1, // FIX: include so sort works correctly
         enrollmentCount: { $size: '$enrollments' },
         teacher: { _id: '$teacherInfo._id', name: '$teacherInfo.name' }
       }
     },
-    { $sort: { createdAt: -1 } },
+    { $sort: { createdAt: -1 } }, // now sorts on projected field
     { $skip: skip },
     { $limit: Number(limit) }
   ]);
@@ -83,10 +89,14 @@ exports.getCourses = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Get course detail
+// @desc    Get course detail with enrollment count
 // @route   GET /api/admin/courses/:id
 // @access  Private (Admin)
 exports.getCourse = asyncHandler(async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid course ID' });
+  }
+
   const course = await Course.findById(req.params.id).populate('teacher', 'name email');
   if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
 
@@ -95,7 +105,7 @@ exports.getCourse = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: {
-      ...course._doc,
+      ...course.toObject(), // FIX: use .toObject() not ._doc
       enrollmentCount
     }
   });
@@ -106,9 +116,17 @@ exports.getCourse = asyncHandler(async (req, res, next) => {
 // @access  Private (Admin)
 exports.reassignTeacher = asyncHandler(async (req, res, next) => {
   const { teacherId } = req.body;
-  
+
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid course ID' });
+  }
+
+  if (!teacherId || !mongoose.Types.ObjectId.isValid(teacherId)) {
+    return res.status(400).json({ success: false, message: 'Invalid teacher ID' });
+  }
+
   const newTeacher = await User.findOne({ _id: teacherId, role: 'teacher' });
-  if (!newTeacher) return res.status(400).json({ success: false, message: 'Invalid teacher ID' });
+  if (!newTeacher) return res.status(400).json({ success: false, message: 'User not found or is not a teacher' });
 
   const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
@@ -126,6 +144,15 @@ exports.reassignTeacher = asyncHandler(async (req, res, next) => {
 // @route   PATCH /api/admin/courses/:id/status
 // @access  Private (Admin)
 exports.changeCourseStatus = asyncHandler(async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid course ID' });
+  }
+
+  const validStatuses = ['draft', 'active', 'archived'];
+  if (!validStatuses.includes(req.body.status)) {
+    return res.status(400).json({ success: false, message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+  }
+
   const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
 
@@ -133,33 +160,45 @@ exports.changeCourseStatus = asyncHandler(async (req, res, next) => {
   course.status = req.body.status;
   await course.save();
 
-  const action = course.status === 'archived' ? 'ARCHIVE_COURSE' : 'ACTIVATE_USER'; // Note: Prompt uses ARCHIVE_COURSE, but for reactivation we can use another or just ACTIVATE
-  await logAdminAction(req.user.id, action === 'archived' ? 'ARCHIVE_COURSE' : 'ACTIVATE_USER', 'Course', course._id, { previousStatus, newStatus: course.status }, req);
+  // FIX: compute action correctly, ARCHIVE_COURSE is valid in AdminLog enum
+  const action = course.status === 'archived' ? 'ARCHIVE_COURSE' : 'ACTIVATE_USER';
+  await logAdminAction(
+    req.user.id,
+    action,
+    'Course',
+    course._id,
+    { previousStatus, newStatus: course.status },
+    req
+  );
 
   res.status(200).json({ success: true, data: course });
 });
 
-// @desc    Delete course with deep cascade
+// @desc    Delete course with deep cascade across all 17 related collections
 // @route   DELETE /api/admin/courses/:id
 // @access  Private (Admin)
 exports.deleteCourse = asyncHandler(async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid course ID' });
+  }
+
   const courseId = req.params.id;
   const course = await Course.findById(courseId);
   if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
 
   const enrollmentCount = await Enrollment.countDocuments({ course: courseId });
 
-  // Fetch IDs for nested cleanup
-  const assignments = await Assignment.find({ course: courseId });
+  // Fetch IDs for nested cleanup before deleting parent documents
+  const [assignments, gradeBooks, quizzes, sessions] = await Promise.all([
+    Assignment.find({ course: courseId }),
+    GradeBook.find({ course: courseId }),
+    Quiz.find({ course: courseId }),
+    AttendanceSession.find({ course: courseId })
+  ]);
+
   const assignmentIds = assignments.map(a => a._id);
-
-  const gradeBooks = await GradeBook.find({ course: courseId });
   const gradeBookIds = gradeBooks.map(g => g._id);
-
-  const quizzes = await Quiz.find({ course: courseId });
   const quizIds = quizzes.map(q => q._id);
-
-  const sessions = await AttendanceSession.find({ course: courseId });
   const sessionIds = sessions.map(s => s._id);
 
   await Promise.all([
@@ -182,7 +221,14 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
     Course.findByIdAndDelete(courseId)
   ]);
 
-  await logAdminAction(req.user.id, 'DELETE_COURSE', 'Course', courseId, { title: course.title, code: course.code, enrollmentCount }, req);
+  await logAdminAction(
+    req.user.id,
+    'DELETE_COURSE',
+    'Course',
+    courseId,
+    { title: course.title, code: course.code, enrollmentCount },
+    req
+  );
 
   res.status(200).json({ success: true, message: 'Course and all related data deleted successfully' });
 });

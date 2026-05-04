@@ -44,6 +44,28 @@ exports.startDiscussion = asyncHandler(async (req, res, next) => {
   res.status(201).json({ success: true, data: discussion });
 });
 
+// @desc    Get all discussions for a course
+// @route   GET /api/courses/:id/discussions
+// @access  Private
+exports.getDiscussions = asyncHandler(async (req, res, next) => {
+  const discussions = await Discussion.find({ course: req.params.id })
+    .populate('author', 'name avatar')
+    .populate('replies.author', 'name avatar')
+    .sort('-createdAt');
+  res.status(200).json({ success: true, count: discussions.length, data: discussions });
+});
+
+// @desc    Get single discussion thread
+// @route   GET /api/discussions/:id
+// @access  Private
+exports.getDiscussion = asyncHandler(async (req, res, next) => {
+  const discussion = await Discussion.findById(req.params.id)
+    .populate('author', 'name avatar')
+    .populate('replies.author', 'name avatar');
+  if (!discussion) return res.status(404).json({ success: false, message: 'Discussion not found' });
+  res.status(200).json({ success: true, data: discussion });
+});
+
 // @desc    Reply to discussion
 // @route   POST /api/discussions/:id/reply
 // @access  Private

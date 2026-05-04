@@ -3,6 +3,8 @@ const {
   createAnnouncement,
   getAnnouncements,
   startDiscussion,
+  getDiscussions,
+  getDiscussion,
   replyDiscussion,
   getMessages,
   getMyNotifications,
@@ -13,19 +15,23 @@ const router = express.Router({ mergeParams: true });
 
 const { protect } = require('../middleware/auth');
 
-// Note: This router will be mounted at different points
-// Announcements & Discussions (Course level)
+// Announcements (Course level)
 router.post('/announcements', protect, createAnnouncement);
 router.get('/announcements', protect, getAnnouncements);
-router.post('/discussions', protect, startDiscussion);
 
-// Replies
+// Discussions (Course level)
+router.route('/discussions')
+  .get(protect, getDiscussions)
+  .post(protect, startDiscussion);
+
+// Single discussion thread + replies
+router.get('/discussions/:id', protect, getDiscussion);
 router.post('/discussions/:id/reply', protect, replyDiscussion);
 
-// Messages
+// Messages (Global)
 router.get('/messages/:userId', protect, getMessages);
 
-// Notifications
+// Notifications (Global)
 router.get('/notifications/me', protect, getMyNotifications);
 router.patch('/notifications/:id/read', protect, markRead);
 

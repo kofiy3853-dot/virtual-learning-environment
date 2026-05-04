@@ -34,4 +34,7 @@ const SubmissionSchema = new mongoose.Schema({
   },
 });
 
+SubmissionSchema.index({ assignment: 1, student: 1 });
+SubmissionSchema.index({ student: 1 });
+
 module.exports = mongoose.model('Submission', SubmissionSchema);

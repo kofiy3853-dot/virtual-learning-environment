@@ -23,6 +23,7 @@ const {
 const {
   getOverview,
   getUserAnalytics,
+  getCourseAnalytics,
   getGradeAnalytics,
   getAttendanceAnalytics,
   getActivityLogs,
@@ -57,6 +58,7 @@ router.delete('/courses/:id', deleteCourse);
 // Analytics
 router.get('/analytics/overview', getOverview);
 router.get('/analytics/users', getUserAnalytics);
+router.get('/analytics/courses', getCourseAnalytics);
 router.get('/analytics/grades', getGradeAnalytics);
 router.get('/analytics/attendance', getAttendanceAnalytics);
 router.get('/analytics/activity-logs', getActivityLogs);

@@ -127,17 +127,34 @@ const syncToGradeBook = async (quiz, attempt) => {
 // @route   PATCH /api/attempts/:id/grade
 // @access  Private (Teacher)
 exports.gradeAttempt = asyncHandler(async (req, res, next) => {
+  // FIX: .populate('quiz') gives us the quiz object directly — no need to re-fetch
   const attempt = await QuizAttempt.findById(req.params.id).populate('quiz');
   if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
 
-  const { scoreAdjustment } = req.body; // Additional marks for short answers
-  attempt.score += scoreAdjustment;
+  const { scoreAdjustment } = req.body;
+  attempt.score += Number(scoreAdjustment) || 0;
   attempt.percentage = (attempt.score / attempt.totalMarks) * 100;
   attempt.status = 'graded';
   await attempt.save();
 
-  const quiz = await Quiz.findById(attempt.quiz);
-  await syncToGradeBook(quiz, attempt);
+  // FIX: use attempt.quiz directly (it's already the populated quiz document)
+  await syncToGradeBook(attempt.quiz, attempt);
 
   res.status(200).json({ success: true, data: attempt });
+});
+
+// @desc    Get all quizzes for a course
+// @route   GET /api/courses/:id/quizzes
+// @access  Private
+exports.getQuizzes = asyncHandler(async (req, res, next) => {
+  const quizzes = await Quiz.find({ course: req.params.id }).sort('-createdAt');
+  res.status(200).json({ success: true, count: quizzes.length, data: quizzes });
+});
+
+// @desc    Get questions for a quiz (without correct answers)
+// @route   GET /api/quizzes/:id/questions
+// @access  Private
+exports.getQuestions = asyncHandler(async (req, res, next) => {
+  const questions = await Question.find({ quiz: req.params.id }).sort('order');
+  res.status(200).json({ success: true, count: questions.length, data: questions });
 });
