@@ -2,529 +2,251 @@ const express = require('express');
 
 const router = express.Router();
 
-// API Documentation endpoint
+// API Documentation object
+const apiDocs = {
+  version: '1.0.0',
+  title: 'Virtual Learning Environment API',
+  description: 'A comprehensive REST API for managing virtual classrooms',
+  baseUrl: '/api',
+  endpoints: {
+    'Authentication': {
+      'POST /auth/register': {
+        description: 'Register a new user',
+        body: { name: 'string', email: 'string', password: 'string', role: 'student|teacher|admin', department: 'string' },
+        response: { success: 'boolean', token: 'JWT token' },
+      },
+      'POST /auth/login': {
+        description: 'Login user',
+        body: { email: 'string', password: 'string' },
+        response: { success: 'boolean', token: 'JWT token' },
+      },
+      'GET /auth/me': {
+        description: 'Get current user profile',
+        auth: 'Required',
+        response: { success: 'boolean', data: 'User object' },
+      },
+    },
+    'Courses': {
+      'GET /courses': {
+        description: 'Get all courses',
+        query: { page: 'number', limit: 'number' },
+        response: { success: 'boolean', data: 'Array of courses' },
+      },
+      'GET /courses/:id': {
+        description: 'Get course by ID',
+        params: { id: 'Course ID' },
+        response: { success: 'boolean', data: 'Course object' },
+      },
+      'POST /courses': {
+        description: 'Create new course',
+        auth: 'Required (Teacher/Admin)',
+        body: { title: 'string', description: 'string', code: 'string', semester: 'string', academicYear: 'string' },
+        response: { success: 'boolean', data: 'Created course object' },
+      },
+      'PUT /courses/:id': {
+        description: 'Update course',
+        auth: 'Required (Teacher/Admin)',
+        params: { id: 'Course ID' },
+        body: { title: 'string', description: 'string', code: 'string' },
+        response: { success: 'boolean', data: 'Updated course object' },
+      },
+      'DELETE /courses/:id': {
+        description: 'Delete course',
+        auth: 'Required (Admin)',
+        params: { id: 'Course ID' },
+        response: { success: 'boolean' },
+      },
+    },
+    'Assignments': {
+      'GET /assignments': {
+        description: 'Get assignments',
+        query: { courseId: 'string' },
+        response: { success: 'boolean', data: 'Array of assignments' },
+      },
+      'POST /courses/:id/assignments': {
+        description: 'Create assignment in course',
+        auth: 'Required (Teacher)',
+        params: { id: 'Course ID' },
+        body: { title: 'string', description: 'string', dueDate: 'ISO date', totalMarks: 'number' },
+        response: { success: 'boolean', data: 'Created assignment object' },
+      },
+    },
+    'Submissions': {
+      'POST /assignments/:id/submit': {
+        description: 'Submit assignment',
+        auth: 'Required (Student)',
+        params: { id: 'Assignment ID' },
+        body: { textContent: 'string', fileUrls: 'Array of strings' },
+        response: { success: 'boolean', data: 'Submission object' },
+      },
+      'PATCH /submissions/:id/grade': {
+        description: 'Grade submission',
+        auth: 'Required (Teacher)',
+        params: { id: 'Submission ID' },
+        body: { grade: 'number', feedback: 'string' },
+        response: { success: 'boolean', data: 'Updated submission object' },
+      },
+    },
+    'Quizzes': {
+      'POST /courses/:id/quizzes': {
+        description: 'Create quiz',
+        auth: 'Required (Teacher)',
+        params: { id: 'Course ID' },
+        body: { title: 'string', duration: 'number (minutes)', startTime: 'ISO date', endTime: 'ISO date', totalMarks: 'number' },
+        response: { success: 'boolean', data: 'Created quiz object' },
+      },
+    },
+  },
+  statusCodes: {
+    200: 'OK - Request successful',
+    201: 'Created - Resource created successfully',
+    400: 'Bad Request - Invalid input',
+    401: 'Unauthorized - Authentication required',
+    403: 'Forbidden - Insufficient permissions',
+    404: 'Not Found - Resource not found',
+    500: 'Internal Server Error - Server error',
+  },
+};
+
+// JSON API docs endpoint
 router.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Virtual Learning Environment API Documentation',
-    version: '1.0.0',
-    documentation: {
-      html: '/api-docs/html',
-      json: '/api-docs',
-    },
-    endpoints: {
-      auth: [
-        {
-          method: 'POST',
-          path: '/api/auth/register',
-          description: 'Register new user',
-          params: {
-            firstName: 'string (required)',
-            lastName: 'string (required)',
-            email: 'string (required)',
-            password: 'string (required)',
-            role: 'string (optional: student, teacher, admin)',
-          },
-        },
-        {
-          method: 'POST',
-          path: '/api/auth/login',
-          description: 'Login user',
-          params: {
-            email: 'string (required)',
-            password: 'string (required)',
-          },
-        },
-      ],
-      courses: [
-        {
-          method: 'GET',
-          path: '/api/courses',
-          description: 'Get all courses',
-          auth: true,
-        },
-        {
-          method: 'GET',
-          path: '/api/courses/:id',
-          description: 'Get specific course',
-          auth: true,
-        },
-        {
-          method: 'POST',
-          path: '/api/courses',
-          description: 'Create new course',
-          auth: true,
-          role: 'teacher',
-          params: {
-            title: 'string (required)',
-            description: 'string (required)',
-            code: 'string (required)',
-            capacity: 'number (optional)',
-          },
-        },
-        {
-          method: 'PUT',
-          path: '/api/courses/:id',
-          description: 'Update course',
-          auth: true,
-          role: 'teacher',
-        },
-        {
-          method: 'DELETE',
-          path: '/api/courses/:id',
-          description: 'Delete course',
-          auth: true,
-          role: 'teacher',
-        },
-      ],
-      enrollments: [
-        {
-          method: 'GET',
-          path: '/api/enrollments',
-          description: 'Get enrollments',
-          auth: true,
-        },
-        {
-          method: 'POST',
-          path: '/api/enrollments',
-          description: 'Enroll in course',
-          auth: true,
-          params: {
-            courseId: 'string (required)',
-          },
-        },
-        {
-          method: 'DELETE',
-          path: '/api/enrollments/:id',
-          description: 'Drop course',
-          auth: true,
-        },
-      ],
-      assignments: [
-        {
-          method: 'GET',
-          path: '/api/assignments',
-          description: 'Get assignments',
-          auth: true,
-        },
-        {
-          method: 'GET',
-          path: '/api/assignments/:id',
-          description: 'Get specific assignment',
-          auth: true,
-        },
-        {
-          method: 'POST',
-          path: '/api/assignments',
-          description: 'Create assignment',
-          auth: true,
-          role: 'teacher',
-        },
-        {
-          method: 'PUT',
-          path: '/api/assignments/:id',
-          description: 'Update assignment',
-          auth: true,
-          role: 'teacher',
-        },
-        {
-          method: 'DELETE',
-          path: '/api/assignments/:id',
-          description: 'Delete assignment',
-          auth: true,
-          role: 'teacher',
-        },
-      ],
-      submissions: [
-        {
-          method: 'GET',
-          path: '/api/submissions',
-          description: 'Get submissions',
-          auth: true,
-        },
-        {
-          method: 'POST',
-          path: '/api/submissions',
-          description: 'Submit assignment',
-          auth: true,
-        },
-        {
-          method: 'GET',
-          path: '/api/submissions/:id',
-          description: 'Get specific submission',
-          auth: true,
-        },
-      ],
-      modules: [
-        {
-          method: 'GET',
-          path: '/api/modules',
-          description: 'Get course modules',
-          auth: true,
-        },
-        {
-          method: 'POST',
-          path: '/api/modules',
-          description: 'Create module',
-          auth: true,
-          role: 'teacher',
-        },
-      ],
-      quizzes: [
-        {
-          method: 'GET',
-          path: '/api/quizzes',
-          description: 'Get quizzes',
-          auth: true,
-        },
-        {
-          method: 'POST',
-          path: '/api/quizzes',
-          description: 'Create quiz',
-          auth: true,
-          role: 'teacher',
-        },
-        {
-          method: 'POST',
-          path: '/api/quizzes/:id/submit',
-          description: 'Submit quiz',
-          auth: true,
-        },
-      ],
-      communication: [
-        {
-          method: 'GET',
-          path: '/api/communication/messages',
-          description: 'Get messages',
-          auth: true,
-        },
-        {
-          method: 'POST',
-          path: '/api/communication/messages',
-          description: 'Send message',
-          auth: true,
-        },
-        {
-          method: 'GET',
-          path: '/api/communication/notifications',
-          description: 'Get notifications',
-          auth: true,
-        },
-      ],
-      admin: [
-        {
-          method: 'GET',
-          path: '/api/admin/users',
-          description: 'Get all users',
-          auth: true,
-          role: 'admin',
-        },
-        {
-          method: 'GET',
-          path: '/api/admin/analytics',
-          description: 'Get analytics',
-          auth: true,
-          role: 'admin',
-        },
-        {
-          method: 'GET',
-          path: '/api/admin/logs',
-          description: 'Get admin logs',
-          auth: true,
-          role: 'admin',
-        },
-      ],
-    },
-    baseUrl: process.env.API_BASE_URL || 'http://localhost:5000',
-    authentication: {
-      type: 'JWT Bearer Token',
-      format: 'Authorization: Bearer <token>',
-      expiration: '7 days',
-    },
-    rateLimit: {
-      window: '15 minutes',
-      maxRequests: 100,
-    },
-    requestTimeout: '30 seconds',
-    documentation_url: 'https://github.com/sammyopare321-boop/Virtual-Learning-Environment',
-  });
+  res.json(apiDocs);
 });
 
-// HTML documentation page
+// HTML API documentation UI
 router.get('/html', (req, res) => {
-  res.send(`
+  const html = `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Virtual Learning Environment API Documentation</title>
+      <title>Virtual Learning Environment - API Documentation</title>
       <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: #f8fafc;
+          color: #1e293b;
           line-height: 1.6;
-          color: #333;
-          background: #f5f5f5;
         }
-        
         .container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 20px;
-        }
-        
-        header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 40px;
-          border-radius: 8px;
-          margin-bottom: 30px;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        header h1 {
-          font-size: 2.5em;
-          margin-bottom: 10px;
-        }
-        
-        header p {
-          font-size: 1.1em;
-          opacity: 0.9;
-        }
-        
-        .info-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
-          margin-bottom: 40px;
-        }
-        
-        .info-card {
+          max-width: 1000px;
+          margin: 40px auto;
           background: white;
-          padding: 20px;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          border-radius: 16px;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
         }
-        
-        .info-card h3 {
-          color: #667eea;
-          margin-bottom: 10px;
-        }
-        
-        .info-card p {
-          font-size: 0.9em;
-          color: #666;
-        }
-        
-        .endpoint-section {
-          background: white;
-          padding: 20px;
-          margin-bottom: 20px;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .endpoint-section h2 {
-          color: #667eea;
-          margin-bottom: 15px;
-          padding-bottom: 10px;
-          border-bottom: 2px solid #667eea;
-        }
-        
-        .endpoint {
-          padding: 15px;
-          margin-bottom: 15px;
-          background: #f9f9f9;
-          border-left: 4px solid #667eea;
-          border-radius: 4px;
-        }
-        
-        .endpoint-method {
-          display: inline-block;
-          padding: 5px 10px;
-          border-radius: 4px;
+        .header {
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
           color: white;
-          font-weight: bold;
-          margin-right: 10px;
-          font-size: 0.85em;
-        }
-        
-        .endpoint-method.get { background: #61affe; }
-        .endpoint-method.post { background: #49cc90; }
-        .endpoint-method.put { background: #fca130; }
-        .endpoint-method.delete { background: #f93e3e; }
-        
-        .endpoint-path {
-          font-family: 'Courier New', monospace;
-          background: white;
-          padding: 10px;
-          border-radius: 4px;
-          margin: 10px 0;
-          font-size: 0.9em;
-        }
-        
-        .endpoint-description {
-          margin: 10px 0;
-          color: #666;
-        }
-        
-        .auth-badge {
-          display: inline-block;
-          background: #ff6b6b;
-          color: white;
-          padding: 3px 8px;
-          border-radius: 4px;
-          font-size: 0.8em;
-          margin-left: 10px;
-        }
-        
-        footer {
+          padding: 60px 40px;
           text-align: center;
-          padding: 20px;
-          color: #666;
-          margin-top: 40px;
         }
-        
-        .quick-start {
-          background: #667eea;
-          color: white;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 30px;
+        .header h1 { font-size: 2.5rem; margin-bottom: 12px; font-weight: 800; letter-spacing: -0.025em; }
+        .header p { font-size: 1.125rem; opacity: 0.9; font-weight: 400; }
+        .content { padding: 40px; }
+        .section { margin-bottom: 48px; }
+        .section-title {
+          font-size: 1.5rem;
+          color: #0f172a;
+          margin-bottom: 24px;
+          border-bottom: 2px solid #e2e8f0;
+          padding-bottom: 8px;
+          font-weight: 700;
         }
-        
-        .quick-start h2 {
-          margin-bottom: 15px;
+        .endpoint {
+          background: #fdfdfd;
+          border: 1px solid #e2e8f0;
+          border-left: 4px solid #4f46e5;
+          padding: 24px;
+          margin-bottom: 20px;
+          border-radius: 12px;
+          transition: transform 0.2s;
         }
-        
-        .quick-start pre {
-          background: rgba(0,0,0,0.2);
-          padding: 15px;
-          border-radius: 4px;
-          overflow-x: auto;
+        .endpoint:hover { transform: translateY(-2px); }
+        .endpoint-method {
+          font-weight: 700;
+          color: #4f46e5;
+          font-size: 1.125rem;
+          margin-bottom: 8px;
+          font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+        .endpoint-desc { color: #475569; margin-bottom: 16px; font-size: 1rem; }
+        .endpoint-detail { font-size: 0.875rem; color: #64748b; margin: 4px 0; }
+        .badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 9999px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          margin-right: 8px;
+        }
+        .badge.get { background: #dbeafe; color: #1e40af; }
+        .badge.post { background: #dcfce7; color: #166534; }
+        .badge.put { background: #fef3c7; color: #92400e; }
+        .badge.patch { background: #f3e8ff; color: #6b21a8; }
+        .badge.delete { background: #fee2e2; color: #991b1b; }
+        .footer {
+          background: #f8fafc;
+          padding: 32px;
+          text-align: center;
+          color: #64748b;
+          border-top: 1px solid #e2e8f0;
+          font-size: 0.875rem;
         }
       </style>
     </head>
     <body>
       <div class="container">
-        <header>
-          <h1>🎓 Virtual Learning Environment</h1>
-          <p>API Documentation - v1.0.0</p>
-        </header>
-        
-        <div class="quick-start">
-          <h2>🚀 Quick Start</h2>
-          <p>Get the full API documentation in JSON format:</p>
-          <pre>curl http://localhost:5000/api-docs</pre>
+        <div class="header">
+          <h1>API Documentation</h1>
+          <p>Virtual Learning Environment v1.0.0</p>
         </div>
-        
-        <div class="info-grid">
-          <div class="info-card">
-            <h3>📡 Base URL</h3>
-            <p>http://localhost:5000/api</p>
-          </div>
-          <div class="info-card">
-            <h3>🔐 Authentication</h3>
-            <p>JWT Bearer Token (7 days)</p>
-          </div>
-          <div class="info-card">
-            <h3>⏱️ Timeout</h3>
-            <p>30 seconds per request</p>
-          </div>
-          <div class="info-card">
-            <h3>🚦 Rate Limit</h3>
-            <p>100 requests per 15 minutes</p>
-          </div>
-        </div>
-        
-        <div class="endpoint-section">
-          <h2>📚 Key Features</h2>
-          <ul style="margin-left: 20px;">
-            <li>✅ User Authentication & Authorization</li>
-            <li>✅ Course Management</li>
-            <li>✅ Assignment & Submission Tracking</li>
-            <li>✅ Grading System</li>
-            <li>✅ Quiz Management</li>
-            <li>✅ Real-time Communication</li>
-            <li>✅ Attendance Tracking</li>
-            <li>✅ Admin Analytics</li>
-            <li>✅ File Upload with Cloudinary</li>
-            <li>✅ Live Sessions Support</li>
-          </ul>
-        </div>
-        
-        <div class="endpoint-section">
-          <h2>🔌 Main Endpoints</h2>
-          
-          <div class="endpoint">
-            <span class="endpoint-method post">POST</span>
-            <span class="endpoint-path">/auth/register</span>
-            <p class="endpoint-description">Register a new user account</p>
-          </div>
-          
-          <div class="endpoint">
-            <span class="endpoint-method post">POST</span>
-            <span class="endpoint-path">/auth/login</span>
-            <p class="endpoint-description">Login with email and password</p>
-          </div>
-          
-          <div class="endpoint">
-            <span class="endpoint-method get">GET</span>
-            <span class="endpoint-path">/courses</span>
-            <span class="auth-badge">Auth Required</span>
-            <p class="endpoint-description">Retrieve all courses</p>
-          </div>
-          
-          <div class="endpoint">
-            <span class="endpoint-method post">POST</span>
-            <span class="endpoint-path">/courses</span>
-            <span class="auth-badge">Auth Required</span>
-            <p class="endpoint-description">Create a new course (Teachers only)</p>
-          </div>
-          
-          <div class="endpoint">
-            <span class="endpoint-method get">GET</span>
-            <span class="endpoint-path">/enrollments</span>
-            <span class="auth-badge">Auth Required</span>
-            <p class="endpoint-description">Get user enrollments</p>
-          </div>
-          
-          <div class="endpoint">
-            <span class="endpoint-method post">POST</span>
-            <span class="endpoint-path">/enrollments</span>
-            <span class="auth-badge">Auth Required</span>
-            <p class="endpoint-description">Enroll in a course</p>
-          </div>
-          
-          <div class="endpoint">
-            <span class="endpoint-method get">GET</span>
-            <span class="endpoint-path">/assignments</span>
-            <span class="auth-badge">Auth Required</span>
-            <p class="endpoint-description">Get course assignments</p>
-          </div>
-          
-          <div class="endpoint">
-            <span class="endpoint-method post">POST</span>
-            <span class="endpoint-path">/submissions</span>
-            <span class="auth-badge">Auth Required</span>
-            <p class="endpoint-description">Submit an assignment</p>
+        <div class="content">
+          ${Object.entries(apiDocs.endpoints).map(([section, endpoints]) => `
+            <div class="section">
+              <h2 class="section-title">${section}</h2>
+              ${Object.entries(endpoints).map(([path, details]) => {
+                const method = path.split(' ')[0];
+                const route = path.split(' ')[1];
+                return `
+                  <div class="endpoint">
+                    <div class="endpoint-method">
+                      <span class="badge ${method.toLowerCase()}">${method}</span>
+                      ${route}
+                    </div>
+                    <p class="endpoint-desc">${details.description}</p>
+                    ${details.auth ? `<p class="endpoint-detail"><strong>Auth:</strong> ${details.auth}</p>` : ''}
+                    ${details.body ? `<p class="endpoint-detail"><strong>Body:</strong> <code>${JSON.stringify(details.body)}</code></p>` : ''}
+                    ${details.params ? `<p class="endpoint-detail"><strong>Params:</strong> <code>${JSON.stringify(details.params)}</code></p>` : ''}
+                    ${details.response ? `<p class="endpoint-detail"><strong>Response:</strong> <code>${JSON.stringify(details.response)}</code></p>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `).join('')}
+          <div class="section">
+            <h2 class="section-title">Status Codes</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
+              ${Object.entries(apiDocs.statusCodes).map(([code, desc]) => `
+                <div style="padding: 12px; background: #f1f5f9; border-radius: 8px;">
+                  <strong style="color: #4f46e5;">${code}</strong>: ${desc}
+                </div>
+              `).join('')}
+            </div>
           </div>
         </div>
-        
-        <footer>
-          <p>For detailed API documentation, visit: <a href="/api-docs" style="color: #667eea;">API JSON Docs</a></p>
-          <p>© 2024 Virtual Learning Environment - All Rights Reserved</p>
-        </footer>
+        <div class="footer">
+          &copy; 2026 Virtual Learning Environment API
+        </div>
       </div>
     </body>
     </html>
-  `);
+  `;
+  res.send(html);
 });
 
 module.exports = router;

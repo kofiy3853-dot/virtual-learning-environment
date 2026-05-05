@@ -17,8 +17,10 @@ const loginLimiter = rateLimit({
   message: 'Too many login attempts from this IP, please try again after 15 minutes',
 });
 
-router.post('/register', register);
-router.post('/login', loginLimiter, login);
+const { validate, authSchemas } = require('../middleware/validation');
+
+router.post('/register', validate(authSchemas.register), register);
+router.post('/login', loginLimiter, validate(authSchemas.login), login);
 router.get('/me', protect, getMe);
 router.put('/me', protect, updateMe);
 

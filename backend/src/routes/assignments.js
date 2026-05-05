@@ -1,5 +1,10 @@
 const express = require('express');
 const {
+  validate,
+  assignmentSchemas,
+  submissionSchemas,
+} = require('../middleware/validation');
+const {
   getAssignment,
   updateAssignment,
   deleteAssignment,
@@ -20,10 +25,22 @@ const { protect, authorize } = require('../middleware/auth');
 router
   .route('/:id')
   .get(protect, getAssignment)
-  .put(protect, authorize('teacher', 'admin'), updateAssignment)
+  .put(
+    protect,
+    authorize('teacher', 'admin'),
+    validate(assignmentSchemas.update),
+    updateAssignment
+  )
   .delete(protect, authorize('teacher', 'admin'), deleteAssignment);
 
-router.post('/:id/submit', protect, authorize('student'), upload.array('files', 5), submitAssignment);
+router.post(
+  '/:id/submit',
+  protect,
+  authorize('student'),
+  upload.array('files', 5),
+  validate(submissionSchemas.create),
+  submitAssignment
+);
 router.get('/:id/submissions', protect, authorize('teacher', 'admin'), getSubmissions);
 router.get('/:id/my-submission', protect, authorize('student'), getMySubmission);
 

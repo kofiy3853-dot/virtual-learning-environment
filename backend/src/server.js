@@ -24,19 +24,20 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Request timeout handler
+// Request timeout (30s)
 app.use(timeoutHandler(30000));
+
+// Custom request logger (file-based)
+app.use(requestLogger);
 
 // Dev logging middleware
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Custom request logger
-app.use(requestLogger);
-
 // Sanitize data
-app.use(mongoSanitize());
+// Temporarily disabled due to Express 5 compatibility issues
+// app.use(mongoSanitize());
 
 // Set security headers
 app.use(helmet());
@@ -46,14 +47,14 @@ const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000, // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Apply rate limiting to all requests
 app.use(limiter);
 
-// Enable CORS — restrict to allowed origin
+// Enable CORS
 app.use(
   cors({
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
@@ -74,7 +75,7 @@ app.get('/health', (req, res) => {
 // API Documentation routes
 app.use('/api-docs', require('./routes/docs'));
 
-// Mount routers with v1 prefix for API versioning
+// Mount routers with v1 prefix
 app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/courses', require('./routes/courses'));
 app.use('/api/v1/enrollments', require('./routes/enrollments'));
@@ -85,7 +86,8 @@ app.use('/api/v1/assignments', require('./routes/assignments'));
 app.use('/api/v1/submissions', require('./routes/submissions'));
 app.use('/api/v1/admin', require('./routes/admin'));
 app.use('/api/v1/communication', require('./routes/communication'));
-// Backward compatibility - keep old routes without v1
+
+// Backward compatibility
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/enrollments', require('./routes/enrollments'));
@@ -106,7 +108,7 @@ app.use((req, res) => {
   });
 });
 
-// Error handler (must be last)
+// Error handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
@@ -126,17 +128,15 @@ const server = httpServer.listen(PORT, () => {
   logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
-// Handle unhandled promise rejections
+// Handle rejections/exceptions
 process.on('unhandledRejection', (err, promise) => {
   logger.error('Unhandled Rejection', {
     error: err.message,
     stack: err.stack,
   });
-  // Close server & exit process cleanly
   server.close(() => process.exit(1));
 });
 
-// Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception', {
     error: err.message,

@@ -1,5 +1,10 @@
 const express = require('express');
 const {
+  validate,
+  courseSchemas,
+  assignmentSchemas,
+} = require('../middleware/validation');
+const {
   getCourses,
   getCourse,
   createCourse,
@@ -20,12 +25,22 @@ const { protect, authorize } = require('../middleware/auth');
 router
   .route('/')
   .get(getCourses)
-  .post(protect, authorize('teacher', 'admin'), createCourse);
+  .post(
+    protect,
+    authorize('teacher', 'admin'),
+    validate(courseSchemas.create),
+    createCourse
+  );
 
 router
   .route('/:id')
   .get(getCourse)
-  .put(protect, authorize('teacher', 'admin'), updateCourse)
+  .put(
+    protect,
+    authorize('teacher', 'admin'),
+    validate(courseSchemas.update),
+    updateCourse
+  )
   .delete(protect, authorize('teacher', 'admin'), deleteCourse);
 
 router.get('/:id/students', protect, authorize('teacher', 'admin'), getCourseStudents);
@@ -36,7 +51,15 @@ router.route('/:id/modules').get(protect, getModules).post(protect, authorize('t
 
 // Assignments
 const { getAssignments, createAssignment } = require('../controllers/assignmentController');
-router.route('/:id/assignments').get(protect, getAssignments).post(protect, authorize('teacher', 'admin'), createAssignment);
+router
+  .route('/:id/assignments')
+  .get(protect, getAssignments)
+  .post(
+    protect,
+    authorize('teacher', 'admin'),
+    validate(assignmentSchemas.create),
+    createAssignment
+  );
 
 // Enrollment sub-routes
 router.post('/:id/enroll', protect, authorize('student'), enrollCourse);
