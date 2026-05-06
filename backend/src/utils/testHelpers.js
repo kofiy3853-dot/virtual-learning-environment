@@ -51,7 +51,7 @@ const factories = {
     title: 'Test Course',
     description: 'A test course for unit tests',
     code: `TEST-${Date.now()}`,
-    semester: 'Fall 2026',
+    semester: 'Semester 1',
     academicYear: '2026/2027',
     status: 'active',
     ...overrides,

@@ -82,7 +82,9 @@ describe('Course Endpoints', () => {
 
   describe('GET /api/courses', () => {
     it('should fetch all courses', async () => {
-      const res = await request(app).get('/api/courses');
+      const res = await request(app)
+        .get('/api/courses')
+        .set('Authorization', `Bearer ${teacherToken}`);
       expect(res.statusCode).toEqual(200);
       expect(res.body.success).toBe(true);
       expect(Array.isArray(res.body.data)).toBe(true);

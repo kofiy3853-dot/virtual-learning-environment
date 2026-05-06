@@ -1,5 +1,5 @@
 const express = require('express');
-const { validate, submissionSchemas } = require('../middleware/validation');
+const { validate, schemas } = require('../middleware/validation');
 const { gradeSubmission } = require('../controllers/submissionController');
 
 const router = express.Router();
@@ -10,7 +10,7 @@ router.patch(
   '/:id/grade',
   protect,
   authorize('teacher', 'admin'),
-  validate(submissionSchemas.grade),
+  validate(schemas.gradeSubmission),
   gradeSubmission
 );
 

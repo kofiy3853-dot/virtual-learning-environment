@@ -1,47 +1,53 @@
 const express = require('express');
+const assignmentRouter = express.Router();
+const { protect, authorize } = require('../middleware/auth');
+const { validate, schemas } = require('../middleware/validation');
 const {
-  validate,
-  assignmentSchemas,
-  submissionSchemas,
-} = require('../middleware/validation');
-const {
+  getAssignments,
   getAssignment,
+  createAssignment,
   updateAssignment,
-  deleteAssignment,
+  deleteAssignment
 } = require('../controllers/assignmentController');
-
 const {
   submitAssignment,
   getSubmissions,
   getMySubmission,
+  gradeSubmission
 } = require('../controllers/submissionController');
 
 const upload = require('../middleware/upload');
 
-const router = express.Router();
+assignmentRouter.get('/courses/:id/assignments', protect, getAssignments);
+assignmentRouter.post('/courses/:id/assignments',
+  protect,
+  authorize('teacher'),
+  validate(schemas.createAssignment),
+  createAssignment
+);
+assignmentRouter.get('/assignments/:id', protect, getAssignment);
+assignmentRouter.put('/assignments/:id',
+  protect,
+  authorize('teacher'),
+  validate(schemas.updateAssignment),
+  updateAssignment
+);
+assignmentRouter.delete('/assignments/:id', protect, authorize('teacher'), deleteAssignment);
 
-const { protect, authorize } = require('../middleware/auth');
-
-router
-  .route('/:id')
-  .get(protect, getAssignment)
-  .put(
-    protect,
-    authorize('teacher', 'admin'),
-    validate(assignmentSchemas.update),
-    updateAssignment
-  )
-  .delete(protect, authorize('teacher', 'admin'), deleteAssignment);
-
-router.post(
-  '/:id/submit',
+// Submissions
+assignmentRouter.post('/assignments/:id/submit',
   protect,
   authorize('student'),
   upload.array('files', 5),
-  validate(submissionSchemas.create),
   submitAssignment
 );
-router.get('/:id/submissions', protect, authorize('teacher', 'admin'), getSubmissions);
-router.get('/:id/my-submission', protect, authorize('student'), getMySubmission);
+assignmentRouter.get('/assignments/:id/submissions', protect, authorize('teacher'), getSubmissions);
+assignmentRouter.get('/assignments/:id/my-submission', protect, authorize('student'), getMySubmission);
+assignmentRouter.patch('/submissions/:id/grade',
+  protect,
+  authorize('teacher'),
+  validate(schemas.gradeSubmission),
+  gradeSubmission
+);
 
-module.exports = router;
+module.exports = assignmentRouter;

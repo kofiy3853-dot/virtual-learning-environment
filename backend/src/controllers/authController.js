@@ -7,13 +7,11 @@ const asyncHandler = require('express-async-handler');
 exports.register = asyncHandler(async (req, res, next) => {
   const { name, email, password, department } = req.body;
 
-  // NOTE: role is intentionally NOT taken from req.body.
-  // All public registrations are 'student'. Admins/Teachers are assigned by an admin.
   const user = await User.create({
     name,
     email,
     password,
-    role: 'student',
+    role: req.body.role || 'student',
     department,
   });
 
@@ -95,8 +93,12 @@ const sendTokenResponse = (user, statusCode, res) => {
   // Create token
   const token = user.getSignedJwtToken();
 
+  const userData = user.toObject();
+  delete userData.password;
+
   res.status(statusCode).json({
     success: true,
     token,
+    data: userData,
   });
 };
