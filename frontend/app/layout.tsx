@@ -24,6 +24,8 @@ export const metadata: Metadata = {
   }
 };
 
+import { SocketProvider } from "@/context/SocketContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,22 +35,24 @@ export default function RootLayout({
     <html lang="en" className={`${sora.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <AuthProvider>
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              className: 'react-hot-toast',
-              style: {
-                borderRadius: '12px',
-                background: '#fff',
-                color: '#0f172a',
-                fontSize: '14px',
-                fontWeight: '500',
-                border: '1px solid #e2e8f0',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-              },
-            }}
-          />
-          {children}
+          <SocketProvider>
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                className: 'react-hot-toast',
+                style: {
+                  borderRadius: '12px',
+                  background: '#fff',
+                  color: '#0f172a',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                },
+              }}
+            />
+            {children}
+          </SocketProvider>
         </AuthProvider>
       </body>
     </html>

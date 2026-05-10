@@ -2,6 +2,7 @@ import api from './axiosInstance';
 
 export const communicationApi = {
   // Messages
+  getConversations: () => api.get('/api/communication/conversations'),
   getMessages: (userId: string) => api.get(`/api/communication/messages/${userId}`),
 
   // Notifications

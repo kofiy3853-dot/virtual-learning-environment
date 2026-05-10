@@ -34,8 +34,11 @@ const adminLinks = [
 
 const linksByRole: Record<string, any> = { student: studentLinks, teacher: teacherLinks, admin: adminLinks };
 
+import { useNotificationSentinel } from '@/hooks/useNotificationSentinel';
+
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotificationSentinel();
   const pathname = usePathname();
   const links = (user?.role && linksByRole[user.role as keyof typeof linksByRole]) || studentLinks;
 
@@ -55,15 +58,25 @@ export default function Sidebar() {
         <nav className="flex flex-col gap-1.5">
           {links.map(({ href, label, icon: Icon }: any) => {
             const isActive = pathname === href || (pathname.startsWith(href) && href !== `/dashboard/${user?.role}`);
+            const isNotification = label === 'Notifications';
+            const isMessage = label === 'Messages';
+
             return (
               <Link key={href} href={href} 
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold transition-all group ${
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl font-semibold transition-all group ${
                   isActive 
-                    ? 'bg-blue-50 text-blue-700 border border-blue-100' 
+                    ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20 border border-blue-500' 
                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                 }`}>
-                <Icon size={18} className={isActive ? 'text-blue-600' : 'group-hover:text-blue-600 transition-colors'} />
-                <span className="text-sm">{label}</span>
+                <div className="flex items-center gap-3">
+                   <Icon size={18} className={isActive ? 'text-white' : 'group-hover:text-blue-600 transition-colors'} />
+                   <span className="text-sm">{label}</span>
+                </div>
+                {isNotification && unreadCount > 0 && (
+                   <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm ${isActive ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>
+                      {unreadCount}
+                   </span>
+                )}
               </Link>
             );
           })}

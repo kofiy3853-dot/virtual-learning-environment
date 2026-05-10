@@ -82,8 +82,71 @@ exports.replyDiscussion = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: discussion });
 });
 
+// @desc    Get all my conversations (unique users I have messaged)
+// @route   GET /api/communication/conversations
+// @access  Private
+exports.getConversations = asyncHandler(async (req, res, next) => {
+  const conversations = await Message.aggregate([
+    {
+      $match: {
+        $or: [
+          { sender: req.user._id },
+          { receiver: req.user._id }
+        ]
+      }
+    },
+    { $sort: { createdAt: -1 } },
+    {
+      $group: {
+        _id: {
+          $cond: [
+            { $eq: ["$sender", req.user._id] },
+            "$receiver",
+            "$sender"
+          ]
+        },
+        lastMessage: { $first: "$body" },
+        createdAt: { $first: "$createdAt" },
+        unreadCount: {
+          $sum: {
+            $cond: [
+              { $and: [{ $eq: ["$receiver", req.user._id] }, { $eq: ["$isRead", false] }] },
+              1,
+              0
+            ]
+          }
+        }
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    { $unwind: '$user' },
+    {
+      $project: {
+        _id: 1,
+        lastMessage: 1,
+        createdAt: 1,
+        unreadCount: 1,
+        'user.name': 1,
+        'user.avatar': 1,
+        'user.role': 1,
+        'user.online': { $literal: false } // Placeholder for real-time presence
+      }
+    },
+    { $sort: { createdAt: -1 } }
+  ]);
+
+  res.status(200).json({ success: true, count: conversations.length, data: conversations });
+});
+
 // @desc    Get messages with user
-// @route   GET /api/messages/:userId
+// @route   GET /api/communication/messages/:userId
 // @access  Private
 exports.getMessages = asyncHandler(async (req, res, next) => {
   const messages = await Message.find({
@@ -93,11 +156,17 @@ exports.getMessages = asyncHandler(async (req, res, next) => {
     ]
   }).sort('createdAt');
 
+  // Mark as read
+  await Message.updateMany(
+    { sender: req.params.userId, receiver: req.user.id, isRead: false },
+    { isRead: true }
+  );
+
   res.status(200).json({ success: true, data: messages });
 });
 
 // @desc    Get my notifications
-// @route   GET /api/notifications/me
+// @route   GET /api/communication/notifications/me
 // @access  Private
 exports.getMyNotifications = asyncHandler(async (req, res, next) => {
   const notifications = await Notification.find({ user: req.user.id }).sort('-createdAt');

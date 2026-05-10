@@ -1,4 +1,3 @@
-const express = require('express');
 const {
   createAnnouncement,
   getAnnouncements,
@@ -7,6 +6,7 @@ const {
   getDiscussion,
   replyDiscussion,
   getMessages,
+  getConversations,
   getMyNotifications,
   markRead,
 } = require('../controllers/communicationController');
@@ -29,6 +29,7 @@ router.get('/discussions/:id', protect, getDiscussion);
 router.post('/discussions/:id/reply', protect, replyDiscussion);
 
 // Messages (Global)
+router.get('/conversations', protect, getConversations);
 router.get('/messages/:userId', protect, getMessages);
 
 // Notifications (Global)

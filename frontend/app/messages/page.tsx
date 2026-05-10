@@ -1,87 +1,157 @@
 'use client';
+
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
+import { useSocket } from '@/context/SocketContext';
+import { communicationApi } from '@/utils/api/communicationApi';
 import Sidebar from '@/components/shared/Sidebar';
 import { 
   Search, Plus, Phone, Video, MoreVertical, Send, 
-  MessageSquare, Users, Star, Info
+  MessageSquare, Users, Star, Info, Loader2, Sparkles
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
-const CHATS = [
-  { id: '1', name: 'Prof. Alan Turing', avatar: 'AT', lastMessage: 'The assignment looks good!', time: '10:42 AM', unread: 2, online: true, role: 'teacher' },
-  { id: '2', name: 'Physics Study Group', avatar: 'PG', lastMessage: 'When is the next lab session?', time: '9:15 AM', unread: 0, online: false, role: 'group' },
-  { id: '3', name: 'Alice Smith', avatar: 'AS', lastMessage: 'Can you help me with the setup?', time: 'Yesterday', unread: 5, online: true, role: 'student' },
-  { id: '4', name: 'Course Support', avatar: 'CS', lastMessage: 'Ticket #42 has been resolved.', time: 'Monday', unread: 0, online: false, role: 'admin' },
-];
+interface Conversation {
+  _id: string;
+  lastMessage: string;
+  createdAt: string;
+  unreadCount: number;
+  user: {
+    _id: string;
+    name: string;
+    avatar: string;
+    role: string;
+  };
+}
 
-const MESSAGES: Record<string, { id: number; sender: 'me' | 'them'; text: string; time: string }[]> = {
-  '1': [
-    { id: 1, sender: 'them', text: 'Hi! Have you had a chance to look at the Physics assignment?', time: '10:30 AM' },
-    { id: 2, sender: 'me',   text: 'Yes, I just finished reading through the requirements.', time: '10:35 AM' },
-    { id: 3, sender: 'them', text: 'Great! The assignment looks good. Just make sure to include the diagrams for Chapter 4.', time: '10:42 AM' },
-  ],
-  '2': [
-    { id: 1, sender: 'them', text: 'Hey team, when is the next lab session?', time: '9:10 AM' },
-    { id: 2, sender: 'me',   text: 'I think it\'s on Thursday at 2 PM.', time: '9:15 AM' },
-  ],
-  '3': [
-    { id: 1, sender: 'them', text: 'Hi! Can you help me with the environment setup for the project?', time: 'Yesterday' },
-  ],
-  '4': [
-    { id: 1, sender: 'them', text: 'Your support ticket #42 regarding course access has been resolved.', time: 'Monday' },
-    { id: 2, sender: 'me',   text: 'Thank you, I can access the course now!', time: 'Monday' },
-  ],
-};
+interface Message {
+  _id: string;
+  sender: string;
+  receiver: string;
+  body: string;
+  createdAt: string;
+}
 
 export default function MessagesPage() {
   const { user } = useAuth();
-  const [activeChat, setActiveChat]     = useState<string | null>('1');
-  const [message, setMessage]           = useState('');
-  const [allMessages, setAllMessages]   = useState(MESSAGES);
-  const [search, setSearch]             = useState('');
+  const { socket, onlineUsers } = useSocket();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messageText, setMessageText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
-  const activeContact = CHATS.find(c => c.id === activeChat);
-  const currentMessages = activeChat ? (allMessages[activeChat] || []) : [];
+  // Fetch conversations on mount
+  useEffect(() => {
+    communicationApi.getConversations()
+      .then(res => setConversations(res.data.data))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Fetch messages when activeChat changes
+  useEffect(() => {
+    if (activeChat) {
+      communicationApi.getMessages(activeChat)
+        .then(res => setMessages(res.data.data));
+    }
+  }, [activeChat]);
+
+  // Socket Listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('new_message', (msg: any) => {
+      // If message is from the active chat, add it
+      if (activeChat === msg.senderId) {
+        setMessages(prev => [...prev, {
+          _id: Date.now().toString(),
+          sender: msg.senderId,
+          receiver: user?._id || '',
+          body: msg.body,
+          createdAt: msg.createdAt
+        }]);
+      }
+      
+      // Update conversations list (move to top, update last message)
+      communicationApi.getConversations().then(res => setConversations(res.data.data));
+    });
+
+    return () => {
+      socket.off('new_message');
+    };
+  }, [socket, activeChat, user?._id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentMessages]);
+  }, [messages]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !activeChat) return;
-    const newMsg = { id: Date.now(), sender: 'me' as const, text: message.trim(), time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) };
-    setAllMessages(p => ({ ...p, [activeChat]: [...(p[activeChat] || []), newMsg] }));
-    setMessage('');
+    if (!messageText.trim() || !activeChat || !socket) return;
+
+    // Send via socket
+    socket.emit('send_message', {
+      receiverId: activeChat,
+      body: messageText.trim()
+    });
+
+    // Optimistically add to UI
+    const newMsg: Message = {
+      _id: Date.now().toString(),
+      sender: user?._id || '',
+      receiver: activeChat,
+      body: messageText.trim(),
+      createdAt: new Date().toISOString()
+    };
+    
+    setMessages(prev => [...prev, newMsg]);
+    setMessageText('');
+
+    // Update conversations last message optimistically
+    setConversations(prev => {
+      const updated = prev.map(c => 
+        c.user._id === activeChat 
+          ? { ...c, lastMessage: messageText.trim(), createdAt: new Date().toISOString() } 
+          : c
+      );
+      return updated.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    });
   };
 
-  const filteredChats = CHATS.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const activeConv = conversations.find(c => c.user._id === activeChat);
+  const filteredConversations = conversations.filter(c => 
+    c.user.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden">
       <Sidebar />
       
-      <main className="flex-1 flex p-6 lg:p-8 h-full min-w-0">
-        <div className="flex w-full h-full bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
+      <main className="flex-1 flex p-6 lg:p-10 h-full min-w-0">
+        <div className="flex w-full h-full bg-white rounded-[40px] border border-slate-200 shadow-2xl shadow-slate-900/5 overflow-hidden">
           
           {/* Chat List Sidebar */}
-          <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/50 shrink-0">
+          <div className="w-80 border-r border-slate-100 flex flex-col bg-[#FDFDFD] shrink-0">
             {/* Header */}
-            <div className="p-6 pb-4">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Messages</h1>
-                <button aria-label="New Message" title="New Message" className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all shadow-sm">
-                  <Plus size={20} />
+            <div className="p-8 pb-6">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                   <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Messages.</h1>
+                   <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">Social Pulse Active</p>
+                </div>
+                <button className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-90">
+                  <Plus size={24} />
                 </button>
               </div>
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
                 <input
                   type="text"
-                  placeholder="Search conversations..."
-                  className="w-full bg-white border border-slate-200 text-slate-900 pl-11 pr-4 h-12 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-sm shadow-sm"
+                  placeholder="Search interactions..."
+                  className="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 pl-12 pr-4 h-14 rounded-2xl focus:bg-white focus:border-blue-600 focus:ring-8 focus:ring-blue-600/5 outline-none transition-all font-bold text-sm"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
@@ -89,128 +159,152 @@ export default function MessagesPage() {
             </div>
 
             {/* Chat List */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 scrollbar-none">
-              {filteredChats.map(chat => (
-                <button
-                  key={chat.id}
-                  onClick={() => setActiveChat(chat.id)}
-                  className={`w-full text-left p-3 rounded-2xl flex gap-3 items-center transition-all group relative overflow-hidden ${
-                    activeChat === chat.id 
-                      ? 'bg-blue-600 shadow-md shadow-blue-600/20' 
-                      : 'hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm'
-                  }`}
-                >
-                  <div className="relative shrink-0">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm transition-colors ${
-                      activeChat === chat.id 
-                        ? 'bg-white/20 text-white' 
-                        : 'bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100'
-                    }`}>
-                      {chat.avatar}
-                    </div>
-                    {chat.online && (
-                      <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 ${
-                        activeChat === chat.id ? 'border-blue-600 bg-emerald-400' : 'border-white bg-emerald-500'
-                      }`} />
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className={`font-bold text-sm truncate ${
-                        activeChat === chat.id ? 'text-white' : 'text-slate-900'
-                      }`}>
-                        {chat.name}
-                      </span>
-                      <span className={`text-[10px] font-bold tracking-wider shrink-0 ${
-                        activeChat === chat.id ? 'text-blue-200' : 'text-slate-400'
-                      }`}>
-                        {chat.time}
-                      </span>
-                    </div>
-                    <p className={`text-xs truncate ${
-                      activeChat === chat.id ? 'text-blue-100' : 'text-slate-500 font-medium'
-                    }`}>
-                      {chat.lastMessage}
-                    </p>
-                  </div>
+            <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-2 custom-scrollbar">
+              {loading ? (
+                <div className="space-y-4 p-4">
+                   {[1,2,3,4].map(i => <div key={i} className="h-20 bg-slate-50 rounded-2xl animate-pulse" />)}
+                </div>
+              ) : filteredConversations.length > 0 ? (
+                filteredConversations.map(conv => {
+                  const isOnline = onlineUsers.includes(conv.user._id);
+                  const isActive = activeChat === conv.user._id;
+                  return (
+                    <button
+                      key={conv._id}
+                      onClick={() => setActiveChat(conv.user._id)}
+                      className={`w-full text-left p-4 rounded-3xl flex gap-4 items-center transition-all group relative overflow-hidden ${
+                        isActive 
+                          ? 'bg-blue-600 shadow-xl shadow-blue-600/20' 
+                          : 'hover:bg-white border-2 border-transparent hover:border-slate-100 hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="relative shrink-0">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-sm transition-all ${
+                          isActive 
+                            ? 'bg-white/20 text-white' 
+                            : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
+                        }`}>
+                          {conv.user.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        {isOnline && (
+                          <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-4 ${
+                            isActive ? 'border-blue-600 bg-emerald-400' : 'border-white bg-emerald-500 shadow-sm'
+                          }`} />
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className={`font-black text-sm truncate ${
+                            isActive ? 'text-white' : 'text-slate-900'
+                          }`}>
+                            {conv.user.name}
+                          </span>
+                          <span className={`text-[9px] font-black tracking-widest shrink-0 ${
+                            isActive ? 'text-blue-200' : 'text-slate-400'
+                          }`}>
+                            {formatDistanceToNow(new Date(conv.createdAt), { addSuffix: false })}
+                          </span>
+                        </div>
+                        <p className={`text-xs truncate font-medium ${
+                          isActive ? 'text-blue-100' : 'text-slate-500'
+                        }`}>
+                          {conv.lastMessage}
+                        </p>
+                      </div>
 
-                  {chat.unread > 0 && (
-                    <span className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${
-                      activeChat === chat.id ? 'bg-white text-blue-600' : 'bg-red-500 text-white shadow-sm shadow-red-500/20'
-                    }`}>
-                      {chat.unread}
-                    </span>
-                  )}
-                </button>
-              ))}
+                      {conv.unreadCount > 0 && !isActive && (
+                        <span className="w-6 h-6 flex items-center justify-center rounded-xl bg-blue-600 text-white text-[10px] font-black shadow-lg shadow-blue-600/20 border-2 border-white">
+                          {conv.unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="py-20 text-center px-8">
+                   <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-200">
+                      <MessageSquare size={32} />
+                   </div>
+                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No Interactions Found</p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col min-w-0 bg-white relative">
-            {activeChat && activeContact ? (
+            {activeChat && activeConv ? (
               <>
                 {/* Chat Header */}
-                <div className="h-20 px-8 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 z-10 relative">
-                  <div className="flex items-center gap-4">
+                <div className="h-24 px-10 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md shrink-0 z-10 relative">
+                  <div className="flex items-center gap-5">
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold shadow-sm border border-indigo-100">
-                        {activeContact.avatar}
+                      <div className="w-14 h-14 rounded-[20px] bg-blue-50 text-blue-600 flex items-center justify-center font-black shadow-sm border border-blue-100">
+                        {activeConv.user.name.split(' ').map(n => n[0]).join('')}
                       </div>
-                      {activeContact.online && (
-                        <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
+                      {onlineUsers.includes(activeConv.user._id) && (
+                        <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-4 border-white shadow-sm" />
                       )}
                     </div>
                     <div>
-                      <h2 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
-                        {activeContact.name}
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] uppercase tracking-wider">
-                          {activeContact.role}
+                      <h2 className="font-black text-slate-900 text-xl flex items-center gap-3">
+                        {activeConv.user.name}
+                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                          {activeConv.user.role}
                         </span>
                       </h2>
-                      <p className={`text-xs font-bold ${activeContact.online ? 'text-emerald-500' : 'text-slate-400'}`}>
-                        {activeContact.online ? 'Online now' : 'Offline'}
+                      <p className={`text-[10px] font-black uppercase tracking-widest ${onlineUsers.includes(activeConv.user._id) ? 'text-emerald-500' : 'text-slate-400'}`}>
+                        {onlineUsers.includes(activeConv.user._id) ? 'Live Intelligence' : 'Offline'}
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex gap-2">
-                    <button aria-label="Audio Call" title="Audio Call" className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                      <Phone size={18} />
+                  <div className="flex gap-3">
+                    <button className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-95">
+                      <Phone size={20} />
                     </button>
-                    <button aria-label="Video Call" title="Video Call" className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                      <Video size={18} />
+                    <button className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-95">
+                      <Video size={20} />
                     </button>
-                    <button aria-label="Conversation Info" title="Info" className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-slate-100 transition-colors">
-                      <Info size={18} />
+                    <button className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-all">
+                      <MoreVertical size={20} />
                     </button>
                   </div>
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50 flex flex-col gap-6">
+                <div className="flex-1 overflow-y-auto p-10 bg-[#FDFDFD] flex flex-col gap-8 custom-scrollbar">
+                  <div className="flex flex-col items-center mb-4">
+                     <div className="px-4 py-2 rounded-full bg-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        End-to-End Encryption Active
+                     </div>
+                  </div>
+                  
                   <AnimatePresence initial={false}>
-                    {currentMessages.map(msg => {
-                      const isMe = msg.sender === 'me';
+                    {messages.map((msg, idx) => {
+                      const isMe = msg.sender === user?._id;
+                      const showTime = idx === messages.length - 1 || messages[idx+1]?.sender !== msg.sender;
                       return (
                         <motion.div 
-                          key={msg.id}
-                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          key={msg._id}
+                          initial={{ opacity: 0, y: 20, scale: 0.9 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1.5`}>
-                            <div className={`px-5 py-3.5 text-[15px] leading-relaxed shadow-sm ${
+                          <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-2`}>
+                            <div className={`px-6 py-4 text-sm leading-relaxed shadow-xl shadow-slate-900/5 ${
                               isMe 
-                                ? 'bg-blue-600 text-white rounded-[24px] rounded-br-[8px]' 
-                                : 'bg-white text-slate-700 rounded-[24px] rounded-bl-[8px] border border-slate-200'
+                                ? 'bg-blue-600 text-white rounded-[32px] rounded-br-[8px]' 
+                                : 'bg-white text-slate-700 rounded-[32px] rounded-bl-[8px] border border-slate-100'
                             }`}>
-                              {msg.text}
+                              {msg.body}
                             </div>
-                            <span className="text-[11px] font-bold text-slate-400 px-2 tracking-wide uppercase">
-                              {msg.time}
-                            </span>
+                            {showTime && (
+                              <span className="text-[9px] font-black text-slate-400 px-4 tracking-[0.2em] uppercase">
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
                           </div>
                         </motion.div>
                       );
@@ -220,37 +314,43 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Chat Input */}
-                <div className="p-6 bg-white border-t border-slate-100 shrink-0">
-                  <form onSubmit={handleSend} className="flex gap-3 relative">
-                    <button aria-label="Attach File" title="Attach" type="button" className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 hover:text-slate-600 transition-colors shrink-0">
-                      <Plus size={20} />
+                <div className="p-8 bg-white border-t border-slate-100 shrink-0">
+                  <form onSubmit={handleSend} className="flex gap-4 relative">
+                    <button type="button" className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 hover:text-slate-600 transition-all shrink-0">
+                      <Plus size={24} />
                     </button>
                     <input
                       type="text"
-                      placeholder="Type a message..."
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-16 pr-4 h-14 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium shadow-sm"
-                      value={message}
-                      onChange={e => setMessage(e.target.value)}
+                      placeholder="Enter a strategic message..."
+                      className="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 pl-20 pr-4 h-16 rounded-[24px] focus:bg-white focus:border-blue-600 focus:ring-8 focus:ring-blue-600/5 outline-none transition-all font-bold shadow-sm"
+                      value={messageText}
+                      onChange={e => setMessageText(e.target.value)}
                     />
                     <button 
-                      aria-label="Send Message"
-                      title="Send"
                       type="submit" 
-                      disabled={!message.trim()} 
-                      className="w-14 h-14 rounded-2xl bg-blue-600 text-white border-none cursor-pointer flex items-center justify-center shadow-md shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none hover:bg-blue-700 transition-all shrink-0"
+                      disabled={!messageText.trim()} 
+                      className="w-16 h-16 rounded-[24px] bg-blue-600 text-white cursor-pointer flex items-center justify-center shadow-2xl shadow-blue-600/30 disabled:opacity-50 disabled:shadow-none hover:bg-blue-700 transition-all active:scale-90 shrink-0"
                     >
-                      <Send size={20} className="ml-1" />
+                      <Send size={24} className="ml-1" />
                     </button>
                   </form>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50">
-                <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center border border-slate-200 shadow-sm mb-6">
-                  <MessageSquare size={40} className="text-slate-300" />
-                </div>
-                <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-2">Select a conversation</h3>
-                <p className="text-slate-500 font-medium">Choose a contact from the sidebar to start messaging.</p>
+              <div className="flex-1 flex flex-col items-center justify-center bg-[#FDFDFD]">
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  className="flex flex-col items-center"
+                >
+                   <div className="w-32 h-32 bg-white rounded-[40px] flex items-center justify-center border border-slate-100 shadow-2xl mb-10 relative">
+                      <div className="absolute inset-0 bg-blue-600/5 rounded-[40px] blur-2xl" />
+                      <Sparkles size={56} className="text-blue-200 relative z-10" />
+                   </div>
+                   <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-4">Initialize Pulse.</h3>
+                   <p className="text-slate-400 font-medium text-lg max-w-xs text-center leading-relaxed">
+                     Select an academic interaction from the sidebar to engage in real-time collaboration.
+                   </p>
+                </motion.div>
               </div>
             )}
           </div>
