@@ -275,13 +275,13 @@ export default function ModulesPage() {
                                   key={item._id} 
                                   className="group flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-200 hover:shadow-md transition-all"
                                 >
-                                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${meta.bg} ${meta.color} ${meta.border}`}>
+                                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${meta.bg} ${meta.text} ${meta.border}`}>
                                     <MetaIcon size={20} />
                                   </div>
                                   
                                   <div className="flex-1 min-w-0">
                                     <h5 className="font-bold text-slate-900 truncate mb-1">{item.title}</h5>
-                                    <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${meta.bg} ${meta.color} ${meta.border}`}>
+                                    <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${meta.bg} ${meta.text} ${meta.border}`}>
                                       {item.type}
                                     </span>
                                   </div>
