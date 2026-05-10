@@ -137,8 +137,9 @@ export default function CourseSettingsPage() {
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Course Title</label>
+                <label htmlFor="settings-title" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Course Title</label>
                 <input 
+                  id="settings-title"
                   type="text" 
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all outline-none font-bold"
                   value={form.title}
@@ -147,8 +148,9 @@ export default function CourseSettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Course Code</label>
+                <label htmlFor="settings-code" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Course Code</label>
                 <input 
+                  id="settings-code"
                   type="text" 
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all outline-none font-bold"
                   value={form.code}
@@ -157,8 +159,9 @@ export default function CourseSettingsPage() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Description</label>
+                <label htmlFor="settings-desc" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Description</label>
                 <textarea 
+                  id="settings-desc"
                   rows={4}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all outline-none font-medium resize-none"
                   value={form.description}
@@ -166,8 +169,9 @@ export default function CourseSettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Semester</label>
+                <label htmlFor="settings-semester" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Semester</label>
                 <select 
+                  id="settings-semester"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 focus:bg-white focus:border-blue-500 transition-all outline-none font-bold appearance-none cursor-pointer"
                   value={form.semester}
                   onChange={e => setForm({...form, semester: e.target.value})}
@@ -178,8 +182,9 @@ export default function CourseSettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Academic Year</label>
+                <label htmlFor="settings-academic-year" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Academic Year</label>
                 <input 
+                  id="settings-academic-year"
                   type="text" 
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all outline-none font-bold"
                   value={form.academicYear}
