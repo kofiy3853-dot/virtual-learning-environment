@@ -1,19 +1,25 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { courseApi } from '@/utils/api/courseApi';
+import CourseShell from '@/components/shared/CourseShell';
 import { Course } from '@/types';
+import CourseIntelligence from '@/components/dashboard/CourseIntelligence';
+import { useAuth } from '@/context/AuthContext';
 import { 
   BookOpen, FileText, FlaskConical, BarChart3, CheckSquare, 
-  MessageSquare, Bell, Video, ChevronRight, GraduationCap,
-  Calendar, Building2, User, Activity
+  MessageSquare, Bell, Video, GraduationCap,
+  Calendar, Building2, User, Activity, ArrowRight,
+  Sparkles, Layers
 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CourseOverviewPage() {
   const params = useParams();
   const courseId = params.courseId as string;
+  const { user, logout } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,112 +31,109 @@ export default function CourseOverviewPage() {
     }
   }, [courseId]);
 
-  const tabs = [
-    { label:'Modules',       href:`/courses/${courseId}/modules`,       icon:BookOpen,      color:'text-blue-600',    bg:'bg-blue-50' },
+  const sections = [
+    { label:'Syllabus',      href:`/courses/${courseId}/modules`,       icon:BookOpen,      color:'text-blue-600',    bg:'bg-blue-50' },
     { label:'Assignments',   href:`/courses/${courseId}/assignments`,    icon:FileText,      color:'text-indigo-600',  bg:'bg-indigo-50' },
-    { label:'Quizzes',       href:`/courses/${courseId}/quizzes`,        icon:FlaskConical,  color:'text-purple-600',  bg:'bg-purple-50' },
-    { label:'Grades',        href:`/courses/${courseId}/grades`,         icon:BarChart3,     color:'text-emerald-600', bg:'bg-emerald-50' },
+    { label:'Assessments',   href:`/courses/${courseId}/quizzes`,        icon:FlaskConical,  color:'text-purple-600',  bg:'bg-purple-50' },
+    { label:'Academic Hub',  href:`/courses/${courseId}/grades`,         icon:BarChart3,     color:'text-emerald-600', bg:'bg-emerald-50' },
     { label:'Attendance',    href:`/courses/${courseId}/attendance`,     icon:CheckSquare,   color:'text-teal-600',    bg:'bg-teal-50' },
-    { label:'Discussions',   href:`/courses/${courseId}/discussions`,    icon:MessageSquare, color:'text-amber-600',   bg:'bg-amber-50' },
-    { label:'Announcements', href:`/courses/${courseId}/announcements`,  icon:Bell,          color:'text-rose-600',    bg:'bg-rose-50' },
-    { label:'Live Sessions', href:`/courses/${courseId}/live`,           icon:Video,         color:'text-red-600',     bg:'bg-red-50' },
+    { label:'Communications', href:`/courses/${courseId}/announcements`,  icon:Bell,          color:'text-rose-600',    bg:'bg-rose-50' },
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
-      {/* Left — Quick Links Grid */}
-      <div className="flex-1 order-2 lg:order-1">
-        <h2 className="text-xl font-extrabold text-slate-900 mb-6">Course Sections</h2>
+    <CourseShell course={course} courseId={courseId} user={user} logout={logout}>
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-10">
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-          {tabs.map((tab, idx) => (
-            <motion.div 
-              key={tab.href}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-            >
-              <Link href={tab.href} className="group block relative overflow-hidden rounded-[24px] bg-white border border-slate-200 p-6 hover:border-blue-300 transition-all shadow-sm hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1 h-full">
-                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ChevronRight size={20} className="text-blue-500" />
-                </div>
-                
-                <div className={`w-14 h-14 rounded-2xl ${tab.bg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500`}>
-                  <tab.icon size={26} className={tab.color} />
-                </div>
-                
-                <h3 className="text-lg font-extrabold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
-                  {tab.label}
-                </h3>
-                <p className="text-sm font-medium text-slate-500">
-                  Access section tools
-                </p>
+        {/* Intelligence Header */}
+        <header className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
+           <div className="flex-1">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-3 text-blue-600 text-[10px] font-black uppercase tracking-[0.3em] mb-4"
+              >
+                <Sparkles size={14} />
+                Intelligent Workspace Active
+              </motion.div>
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                className="text-5xl lg:text-6xl font-black text-slate-900 tracking-tighter leading-none mb-6"
+              >
+                Course <span className="text-blue-600 text-shadow-sm">Intelligence.</span>
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                className="text-slate-500 text-lg font-medium max-w-xl leading-relaxed"
+              >
+                Welcome to your command center. Monitor performance, engage with students, and manage your curriculum with world-class precision.
+              </motion.p>
+           </div>
+           
+           <div className="flex gap-4">
+              <Link href={`/courses/${courseId}/modules`} className="flex items-center gap-3 px-8 h-16 rounded-2xl bg-white border-2 border-slate-100 text-slate-600 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                 <Layers size={18} /> Manage Content
               </Link>
-            </motion.div>
-          ))}
+              <Link href={`/courses/${courseId}/announcements`} className="flex items-center gap-3 px-8 h-16 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95">
+                 <Bell size={18} /> Broadcast
+              </Link>
+           </div>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+           
+           {/* Left Column: Analytics & Sentinel */}
+           <div className="lg:col-span-9 space-y-12">
+              <CourseIntelligence />
+           </div>
+
+           {/* Right Column: Section Navigation */}
+           <div className="lg:col-span-3">
+              <div className="sticky top-12 space-y-8">
+                 <div>
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 px-2">Navigation</h3>
+                    <div className="space-y-3">
+                       {sections.map((section, idx) => (
+                          <motion.div
+                            key={section.href}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                          >
+                             <Link 
+                               href={section.href}
+                               className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all group"
+                             >
+                                <div className="flex items-center gap-4">
+                                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${section.bg} ${section.color}`}>
+                                      <section.icon size={18} />
+                                   </div>
+                                   <span className="text-sm font-black text-slate-700 group-hover:text-blue-600 transition-colors">{section.label}</span>
+                                </div>
+                                <ArrowRight size={14} className="text-slate-200 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                             </Link>
+                          </motion.div>
+                       ))}
+                    </div>
+                 </div>
+
+                 {/* System Health Card */}
+                 <div className="bg-slate-900 rounded-[32px] p-8 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">Workspace Health</h4>
+                    <div className="space-y-4">
+                       <div className="flex items-center justify-between text-xs font-bold">
+                          <span className="opacity-60">Sync Status</span>
+                          <span className="text-emerald-400">Optimal</span>
+                       </div>
+                       <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full w-[94%] bg-blue-500 rounded-full" />
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
         </div>
       </div>
-
-      {/* Right — Course Info Sidebar */}
-      <div className="w-full lg:w-80 xl:w-96 shrink-0 order-1 lg:order-2">
-        <h2 className="text-xl font-extrabold text-slate-900 mb-6">Course Details</h2>
-        
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-hidden"
-        >
-          {/* Header Banner */}
-          <div className="h-24 bg-gradient-to-br from-blue-600 to-indigo-700 relative">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-            {course && (
-              <div className="absolute -bottom-8 left-6 w-16 h-16 rounded-2xl bg-white border-4 border-slate-50 flex items-center justify-center shadow-md">
-                <GraduationCap size={28} className="text-blue-600" />
-              </div>
-            )}
-          </div>
-
-          <div className="pt-12 p-6">
-            {loading ? (
-              <div className="space-y-4">
-                {[1,2,3,4].map(i => <div key={i} className="h-10 bg-slate-100 rounded-xl animate-pulse" />)}
-              </div>
-            ) : course ? (
-              <div className="space-y-1">
-                {[
-                  { icon: BookOpen,   label: 'Course Code',   value: course.code },
-                  { icon: Calendar,   label: 'Semester',      value: course.semester },
-                  { icon: Activity,   label: 'Academic Year', value: course.academicYear },
-                  { icon: Building2,  label: 'Department',    value: (course.teacher as any)?.department || 'N/A' },
-                  { icon: User,       label: 'Instructor',    value: (course.teacher as any)?.name || 'TBA' },
-                ].map((row, i) => (
-                  <div key={row.label} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
-                    <div className="flex items-center gap-3">
-                      <row.icon size={16} className="text-slate-400" />
-                      <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">{row.label}</span>
-                    </div>
-                    <span className="text-sm font-extrabold text-slate-900 text-right">{row.value}</span>
-                  </div>
-                ))}
-                
-                <div className="mt-6 pt-4 border-t border-slate-100">
-                  <span className={`inline-flex items-center justify-center w-full px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest ${
-                    course.status === 'active' 
-                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                      : 'bg-amber-50 text-amber-600 border border-amber-100'
-                  }`}>
-                    {course.status}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-slate-500 font-medium">Course data unavailable.</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      </div>
-    </div>
+    </CourseShell>
   );
 }
