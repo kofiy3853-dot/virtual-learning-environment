@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Token is HttpOnly, but is also returned in the login response body.
       // We detect impersonation from the user object's flag if available.
-      const token = (user as any)?._impersonationToken;
+      const token = (user as User & { _impersonationToken?: string })?._impersonationToken;
       if (!token) return false;
       const decoded = jwtDecode<{ isImpersonation?: boolean }>(token);
       return decoded.isImpersonation === true;
