@@ -120,8 +120,9 @@ export default function NewCoursePage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Course Title</label>
+                  <label htmlFor="course-title" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Course Title</label>
                   <input 
+                    id="course-title"
                     type="text" 
                     placeholder="e.g. Advanced Quantum Mechanics"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all outline-none font-bold"
@@ -131,10 +132,11 @@ export default function NewCoursePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Course Code</label>
+                  <label htmlFor="course-code" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Course Code</label>
                   <input 
+                    id="course-code"
                     type="text" 
-                    placeholder="e.g. PHY402"
+                    placeholder="e.g. PHYS402"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all outline-none font-bold"
                     value={form.code}
                     onChange={e => setForm({...form, code: e.target.value})}
@@ -142,8 +144,9 @@ export default function NewCoursePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Academic Year</label>
+                  <label htmlFor="academic-year" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Academic Year</label>
                   <input 
+                    id="academic-year"
                     type="text" 
                     placeholder="2025/2026"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all outline-none font-bold"
@@ -153,8 +156,9 @@ export default function NewCoursePage() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Description</label>
+                  <label htmlFor="course-desc" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Description</label>
                   <textarea 
+                    id="course-desc"
                     rows={4}
                     placeholder="Describe the learning objectives and course scope..."
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-8 focus:ring-blue-500/5 transition-all outline-none font-medium resize-none"
@@ -173,8 +177,9 @@ export default function NewCoursePage() {
               </div>
               
               <div className="relative">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Assign Instructor</label>
+                <label htmlFor="teacher-assignment" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Assign Instructor</label>
                 <select 
+                  id="teacher-assignment"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 focus:bg-white focus:border-blue-500 transition-all outline-none font-bold appearance-none cursor-pointer"
                   value={form.teacher}
                   onChange={e => setForm({...form, teacher: e.target.value})}
