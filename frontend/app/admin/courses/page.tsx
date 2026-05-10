@@ -1,9 +1,15 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { adminApi } from '@/utils/api/adminApi';
 import { AxiosError } from 'axios';
+import Sidebar from '@/components/shared/Sidebar';
+import { 
+  BookOpen, Search, Filter, Trash2, Archive, ArchiveRestore, 
+  UserCog, AlertTriangle, CheckCircle2, X
+} from 'lucide-react';
 
 interface Course {
   _id: string;
@@ -27,42 +33,14 @@ interface ConfirmState {
   course: Course;
 }
 
-interface ToastState {
-  msg: string;
-  type: string;
-}
-
-const S: Record<string, React.CSSProperties> = {
-  wrap:       { display:'flex', minHeight:'100vh', backgroundColor:'#f8fafc', fontFamily:"'Sora','Inter',sans-serif" },
-  sidebar:    { width:240, backgroundColor:'#fff', borderRight:'1px solid #e2e8f0', display:'flex', flexDirection:'column', flexShrink:0 },
-  logoBox:    { padding:'20px 16px 16px', borderBottom:'1px solid #f1f5f9' },
-  logoInner:  { display:'flex', alignItems:'center', gap:10 },
-  logoIcon:   { width:34, height:34, borderRadius:10, backgroundColor:'#4f46e5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-  nav:        { flex:1, padding:'10px', display:'flex', flexDirection:'column', gap:2 },
-  link:       { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#475569', textDecoration:'none', border:'none', background:'transparent', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  linkActive: { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#4338ca', textDecoration:'none', background:'#eef2ff', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  main:       { flex:1, overflowY:'auto', padding:'40px' },
-  input:      { padding:'9px 14px', borderRadius:10, border:'1px solid #e2e8f0', backgroundColor:'#fff', color:'#0f172a', fontSize:14, fontFamily:"'Sora','Inter',sans-serif", outline:'none' },
-  btn:        { display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:10, fontSize:13, fontWeight:500, border:'none', cursor:'pointer', fontFamily:"'Sora','Inter',sans-serif", transition:'all 0.15s' },
-};
-
-const navItems = [
-  { href:'/dashboard/admin', label:'Dashboard',    icon:'📊' },
-  { href:'/admin/users',     label:'Users',         icon:'👥' },
-  { href:'/admin/courses',   label:'Courses',       icon:'📚', active:true },
-  { href:'/admin/analytics', label:'Analytics',     icon:'📈' },
-  { href:'/admin/logs',      label:'Activity Logs', icon:'📋' },
-  { href:'/profile',         label:'Profile',       icon:'👤' },
-];
-
-const statusColor: Record<string, {bg: string, color: string}> = {
-  active:   { bg:'#d1fae5', color:'#065f46' },
-  draft:    { bg:'#fef3c7', color:'#92400e' },
-  archived: { bg:'#f1f5f9', color:'#475569' },
+const statusColor: Record<string, {bg: string, text: string, border: string}> = {
+  active:   { bg:'bg-emerald-50', text:'text-emerald-700', border:'border-emerald-200' },
+  draft:    { bg:'bg-amber-50',   text:'text-amber-700',   border:'border-amber-200' },
+  archived: { bg:'bg-slate-100',  text:'text-slate-600',   border:'border-slate-200' },
 };
 
 export default function AdminCoursesPage() {
-  const { user, logout }      = useAuth();
+  const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +52,7 @@ export default function AdminCoursesPage() {
   const [reassignModal, setReassignModal] = useState<Course | null>(null);
   const [newTeacherId, setNewTeacherId]   = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [toast, setToast]     = useState<ToastState | null>(null);
+  const [toast, setToast]     = useState<{msg: string, type: string} | null>(null);
 
   const showToast = (msg: string, type: string = 'success') => {
     setToast({ msg, type });
@@ -106,9 +84,8 @@ export default function AdminCoursesPage() {
       await adminApi.changeCourseStatus(course._id, newStatus);
       setCourses(p => p.map(c => c._id === course._id ? { ...c, status: newStatus } : c));
       showToast(`Course ${newStatus === 'archived' ? 'archived' : 'reactivated'} successfully.`);
-    } catch (e: unknown) {
-      const err = e as AxiosError<{message: string}>;
-      showToast(err.response?.data?.message || 'Action failed.', 'error');
+    } catch (e: any) {
+      showToast(e.response?.data?.message || 'Action failed.', 'error');
     } finally { setActionLoading(null); setConfirm(null); }
   };
 
@@ -118,9 +95,8 @@ export default function AdminCoursesPage() {
       await adminApi.deleteCourse(course._id);
       setCourses(p => p.filter(c => c._id !== course._id));
       showToast('Course and all related data deleted.');
-    } catch (e: unknown) {
-      const err = e as AxiosError<{message: string}>;
-      showToast(err.response?.data?.message || 'Delete failed.', 'error');
+    } catch (e: any) {
+      showToast(e.response?.data?.message || 'Delete failed.', 'error');
     } finally { setActionLoading(null); setConfirm(null); }
   };
 
@@ -133,192 +109,275 @@ export default function AdminCoursesPage() {
       setCourses(p => p.map(c => c._id === reassignModal._id ? { ...c, teacher: teacher as any } : c));
       showToast('Teacher reassigned successfully.');
       setReassignModal(null); setNewTeacherId('');
-    } catch (e: unknown) {
-      const err = e as AxiosError<{message: string}>;
-      showToast(err.response?.data?.message || 'Reassignment failed.', 'error');
+    } catch (e: any) {
+      showToast(e.response?.data?.message || 'Reassignment failed.', 'error');
     } finally { setActionLoading(null); }
   };
 
   return (
-    <div style={S.wrap}>
-      {/* Toast */}
-      {toast && (
-        <div style={{ position:'fixed', top:24, right:24, zIndex:9999, padding:'12px 20px', borderRadius:12, backgroundColor: toast.type==='error'?'#fee2e2':'#d1fae5', color: toast.type==='error'?'#991b1b':'#065f46', fontSize:14, fontWeight:500, boxShadow:'0 4px 12px rgb(0 0 0/0.15)' }}>
-          {toast.msg}
-        </div>
-      )}
+    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+      
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: -20, x: '-50%' }}
+            className={`fixed top-8 left-1/2 z-50 px-6 py-3 rounded-full font-bold shadow-xl border flex items-center gap-2 ${
+              toast.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            }`}
+          >
+            {toast.type === 'error' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Confirm dialog */}
-      {confirm && (
-        <div style={{ position:'fixed', inset:0, backgroundColor:'rgb(0 0 0/0.4)', zIndex:9998, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div style={{ backgroundColor:'#fff', borderRadius:20, padding:32, maxWidth:420, width:'90%', boxShadow:'0 25px 50px rgb(0 0 0/0.25)' }}>
-            <div style={{ width:48, height:48, borderRadius:14, backgroundColor:'#fee2e2', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, marginBottom:16 }}>⚠️</div>
-            <h3 style={{ fontSize:16, fontWeight:700, color:'#0f172a', margin:'0 0 8px' }}>
-              {confirm.type === 'delete' ? 'Delete Course' : confirm.type === 'archive' ? 'Archive Course' : 'Reactivate Course'}
-            </h3>
-            <p style={{ fontSize:14, color:'#64748b', margin:'0 0 24px', lineHeight:1.6 }}>
-              {confirm.type === 'delete'
-                ? `This will permanently delete "${confirm.course.title}" and ALL related data — modules, content, assignments, submissions, grades, quizzes. This cannot be undone.`
-                : confirm.type === 'archive'
-                ? `"${confirm.course.title}" will be archived and hidden from students.`
-                : `"${confirm.course.title}" will be reactivated and visible to students.`}
-            </p>
-            <div style={{ display:'flex', gap:10 }}>
-              <button onClick={() => setConfirm(null)} style={{ ...S.btn, flex:1, backgroundColor:'#f1f5f9', color:'#334155', justifyContent:'center' }}>Cancel</button>
-              <button onClick={() => confirm.type === 'delete' ? handleDelete(confirm.course) : handleStatusChange(confirm.course, confirm.type === 'archive' ? 'archived' : 'active')}
-                style={{ ...S.btn, flex:1, backgroundColor: confirm.type === 'reactivate' ? '#4f46e5' : '#ef4444', color:'#fff', justifyContent:'center' }}>
-                {confirm.type === 'delete' ? 'Delete' : confirm.type === 'archive' ? 'Archive' : 'Reactivate'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reassign teacher modal */}
-      {reassignModal && (
-        <div style={{ position:'fixed', inset:0, backgroundColor:'rgb(0 0 0/0.4)', zIndex:9998, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div style={{ backgroundColor:'#fff', borderRadius:20, padding:32, maxWidth:440, width:'90%', boxShadow:'0 25px 50px rgb(0 0 0/0.25)' }}>
-            <h3 style={{ fontSize:16, fontWeight:700, color:'#0f172a', margin:'0 0 4px' }}>Reassign Teacher</h3>
-            <p style={{ fontSize:13, color:'#64748b', margin:'0 0 20px' }}>Course: <strong>{reassignModal.title}</strong></p>
-            <label htmlFor="reassign-teacher" style={{ display:'block', fontSize:13, fontWeight:500, color:'#334155', marginBottom:8 }}>Select new teacher</label>
-            <select id="reassign-teacher" style={{ ...S.input, width:'100%', marginBottom:20 }} value={newTeacherId} onChange={e => setNewTeacherId(e.target.value)}>
-              <option value="">— Choose a teacher —</option>
-              {teachers.map(t => <option key={t._id} value={t._id}>{t.name} ({t.email})</option>)}
-            </select>
-            <div style={{ display:'flex', gap:10 }}>
-              <button onClick={() => { setReassignModal(null); setNewTeacherId(''); }} style={{ ...S.btn, flex:1, backgroundColor:'#f1f5f9', color:'#334155', justifyContent:'center' }}>Cancel</button>
-              <button onClick={handleReassign} disabled={!newTeacherId || !!actionLoading} style={{ ...S.btn, flex:1, backgroundColor:'#4f46e5', color:'#fff', justifyContent:'center', opacity: !newTeacherId ? 0.5 : 1 }}>
-                {actionLoading ? 'Saving...' : 'Reassign'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sidebar */}
-      <aside style={S.sidebar}>
-        <div style={S.logoBox}>
-          <div style={S.logoInner}>
-            <div style={S.logoIcon}>
-              <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-              </svg>
-            </div>
-            <span style={{ fontWeight:700, fontSize:16, color:'#0f172a' }}>UniLearn</span>
-          </div>
-        </div>
-        <div style={{ padding:'12px 16px', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'#e0e7ff', display:'flex', alignItems:'center', justifyContent:'center', color:'#4338ca', fontWeight:700, fontSize:14, flexShrink:0 }}>{user?.name?.charAt(0)?.toUpperCase()||'A'}</div>
-          <div style={{ minWidth:0 }}>
-            <p style={{ fontSize:13, fontWeight:600, color:'#0f172a', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.name||'Admin'}</p>
-            <span style={{ fontSize:11, fontWeight:500, backgroundColor:'#e0e7ff', color:'#4338ca', padding:'1px 8px', borderRadius:9999 }}>admin</span>
-          </div>
-        </div>
-        <nav style={S.nav}>
-          {navItems.map(item => (
-            <Link key={item.href} href={item.href} style={item.active ? S.linkActive : S.link}>
-              <span style={{ fontSize:16 }}>{item.icon}</span><span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div style={{ padding:'10px', borderTop:'1px solid #f1f5f9' }}>
-          <button onClick={logout} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#ef4444', background:'transparent', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" }}>
-            <span style={{ fontSize:16 }}>🚪</span><span>Sign out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <main style={S.main}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:32 }}>
-          <div>
-            <h1 style={{ fontSize:24, fontWeight:700, color:'#0f172a', letterSpacing:'-0.025em', margin:0 }}>Course Management</h1>
-            <p style={{ fontSize:14, color:'#64748b', marginTop:4 }}>Manage all courses — reassign teachers, archive, or delete.</p>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div style={{ backgroundColor:'#fff', borderRadius:16, border:'1px solid #e2e8f0', padding:'16px 20px', marginBottom:16, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-          <label htmlFor="search-input" className="sr-only">Search</label>
-          <input id="search-input" style={{ ...S.input, flex:1, minWidth:200 }} placeholder="🔍  Search by title or code..."
-            value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
-          <label htmlFor="status-filter" className="sr-only">Status Filter</label>
-          <select id="status-filter" style={{ ...S.input, minWidth:150 }} value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="draft">Draft</option>
-            <option value="archived">Archived</option>
-          </select>
-          {(search || statusFilter !== 'all') && (
-            <button onClick={() => { setSearch(''); setStatusFilter('all'); setPage(1); }} style={{ ...S.btn, backgroundColor:'#fee2e2', color:'#991b1b' }}>✕ Clear</button>
-          )}
-        </div>
-
-        {/* Table */}
-        <div style={{ backgroundColor:'#fff', borderRadius:16, border:'1px solid #e2e8f0', overflow:'hidden' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'2.5fr 1.5fr 1fr 1fr 1fr', padding:'10px 20px', backgroundColor:'#f8fafc', borderBottom:'1px solid #e2e8f0' }}>
-            {['Course','Teacher','Status','Students','Actions'].map(h => (
-              <span key={h} style={{ fontSize:11, fontWeight:600, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.05em' }}>{h}</span>
-            ))}
-          </div>
-          {loading ? (
-            <div style={{ padding:40, textAlign:'center', color:'#94a3b8', fontSize:14 }}>Loading courses...</div>
-          ) : courses.length === 0 ? (
-            <div style={{ padding:'48px 24px', textAlign:'center' }}>
-              <p style={{ fontSize:32, margin:'0 0 12px' }}>📚</p>
-              <p style={{ fontSize:15, fontWeight:600, color:'#334155', margin:'0 0 4px' }}>No courses found</p>
-              <p style={{ fontSize:13, color:'#94a3b8' }}>Try adjusting your filters.</p>
-            </div>
-          ) : courses.map((course, idx) => {
-            const sc = statusColor[course.status] || statusColor.archived;
-            return (
-              <div key={course._id} style={{ display:'grid', gridTemplateColumns:'2.5fr 1.5fr 1fr 1fr 1fr', padding:'14px 20px', alignItems:'center', borderBottom: idx===courses.length-1?'none':'1px solid #f1f5f9' }}>
-                <div>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
-                    <span style={{ fontSize:11, fontWeight:600, backgroundColor:'#e0e7ff', color:'#4338ca', padding:'2px 8px', borderRadius:9999 }}>{course.code}</span>
-                  </div>
-                  <Link href={`/admin/courses/${course._id}`} style={{ textDecoration:'none' }}>
-                    <p style={{ fontSize:14, fontWeight:600, color:'#4f46e5', margin:'4px 0 2px', cursor:'pointer' }}>{course.title}</p>
-                  </Link>
-                  <p style={{ fontSize:12, color:'#94a3b8', margin:0 }}>{course.semester} · {course.academicYear}</p>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <div style={{ width:30, height:30, borderRadius:8, backgroundColor:'#faf5ff', display:'flex', alignItems:'center', justifyContent:'center', color:'#7c3aed', fontWeight:700, fontSize:12, flexShrink:0 }}>
-                    {typeof course.teacher === 'object' && course.teacher?.name ? course.teacher.name.charAt(0).toUpperCase() : '?'}
-                  </div>
-                  <p style={{ fontSize:13, color:'#334155', margin:0 }}>{typeof course.teacher === 'object' ? course.teacher?.name : '—'}</p>
-                </div>
-                <div>
-                  <span style={{ fontSize:12, fontWeight:500, backgroundColor: sc.bg, color: sc.color, padding:'3px 10px', borderRadius:9999 }}>{course.status}</span>
-                </div>
-                <div style={{ fontSize:13, color:'#64748b' }}>{course.enrollmentCount ?? '—'}</div>
-                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <button onClick={() => setReassignModal(course)} title="Reassign teacher" aria-label="Reassign teacher"
-                    style={{ padding:'5px 10px', borderRadius:8, backgroundColor:'#eef2ff', color:'#4338ca', border:'none', cursor:'pointer', fontSize:12, fontWeight:500, fontFamily:"'Sora','Inter',sans-serif" }}>👨🏫</button>
-                  {course.status !== 'archived' ? (
-                    <button onClick={() => setConfirm({ type:'archive', course })} title="Archive" aria-label="Archive"
-                      style={{ padding:'5px 10px', borderRadius:8, backgroundColor:'#fef3c7', color:'#92400e', border:'none', cursor:'pointer', fontSize:12, fontFamily:"'Sora','Inter',sans-serif" }}>📦</button>
-                  ) : (
-                    <button onClick={() => setConfirm({ type:'reactivate', course })} title="Reactivate" aria-label="Reactivate"
-                      style={{ padding:'5px 10px', borderRadius:8, backgroundColor:'#d1fae5', color:'#065f46', border:'none', cursor:'pointer', fontSize:12, fontFamily:"'Sora','Inter',sans-serif" }}>✅</button>
-                  )}
-                  <button onClick={() => setConfirm({ type:'delete', course })} title="Delete" aria-label="Delete"
-                    style={{ padding:'5px 10px', borderRadius:8, backgroundColor:'#fee2e2', color:'#991b1b', border:'none', cursor:'pointer', fontSize:12, fontFamily:"'Sora','Inter',sans-serif" }}>🗑️</button>
-                </div>
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirm && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl border border-slate-200"
+            >
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 border ${
+                confirm.type === 'delete' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+              }`}>
+                {confirm.type === 'delete' ? <AlertTriangle size={32} /> : <Archive size={32} />}
               </div>
-            );
-          })}
-        </div>
-
-        {totalPages > 1 && (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:16 }}>
-            <p style={{ fontSize:13, color:'#64748b' }}>Page {page} of {totalPages}</p>
-            <div style={{ display:'flex', gap:8 }}>
-              <button onClick={() => setPage(p=>Math.max(1,p-1))} disabled={page===1} style={{ ...S.btn, backgroundColor:'#fff', border:'1px solid #e2e8f0', color:'#334155', opacity:page===1?0.4:1 }}>← Previous</button>
-              <button onClick={() => setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages} style={{ ...S.btn, backgroundColor:'#4f46e5', color:'#fff', opacity:page===totalPages?0.4:1 }}>Next →</button>
-            </div>
+              <h3 className="text-2xl font-extrabold text-slate-900 mb-2">
+                {confirm.type === 'delete' ? 'Delete Course' : confirm.type === 'archive' ? 'Archive Course' : 'Reactivate Course'}
+              </h3>
+              <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+                {confirm.type === 'delete'
+                  ? `This will permanently delete "${confirm.course.title}" and ALL related data — modules, assignments, grades. This cannot be undone.`
+                  : confirm.type === 'archive'
+                  ? `"${confirm.course.title}" will be archived and hidden from students.`
+                  : `"${confirm.course.title}" will be reactivated and visible to students.`}
+              </p>
+              <div className="flex gap-4">
+                <button onClick={() => setConfirm(null)} className="flex-1 h-12 rounded-xl bg-slate-50 text-slate-700 font-bold hover:bg-slate-100 border border-slate-200 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={() => confirm.type === 'delete' ? handleDelete(confirm.course) : handleStatusChange(confirm.course, confirm.type === 'archive' ? 'archived' : 'active')}
+                  className={`flex-1 h-12 rounded-xl text-white font-bold shadow-md transition-transform hover:-translate-y-0.5 ${
+                    confirm.type === 'delete' ? 'bg-rose-600 shadow-rose-600/20 hover:bg-rose-700' : 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-700'
+                  }`}>
+                  {confirm.type === 'delete' ? 'Delete' : confirm.type === 'archive' ? 'Archive' : 'Reactivate'}
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* Reassign Teacher Modal */}
+      <AnimatePresence>
+        {reassignModal && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl border border-slate-200"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-6 border border-indigo-100">
+                <UserCog size={32} />
+              </div>
+              <h3 className="text-2xl font-extrabold text-slate-900 mb-2">Reassign Teacher</h3>
+              <p className="text-slate-500 font-medium mb-6">Assigning teacher for <span className="text-slate-900 font-bold">{reassignModal.title}</span></p>
+              
+              <div className="mb-8 relative">
+                <select 
+                  className="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-900 px-4 h-14 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold cursor-pointer"
+                  value={newTeacherId} onChange={e => setNewTeacherId(e.target.value)}
+                >
+                  <option value="" disabled>Choose a new teacher...</option>
+                  {teachers.map(t => <option key={t._id} value={t._id}>{t.name} ({t.email})</option>)}
+                </select>
+                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">▼</div>
+              </div>
+
+              <div className="flex gap-4">
+                <button onClick={() => { setReassignModal(null); setNewTeacherId(''); }} className="flex-1 h-12 rounded-xl bg-slate-50 text-slate-700 font-bold hover:bg-slate-100 border border-slate-200 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={handleReassign} disabled={!newTeacherId || !!actionLoading} 
+                  className="flex-1 h-12 rounded-xl text-white font-bold bg-blue-600 shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none disabled:transform-none disabled:cursor-not-allowed">
+                  {actionLoading ? 'Saving...' : 'Reassign'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <Sidebar />
+
+      <main className="flex-1 overflow-y-auto p-8 lg:p-12 scroll-smooth">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
+            <div>
+              <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">Course Management</h1>
+              <p className="text-slate-500 font-medium">Manage all academic courses — reassign teachers, archive, or delete entirely.</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm">
+              <BookOpen size={24} />
+            </div>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="bg-white rounded-[24px] border border-slate-200 p-4 mb-6 flex flex-col md:flex-row items-center gap-4 shadow-sm">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-12 pr-4 h-12 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-sm"
+                placeholder="Search by course title or code..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+              />
+            </div>
+            
+            <div className="flex w-full md:w-auto items-center gap-4">
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <select 
+                  className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 pl-10 pr-10 h-12 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-sm cursor-pointer min-w-[150px]"
+                  value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="active">Active</option>
+                  <option value="draft">Draft</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+
+              {(search || statusFilter !== 'all') && (
+                <button onClick={() => { setSearch(''); setStatusFilter('all'); setPage(1); }}
+                  className="h-12 px-4 rounded-xl bg-rose-50 text-rose-600 font-bold hover:bg-rose-100 transition-colors flex items-center gap-2">
+                  <X size={16} /> Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Table Container */}
+          <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[900px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest w-[35%]">Course Details</th>
+                    <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest w-[20%]">Teacher</th>
+                    <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest w-[15%]">Status</th>
+                    <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest w-[10%]">Students</th>
+                    <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest w-[20%] text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-20 text-center">
+                        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                        <p className="text-slate-500 font-medium">Loading courses...</p>
+                      </td>
+                    </tr>
+                  ) : courses.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-20 text-center">
+                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                          <BookOpen size={24} className="text-slate-400" />
+                        </div>
+                        <p className="text-lg font-extrabold text-slate-900 mb-1">No courses found</p>
+                        <p className="text-sm font-medium text-slate-500">Try adjusting your search or filters.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    courses.map((course, idx) => {
+                      const sc = statusColor[course.status] || statusColor.archived;
+
+                      return (
+                        <motion.tr key={course._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(idx * 0.05, 0.5) }} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="px-6 py-4">
+                            <div>
+                              <span className="inline-block px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[10px] font-bold tracking-wider uppercase mb-1">
+                                {course.code}
+                              </span>
+                              <p className="font-extrabold text-slate-900 truncate mb-1">
+                                {course.title}
+                              </p>
+                              <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+                                {course.semester} · {course.academicYear}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 border border-purple-100 flex items-center justify-center font-bold text-xs shrink-0">
+                                {typeof course.teacher === 'object' && course.teacher?.name ? course.teacher.name.charAt(0).toUpperCase() : '?'}
+                              </div>
+                              <p className="text-sm font-bold text-slate-700 truncate">
+                                {typeof course.teacher === 'object' ? course.teacher?.name : 'Unassigned'}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${sc.bg} ${sc.text} ${sc.border}`}>
+                              {course.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-bold text-slate-500">{course.enrollmentCount ?? '—'}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => setReassignModal(course)} title="Reassign teacher"
+                                className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">
+                                <UserCog size={16} />
+                              </button>
+                              {course.status !== 'archived' ? (
+                                <button onClick={() => setConfirm({ type:'archive', course })} title="Archive course"
+                                  className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-colors">
+                                  <Archive size={16} />
+                                </button>
+                              ) : (
+                                <button onClick={() => setConfirm({ type:'reactivate', course })} title="Reactivate course"
+                                  className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors">
+                                  <ArchiveRestore size={16} />
+                                </button>
+                              )}
+                              <button onClick={() => setConfirm({ type:'delete', course })} title="Delete course"
+                                className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-colors">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Pagination inside table container */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Page {page} of {totalPages}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}
+                    className="h-9 px-4 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    Previous
+                  </button>
+                  <button onClick={() => setPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}
+                    className="h-9 px-4 rounded-lg bg-slate-900 border border-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-slate-900/10">
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );
