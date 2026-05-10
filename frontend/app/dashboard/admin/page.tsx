@@ -1,8 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { adminApi } from '@/utils/api/adminApi';
+import { 
+  LayoutDashboard, Users, BookOpen, BarChart3, Activity, 
+  User as UserIcon, LogOut, GraduationCap, Calendar, Shield, 
+  ChevronRight, Search, Plus, Bell
+} from 'lucide-react';
 
 interface DashboardStats {
   totalUsers: number;
@@ -14,67 +20,10 @@ interface DashboardStats {
   [key: string]: number | undefined;
 }
 
-const S: Record<string, React.CSSProperties> = {
-  wrap:       { display:'flex', minHeight:'100vh', backgroundColor:'#f8fafc', fontFamily:"'Sora', 'Inter', sans-serif" },
-  sidebar:    { width:240, backgroundColor:'#fff', borderRight:'1px solid #e2e8f0', display:'flex', flexDirection:'column', flexShrink:0 },
-  sidebarTop: { padding:'20px 16px 16px', borderBottom:'1px solid #f1f5f9' },
-  logo:       { display:'flex', alignItems:'center', gap:10 },
-  logoBox:    { width:34, height:34, borderRadius:10, backgroundColor:'#4f46e5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-  logoText:   { fontWeight:700, fontSize:16, color:'#0f172a' },
-  userCard:   { padding:'12px 16px', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', gap:10 },
-  avatar:     { width:36, height:36, borderRadius:10, backgroundColor:'#e0e7ff', display:'flex', alignItems:'center', justifyContent:'center', color:'#4338ca', fontWeight:700, fontSize:14, flexShrink:0 },
-  nav:        { flex:1, padding:'10px 10px', display:'flex', flexDirection:'column', gap:2 },
-  navLink:    { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#475569', textDecoration:'none', transition:'all 0.15s', border:'none', background:'transparent', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  navLinkActive:{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#4338ca', textDecoration:'none', background:'#eef2ff', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  main:       { flex:1, overflowY:'auto', padding:'40px 40px' },
-  header:     { display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:32 },
-  h1:         { fontSize:24, fontWeight:700, color:'#0f172a', letterSpacing:'-0.025em', margin:0 },
-  subtitle:   { fontSize:14, color:'#64748b', marginTop:4 },
-  grid3:      { display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:16, marginBottom:32 },
-  grid4:      { display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:16 },
-  statCard:   { backgroundColor:'#fff', borderRadius:16, border:'1px solid #e2e8f0', boxShadow:'0 1px 3px rgb(0 0 0/0.07)', padding:24, display:'flex', alignItems:'center', gap:16, textDecoration:'none', transition:'all 0.2s', cursor:'pointer' },
-  statIcon:   { width:48, height:48, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:20 },
-  statVal:    { fontSize:28, fontWeight:700, color:'#0f172a', letterSpacing:'-0.02em', lineHeight:1 },
-  statLabel:  { fontSize:13, color:'#64748b', marginTop:4 },
-  actionCard: { backgroundColor:'#fff', borderRadius:16, border:'1px solid #e2e8f0', boxShadow:'0 1px 3px rgb(0 0 0/0.07)', padding:24, textDecoration:'none', transition:'all 0.2s', cursor:'pointer', display:'block' },
-  actionIcon: { width:44, height:44, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14, fontSize:20 },
-  sectionTitle:{ fontSize:16, fontWeight:600, color:'#0f172a', marginBottom:16, marginTop:0 },
-  badge:      { display:'inline-flex', alignItems:'center', padding:'2px 10px', borderRadius:9999, fontSize:12, fontWeight:500, backgroundColor:'#e0e7ff', color:'#4338ca' },
-  skeletonCard:{ backgroundColor:'#f1f5f9', borderRadius:16, height:96, animation:'pulse 2s infinite' },
-  logoutBtn:  { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#ef4444', background:'transparent', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif", marginTop:'auto' },
-};
-
-const navItems = [
-  { href:'/dashboard/admin', label:'Dashboard',     icon:'📊', active:true },
-  { href:'/admin/users',     label:'Users',          icon:'👥' },
-  { href:'/admin/courses',   label:'Courses',        icon:'📚' },
-  { href:'/admin/analytics', label:'Analytics',      icon:'📈' },
-  { href:'/admin/logs',      label:'Activity Logs',  icon:'📋' },
-  { href:'/profile',         label:'Profile',        icon:'👤' },
-];
-
-const statDefs = [
-  { key:'totalUsers',       label:'Total Users',       icon:'👥', bg:'#eef2ff', href:'/admin/users' },
-  { key:'totalStudents',    label:'Students',           icon:'🎓', bg:'#f0fdf4', href:'/admin/users?role=student' },
-  { key:'totalTeachers',    label:'Teachers',           icon:'🏫', bg:'#faf5ff', href:'/admin/users?role=teacher' },
-  { key:'totalCourses',     label:'Total Courses',      icon:'📚', bg:'#ecfdf5', href:'/admin/courses' },
-  { key:'activeCourses',    label:'Active Courses',     icon:'✅', bg:'#f0fdfa', href:'/admin/courses?status=active' },
-  { key:'totalEnrollments', label:'Total Enrollments',  icon:'📋', bg:'#fffbeb', href:'/admin/analytics' },
-];
-
-const quickActions = [
-  { href:'/admin/users',     label:'Manage Users',    icon:'👥', bg:'#eef2ff', desc:'View, suspend, change roles, delete users' },
-  { href:'/admin/courses',   label:'Manage Courses',  icon:'📚', bg:'#ecfdf5', desc:'Reassign teachers, archive courses' },
-  { href:'/admin/analytics', label:'Analytics',       icon:'📈', bg:'#faf5ff', desc:'Platform-wide performance & grade stats' },
-  { href:'/admin/logs',      label:'Activity Logs',   icon:'📋', bg:'#fffbeb', desc:'Full audit trail of all admin actions' },
-];
-
 export default function AdminDashboard() {
   const { user, logout }    = useAuth();
   const [stats, setStats]   = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hoveredStat, setHoveredStat]     = useState<string | null>(null);
-  const [hoveredAction, setHoveredAction] = useState<string | null>(null);
 
   useEffect(() => {
     adminApi.getStats()
@@ -83,151 +32,205 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  })();
+
+  const statDefs = [
+    { key:'totalUsers',       label:'Total Users',       icon:Users, color:'text-blue-600', bg:'bg-blue-50', border:'border-blue-100', href:'/admin/users' },
+    { key:'totalStudents',    label:'Students',          icon:GraduationCap, color:'text-emerald-600', bg:'bg-emerald-50', border:'border-emerald-100', href:'/admin/users?role=student' },
+    { key:'totalTeachers',    label:'Teachers',          icon:UserIcon, color:'text-purple-600', bg:'bg-purple-50', border:'border-purple-100', href:'/admin/users?role=teacher' },
+    { key:'totalCourses',     label:'Total Courses',     icon:BookOpen, color:'text-indigo-600', bg:'bg-indigo-50', border:'border-indigo-100', href:'/admin/courses' },
+    { key:'activeCourses',    label:'Active Courses',    icon:Activity, color:'text-teal-600', bg:'bg-teal-50', border:'border-teal-100', href:'/admin/courses?status=active' },
+    { key:'totalEnrollments', label:'Total Enrollments', icon:BarChart3, color:'text-amber-600', bg:'bg-amber-50', border:'border-amber-100', href:'/admin/analytics' },
+  ];
+
+  const quickActions = [
+    { href:'/admin/users',     label:'Manage Users',    icon:Users, color:'text-blue-600', bg:'bg-blue-50', desc:'View, suspend, change roles, delete users' },
+    { href:'/admin/courses',   label:'Manage Courses',  icon:BookOpen, color:'text-emerald-600', bg:'bg-emerald-50', desc:'Reassign teachers, archive courses' },
+    { href:'/admin/analytics', label:'Analytics',       icon:BarChart3, color:'text-purple-600', bg:'bg-purple-50', desc:'Platform-wide performance & grade stats' },
+    { href:'/admin/logs',      label:'Activity Logs',   icon:Activity, color:'text-amber-600', bg:'bg-amber-50', desc:'Full audit trail of all admin actions' },
+  ];
+
   return (
-    <div style={S.wrap}>
-      {/* ── Sidebar ───────────────────────────────────── */}
-      <aside style={S.sidebar}>
-        {/* Logo */}
-        <div style={S.sidebarTop}>
-          <div style={S.logo}>
-            <div style={S.logoBox}>
-              <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round"
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-              </svg>
+    <div className="min-h-screen bg-slate-50 flex overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900 relative">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-100/40 rounded-full blur-[140px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-50/50 rounded-full blur-[120px]" />
+      </div>
+
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-slate-200 bg-white/80 backdrop-blur-xl flex flex-col z-20 relative shadow-sm">
+        <div className="p-6 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/20">
+              <GraduationCap size={20} className="text-white" />
             </div>
-            <span style={S.logoText}>UniLearn</span>
+            <span className="font-extrabold text-xl tracking-tight text-slate-900">UniLearn</span>
           </div>
         </div>
 
-        {/* User card */}
-        <div style={S.userCard}>
-          <div style={S.avatar}>{user?.name?.charAt(0)?.toUpperCase() || 'A'}</div>
-          <div style={{ minWidth:0 }}>
-            <p style={{ fontSize:13, fontWeight:600, color:'#0f172a', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-              {user?.name || 'Admin'}
-            </p>
-            <span style={{ fontSize:11, fontWeight:500, backgroundColor:'#e0e7ff', color:'#4338ca', padding:'1px 8px', borderRadius:9999 }}>
-              admin
-            </span>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav style={S.nav}>
-          {navItems.map(item => (
-            <Link key={item.href} href={item.href}
-              style={item.active ? S.navLinkActive : S.navLink}>
-              <span style={{ fontSize:16 }}>{item.icon}</span>
-              <span>{item.label}</span>
+        <div className="px-4 py-8 flex-1">
+          <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-4">Administration</p>
+          <nav className="flex flex-col gap-1.5">
+            <Link href="/dashboard/admin" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-blue-50 text-blue-700 font-bold border border-blue-100 transition-all">
+              <LayoutDashboard size={18} />
+              <span className="text-sm">Dashboard</span>
             </Link>
-          ))}
-        </nav>
+            <Link href="/admin/users" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group">
+              <Users size={18} className="group-hover:text-blue-600 transition-colors" />
+              <span className="text-sm">Users</span>
+            </Link>
+            <Link href="/admin/courses" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group">
+              <BookOpen size={18} className="group-hover:text-blue-600 transition-colors" />
+              <span className="text-sm">Courses</span>
+            </Link>
+            <Link href="/admin/analytics" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group">
+              <BarChart3 size={18} className="group-hover:text-blue-600 transition-colors" />
+              <span className="text-sm">Analytics</span>
+            </Link>
+            <Link href="/admin/logs" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group">
+              <Activity size={18} className="group-hover:text-blue-600 transition-colors" />
+              <span className="text-sm">Activity Logs</span>
+            </Link>
+            <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group mt-4">
+              <UserIcon size={18} className="group-hover:text-blue-600 transition-colors" />
+              <span className="text-sm">Profile</span>
+            </Link>
+          </nav>
+        </div>
 
-        {/* Logout */}
-        <div style={{ padding:'10px 10px', borderTop:'1px solid #f1f5f9' }}>
-          <button onClick={logout} style={S.logoutBtn}>
-            <span style={{ fontSize:16 }}>🚪</span>
-            <span>Sign out</span>
+        <div className="p-4 mt-auto border-t border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white border border-slate-200 mb-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm border border-blue-200 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              {user?.name?.charAt(0) || 'A'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-900 truncate">{user?.name || 'Admin'}</p>
+              <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-wider">{user?.role || 'Admin'}</p>
+            </div>
+          </div>
+          
+          <button onClick={logout} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 font-bold hover:bg-red-50 hover:text-red-700 transition-all w-full text-left">
+            <LogOut size={18} />
+            <span className="text-sm">Sign out securely</span>
           </button>
         </div>
       </aside>
 
-      {/* ── Main content ──────────────────────────────── */}
-      <main style={S.main}>
-        {/* Header */}
-        <div style={S.header}>
-          <div>
-            <h1 style={S.h1}>Admin Dashboard</h1>
-            <p style={S.subtitle}>Platform overview and management tools.</p>
-          </div>
-          <div style={{ display:'flex', gap:10 }}>
-            <Link href="/admin/users"
-              style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:12, backgroundColor:'#fff', border:'1px solid #e2e8f0', fontSize:14, fontWeight:500, color:'#334155', textDecoration:'none' }}>
-              + Register User
-            </Link>
-            <Link href="/admin/analytics"
-              style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:12, backgroundColor:'#4f46e5', fontSize:14, fontWeight:500, color:'#fff', textDecoration:'none' }}>
-              View Analytics
-            </Link>
-          </div>
-        </div>
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto relative z-10 scroll-smooth">
+        <div className="max-w-[1400px] mx-auto p-8 lg:p-12">
+          
+          {/* Header */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <div>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider mb-3">
+                <Calendar size={14} />
+                <span>{currentDate}</span>
+              </motion.div>
+              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
+                {greeting}, {user?.name?.split(' ')[0]} 👋
+              </motion.h1>
+              <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-500 text-lg max-w-xl leading-relaxed font-medium">
+                Platform overview and management tools. System status is <strong className="text-emerald-600 font-bold">100% Operational</strong>.
+              </motion.p>
+            </div>
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
+              className="flex gap-4"
+            >
+              <Link href="/admin/users" className="group flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 hover:border-slate-300 shadow-sm transition-all hover:-translate-y-0.5">
+                <Plus size={18} />
+                Register User
+              </Link>
+              <Link href="/admin/analytics" className="group flex items-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5">
+                <BarChart3 size={18} />
+                View Analytics
+              </Link>
+            </motion.div>
+          </header>
 
-        {/* Stats grid */}
-        <p style={S.sectionTitle}>Platform Overview</p>
-        {loading ? (
-          <div style={S.grid3}>
-            {[1,2,3,4,5,6].map(i => (
-              <div key={i} style={{ ...S.skeletonCard, background:'linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%)', backgroundSize:'200% 100%' }} />
-            ))}
-          </div>
-        ) : (
-          <div style={S.grid3}>
-            {statDefs.map(s => {
-              const isHovered = hoveredStat === s.key;
-              return (
-                <Link key={s.key} href={s.href} style={{ textDecoration:'none' }}>
-                  <div
-                    onMouseEnter={() => setHoveredStat(s.key)}
-                    onMouseLeave={() => setHoveredStat(null)}
-                    style={{
-                      ...S.statCard,
-                      boxShadow: isHovered ? '0 8px 24px rgb(0 0 0/0.1)' : S.statCard?.boxShadow,
-                      transform: isHovered ? 'translateY(-3px)' : 'none',
-                    }}>
-                    <div style={{ ...S.statIcon, backgroundColor: s.bg }}>
-                      {s.icon}
+          {/* Stats Grid */}
+          <h2 className="text-lg font-extrabold text-slate-900 mb-6">Platform Overview</h2>
+          
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="h-32 rounded-[24px] bg-slate-100 animate-pulse border border-slate-200" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+              {statDefs.map((stat, i) => (
+                <motion.div 
+                  key={stat.key} 
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * i }}
+                >
+                  <Link href={stat.href} className="group block relative overflow-hidden rounded-[24px] bg-white border border-slate-200 p-6 hover:border-blue-300 transition-all shadow-sm hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`w-14 h-14 rounded-2xl ${stat.bg} ${stat.border} border flex items-center justify-center group-hover:scale-110 transition-transform duration-500`}>
+                        <stat.icon size={24} className={stat.color} />
+                      </div>
+                      <ChevronRight size={20} className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                     </div>
                     <div>
-                      <div style={S.statVal}>{stats?.[s.key]?.toLocaleString() ?? '—'}</div>
-                      <div style={S.statLabel}>{s.label}</div>
+                      <h3 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+                        {stats?.[stat.key]?.toLocaleString() ?? '—'}
+                      </h3>
+                      <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
                     </div>
-                    <div style={{ marginLeft:'auto', color:'#c7d2fe', fontSize:18 }}>→</div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Quick Actions Grid */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-extrabold text-slate-900">Quick Actions</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
+            {quickActions.map((action, i) => (
+              <motion.div 
+                key={action.href} 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }}
+              >
+                <Link href={action.href} className="group block h-full rounded-[24px] bg-white border border-slate-200 p-6 hover:border-slate-300 transition-all shadow-sm hover:shadow-lg hover:shadow-slate-200/50 hover:-translate-y-1">
+                  <div className={`w-12 h-12 rounded-xl ${action.bg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500`}>
+                    <action.icon size={20} className={action.color} />
                   </div>
+                  <h3 className="text-base font-extrabold text-slate-900 mb-2">{action.label}</h3>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">{action.desc}</p>
                 </Link>
-              );
-            })}
+              </motion.div>
+            ))}
           </div>
-        )}
 
-        {/* Divider */}
-        <div style={{ height:1, backgroundColor:'#f1f5f9', marginBottom:28 }} />
+          {/* Footer Note */}
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            className="rounded-[24px] bg-white border border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center gap-6 shadow-sm"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+              <Shield size={24} className="text-indigo-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-base font-extrabold text-slate-900 mb-1">Full Administrative Access</p>
+              <p className="text-sm text-slate-500 font-medium">All actions performed on this dashboard are logged to the enterprise activity audit trail.</p>
+            </div>
+            <Link href="/admin/logs" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold border border-slate-200 transition-colors whitespace-nowrap">
+              View Audit Trail <ChevronRight size={16} />
+            </Link>
+          </motion.div>
 
-        {/* Quick actions */}
-        <p style={S.sectionTitle}>Quick Actions</p>
-        <div style={S.grid4}>
-          {quickActions.map(a => {
-            const isHovered = hoveredAction === a.href;
-            return (
-              <Link key={a.href} href={a.href} style={{ textDecoration:'none' }}>
-                <div
-                  onMouseEnter={() => setHoveredAction(a.href)}
-                  onMouseLeave={() => setHoveredAction(null)}
-                  style={{
-                    ...S.actionCard,
-                    boxShadow: isHovered ? '0 8px 24px rgb(0 0 0/0.1)' : S.actionCard?.boxShadow,
-                    transform: isHovered ? 'translateY(-3px)' : 'none',
-                  }}>
-                  <div style={{ ...S.actionIcon, backgroundColor: a.bg }}>{a.icon}</div>
-                  <p style={{ fontSize:14, fontWeight:600, color:'#0f172a', margin:'0 0 6px' }}>{a.label}</p>
-                  <p style={{ fontSize:12, color:'#94a3b8', margin:0, lineHeight:1.5 }}>{a.desc}</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Footer note */}
-        <div style={{ marginTop:40, padding:'16px 20px', backgroundColor:'#fff', borderRadius:14, border:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'#eef2ff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>🛡️</div>
-          <div>
-            <p style={{ fontSize:13, fontWeight:600, color:'#0f172a', margin:0 }}>You have full admin access</p>
-            <p style={{ fontSize:12, color:'#94a3b8', margin:0 }}>All actions are logged to the activity audit trail.</p>
-          </div>
-          <Link href="/admin/logs"
-            style={{ marginLeft:'auto', fontSize:13, fontWeight:500, color:'#4f46e5', textDecoration:'none', whiteSpace:'nowrap' }}>
-            View logs →
-          </Link>
         </div>
       </main>
     </div>
