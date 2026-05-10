@@ -1,7 +1,12 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
+import Sidebar from '@/components/shared/Sidebar';
+import { 
+  Bell, CheckCircle2, MessageSquare, Megaphone, 
+  Check, CheckAll, Filter
+} from 'lucide-react';
 
 type FilterType = 'all' | 'unread' | 'grades' | 'messages' | 'announcements';
 
@@ -15,10 +20,10 @@ const NOTIFICATIONS = [
   { id: 7, type: 'grades', read: true, title: 'Final grade posted', message: 'Your final grade for Semester 1 CS103 has been posted by the instructor.', time: '2 days ago' },
 ];
 
-const typeConfig: Record<string, { icon: string; color: string; bg: string }> = {
-  grades:        { icon: '📊', color: '#059669', bg: '#d1fae5' },
-  messages:      { icon: '💬', color: '#2563eb', bg: '#dbeafe' },
-  announcements: { icon: '📢', color: '#d97706', bg: '#fef3c7' },
+const typeConfig: Record<string, { icon: any; color: string; bg: string; border: string }> = {
+  grades:        { icon: CheckCircle2,  color: 'text-emerald-600', bg: 'bg-emerald-50',  border: 'border-emerald-100' },
+  messages:      { icon: MessageSquare, color: 'text-blue-600',    bg: 'bg-blue-50',     border: 'border-blue-100' },
+  announcements: { icon: Megaphone,     color: 'text-amber-600',   bg: 'bg-amber-50',    border: 'border-amber-100' },
 };
 
 const FILTERS: { id: FilterType; label: string }[] = [
@@ -29,20 +34,8 @@ const FILTERS: { id: FilterType; label: string }[] = [
   { id: 'announcements', label: 'Announcements' },
 ];
 
-const S: Record<string, React.CSSProperties> = {
-  wrap:       { display:'flex', minHeight:'100vh', backgroundColor:'#f8fafc', fontFamily:"'Sora','Inter',sans-serif" },
-  sidebar:    { width:240, backgroundColor:'#fff', borderRight:'1px solid #e2e8f0', display:'flex', flexDirection:'column', flexShrink:0, position:'sticky' as const, top:0, height:'100vh' },
-  logoBox:    { padding:'20px 16px 16px', borderBottom:'1px solid #f1f5f9' },
-  logoInner:  { display:'flex', alignItems:'center', gap:10 },
-  logoIcon:   { width:34, height:34, borderRadius:10, backgroundColor:'#4f46e5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-  nav:        { flex:1, padding:'10px', display:'flex', flexDirection:'column', gap:2, overflowY:'auto' },
-  link:       { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#475569', textDecoration:'none', border:'none', background:'transparent', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  linkActive: { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#4338ca', textDecoration:'none', background:'#eef2ff', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  main:       { flex:1, overflowY:'auto', padding:'40px' },
-};
-
 export default function NotificationsPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState(NOTIFICATIONS);
   const [filter, setFilter] = useState<FilterType>('all');
 
@@ -62,103 +55,57 @@ export default function NotificationsPage() {
     return n.type === filter;
   });
 
-  const navItems = user?.role === 'admin' ? [
-    { href:'/dashboard/admin', label:'Dashboard',    icon:'📊' },
-    { href:'/admin/users',     label:'Users',         icon:'👥' },
-    { href:'/admin/courses',   label:'Courses',       icon:'📚' },
-    { href:'/admin/analytics', label:'Analytics',     icon:'📈' },
-    { href:'/admin/logs',      label:'Activity Logs', icon:'📋' },
-    { href:'/profile',         label:'Profile',       icon:'👤' },
-  ] : user?.role === 'teacher' ? [
-    { href:'/dashboard/teacher', label:'Dashboard',     icon:'📊' },
-    { href:'/courses',           label:'My Courses',    icon:'📚' },
-    { href:'/messages',          label:'Messages',      icon:'💬' },
-    { href:'/notifications',     label:'Notifications', icon:'🔔', active:true },
-    { href:'/profile',           label:'Profile',       icon:'👤' },
-  ] : [
-    { href:'/dashboard/student', label:'Dashboard',     icon:'📊' },
-    { href:'/courses',           label:'My Courses',    icon:'📚' },
-    { href:'/messages',          label:'Messages',      icon:'💬' },
-    { href:'/notifications',     label:'Notifications', icon:'🔔', active:true },
-    { href:'/profile',           label:'Profile',       icon:'👤' },
-  ];
-
-  const avatarBg = user?.role === 'teacher' ? '#faf5ff' : user?.role === 'admin' ? '#e0e7ff' : '#d1fae5';
-  const avatarColor = user?.role === 'teacher' ? '#7c3aed' : user?.role === 'admin' ? '#4338ca' : '#065f46';
-  const roleBadgeBg = user?.role === 'teacher' ? '#faf5ff' : user?.role === 'admin' ? '#e0e7ff' : '#d1fae5';
-
   return (
-    <div style={S.wrap}>
-      {/* Sidebar */}
-      <aside style={S.sidebar}>
-        <div style={S.logoBox}>
-          <div style={S.logoInner}>
-            <div style={S.logoIcon}>
-              <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-              </svg>
-            </div>
-            <span style={{ fontWeight:700, fontSize:16, color:'#0f172a' }}>UniLearn</span>
-          </div>
-        </div>
-        <div style={{ padding:'12px 16px', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:36, height:36, borderRadius:10, backgroundColor: avatarBg, display:'flex', alignItems:'center', justifyContent:'center', color: avatarColor, fontWeight:700, fontSize:14, flexShrink:0 }}>
-            {user?.name?.charAt(0)?.toUpperCase() || '?'}
-          </div>
-          <div style={{ minWidth:0 }}>
-            <p style={{ fontSize:13, fontWeight:600, color:'#0f172a', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.name}</p>
-            <span style={{ fontSize:11, fontWeight:500, backgroundColor: roleBadgeBg, color: avatarColor, padding:'1px 8px', borderRadius:9999 }}>{user?.role}</span>
-          </div>
-        </div>
-        <nav style={S.nav}>
-          {navItems.map(item => (
-            <Link key={item.href} href={item.href} style={item.active ? S.linkActive : S.link}>
-              <span style={{ fontSize:16 }}>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div style={{ padding:'10px', borderTop:'1px solid #f1f5f9' }}>
-          <button onClick={logout} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#ef4444', background:'transparent', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" }}>
-            <span>🚪</span><span>Sign out</span>
-          </button>
-        </div>
-      </aside>
+    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+      <Sidebar />
 
-      {/* Main Content */}
-      <main style={S.main}>
-        <div style={{ maxWidth:800, margin:'0 auto' }}>
+      <main className="flex-1 flex flex-col h-full overflow-y-auto p-8 lg:p-12 scroll-smooth">
+        <div className="max-w-4xl mx-auto w-full">
+          
           {/* Header */}
-          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:32 }}>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
             <div>
-              <h1 style={{ fontSize:28, fontWeight:700, color:'#0f172a', letterSpacing:'-0.025em', margin:0 }}>Notifications</h1>
-              <p style={{ fontSize:14, color:'#64748b', marginTop:4 }}>
-                {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All caught up!'}
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                  <Bell size={20} />
+                </div>
+                <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">Notifications</h1>
+              </div>
+              <p className="text-slate-500 font-medium ml-13 pl-1">
+                {unreadCount > 0 
+                  ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` 
+                  : 'You are all caught up!'}
               </p>
             </div>
             {unreadCount > 0 && (
-              <button onClick={markAllRead} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', backgroundColor:'#f1f5f9', color:'#334155', borderRadius:10, fontSize:13, fontWeight:600, border:'none', cursor:'pointer' }}>
-                <span>✔️</span> Mark all as read
+              <button onClick={markAllRead} className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm">
+                <CheckAll size={18} />
+                Mark all as read
               </button>
             )}
           </div>
 
           {/* Filters */}
-          <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:24 }}>
+          <div className="flex items-center gap-2 flex-wrap mb-8">
+            <div className="flex items-center gap-2 mr-2 text-slate-400">
+              <Filter size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider">Filter by:</span>
+            </div>
             {FILTERS.map(f => (
               <button
                 key={f.id}
                 onClick={() => setFilter(f.id)}
-                style={{
-                  padding:'8px 16px', borderRadius:12, fontSize:13, fontWeight:600, border:'none', cursor:'pointer', transition:'all 0.2s',
-                  backgroundColor: filter === f.id ? '#4f46e5' : '#f1f5f9',
-                  color: filter === f.id ? '#fff' : '#475569',
-                  display:'flex', alignItems:'center', gap:6
-                }}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                  filter === f.id 
+                    ? 'bg-slate-900 text-white shadow-md' 
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                }`}
               >
                 {f.label}
                 {f.id === 'unread' && unreadCount > 0 && (
-                  <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:18, height:18, borderRadius:'50%', backgroundColor:'rgba(255,255,255,0.2)', fontSize:10, fontWeight:700 }}>
+                  <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-extrabold ${
+                    filter === f.id ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'
+                  }`}>
                     {unreadCount}
                   </span>
                 )}
@@ -168,47 +115,66 @@ export default function NotificationsPage() {
 
           {/* List */}
           {filtered.length === 0 ? (
-            <div style={{ padding:'64px 24px', textAlign:'center', backgroundColor:'#fff', borderRadius:20, border:'1px solid #e2e8f0' }}>
-              <div style={{ fontSize:40, marginBottom:16 }}>🔔</div>
-              <h3 style={{ fontSize:18, fontWeight:700, color:'#0f172a', margin:'0 0 8px' }}>All clear!</h3>
-              <p style={{ fontSize:14, color:'#64748b', margin:0 }}>No notifications in this category.</p>
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-[32px] border border-slate-200 p-16 text-center shadow-sm"
+            >
+              <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                <Bell size={32} className="text-slate-300" />
+              </div>
+              <h3 className="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">All clear!</h3>
+              <p className="text-slate-500 font-medium">No notifications in this category. You're fully caught up.</p>
+            </motion.div>
           ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-              {filtered.map(n => {
-                const cfg = typeConfig[n.type] || typeConfig.announcements;
-                return (
-                  <div
-                    key={n.id}
-                    onClick={() => markRead(n.id)}
-                    style={{
-                      padding:20, borderRadius:16, border: !n.read ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
-                      backgroundColor: !n.read ? '#f5f7ff' : '#fff',
-                      display:'flex', alignItems:'flex-start', gap:16, cursor:'pointer', transition:'all 0.2s'
-                    }}
-                  >
-                    <div style={{ width:44, height:44, borderRadius:14, backgroundColor: cfg.bg, color: cfg.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>
-                      {cfg.icon}
-                    </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16 }}>
-                        <div>
-                          <p style={{ fontSize:14, fontWeight:700, color: !n.read ? '#0f172a' : '#334155', margin:'0 0 4px' }}>{n.title}</p>
-                          <p style={{ fontSize:13, color:'#64748b', margin:0, lineHeight:1.5 }}>{n.message}</p>
-                        </div>
-                        <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-                          <span style={{ fontSize:11, color:'#94a3b8', whiteSpace:'nowrap' }}>{n.time}</span>
-                          {!n.read ? (
-                            <span style={{ width:8, height:8, borderRadius:'50%', backgroundColor:'#4f46e5' }} />
-                          ) : (
-                            <span style={{ fontSize:12, color:'#cbd5e1' }}>✔️</span>
-                          )}
-                        </div>
+            <div className="space-y-4">
+              <AnimatePresence>
+                {filtered.map((n, idx) => {
+                  const cfg = typeConfig[n.type] || typeConfig.announcements;
+                  const Icon = cfg.icon;
+                  return (
+                    <motion.div
+                      key={n.id}
+                      initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: idx * 0.05 }}
+                      onClick={() => markRead(n.id)}
+                      className={`group relative flex gap-5 p-6 rounded-[24px] cursor-pointer transition-all duration-300 overflow-hidden ${
+                        !n.read 
+                          ? 'bg-blue-50/50 border border-blue-200 shadow-md shadow-blue-900/5 hover:border-blue-300' 
+                          : 'bg-white border border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+                      }`}
+                    >
+                      {!n.read && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-[24px]" />
+                      )}
+                      
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border group-hover:scale-110 transition-transform duration-500 ${cfg.bg} ${cfg.color} ${cfg.border}`}>
+                        <Icon size={24} />
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                      
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
+                          <h4 className={`text-[15px] font-extrabold truncate ${!n.read ? 'text-slate-900' : 'text-slate-700'}`}>
+                            {n.title}
+                          </h4>
+                          <span className="text-xs font-bold text-slate-400 tracking-wider uppercase shrink-0">
+                            {n.time}
+                          </span>
+                        </div>
+                        <p className={`text-sm font-medium leading-relaxed ${!n.read ? 'text-slate-700' : 'text-slate-500'}`}>
+                          {n.message}
+                        </p>
+                      </div>
+
+                      <div className="shrink-0 flex items-center justify-center pl-4">
+                        {!n.read ? (
+                          <div className="w-3 h-3 rounded-full bg-blue-600 shadow-sm shadow-blue-600/50 ring-4 ring-blue-50" />
+                        ) : (
+                          <Check size={20} className="text-slate-300" />
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           )}
         </div>

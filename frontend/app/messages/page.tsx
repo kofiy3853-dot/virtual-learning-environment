@@ -1,26 +1,18 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-
-const S: Record<string, React.CSSProperties> = {
-  wrap:       { display:'flex', minHeight:'100vh', backgroundColor:'#f8fafc', fontFamily:"'Sora','Inter',sans-serif" },
-  sidebar:    { width:240, backgroundColor:'#fff', borderRight:'1px solid #e2e8f0', display:'flex', flexDirection:'column', flexShrink:0, position:'sticky' as const, top:0, height:'100vh' },
-  logoBox:    { padding:'20px 16px 16px', borderBottom:'1px solid #f1f5f9' },
-  logoInner:  { display:'flex', alignItems:'center', gap:10 },
-  logoIcon:   { width:34, height:34, borderRadius:10, backgroundColor:'#4f46e5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-  nav:        { flex:1, padding:'10px', display:'flex', flexDirection:'column', gap:2, overflowY:'auto' },
-  link:       { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#475569', textDecoration:'none', border:'none', background:'transparent', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  linkActive: { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#4338ca', textDecoration:'none', background:'#eef2ff', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  main:       { flex:1, overflowY:'auto', padding:'40px', display:'flex', flexDirection:'column', height:'100vh' },
-  input:      { padding:'10px 14px', borderRadius:10, border:'1px solid #e2e8f0', backgroundColor:'#fff', color:'#0f172a', fontSize:14, fontFamily:"'Sora','Inter',sans-serif", outline:'none' },
-};
+import Sidebar from '@/components/shared/Sidebar';
+import { 
+  Search, Plus, Phone, Video, MoreVertical, Send, 
+  MessageSquare, Users, Star, Info
+} from 'lucide-react';
 
 const CHATS = [
-  { id: '1', name: 'Prof. Alan Turing', avatar: 'AT', lastMessage: 'The assignment looks good!', time: '10:42 AM', unread: 2, online: true },
-  { id: '2', name: 'Physics Study Group', avatar: 'PG', lastMessage: 'When is the next lab session?', time: '9:15 AM', unread: 0, online: false },
-  { id: '3', name: 'Alice Smith', avatar: 'AS', lastMessage: 'Can you help me with the setup?', time: 'Yesterday', unread: 5, online: true },
-  { id: '4', name: 'Course Support', avatar: 'CS', lastMessage: 'Ticket #42 has been resolved.', time: 'Monday', unread: 0, online: false },
+  { id: '1', name: 'Prof. Alan Turing', avatar: 'AT', lastMessage: 'The assignment looks good!', time: '10:42 AM', unread: 2, online: true, role: 'teacher' },
+  { id: '2', name: 'Physics Study Group', avatar: 'PG', lastMessage: 'When is the next lab session?', time: '9:15 AM', unread: 0, online: false, role: 'group' },
+  { id: '3', name: 'Alice Smith', avatar: 'AS', lastMessage: 'Can you help me with the setup?', time: 'Yesterday', unread: 5, online: true, role: 'student' },
+  { id: '4', name: 'Course Support', avatar: 'CS', lastMessage: 'Ticket #42 has been resolved.', time: 'Monday', unread: 0, online: false, role: 'admin' },
 ];
 
 const MESSAGES: Record<string, { id: number; sender: 'me' | 'them'; text: string; time: string }[]> = {
@@ -43,11 +35,10 @@ const MESSAGES: Record<string, { id: number; sender: 'me' | 'them'; text: string
 };
 
 export default function MessagesPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [activeChat, setActiveChat]     = useState<string | null>('1');
   const [message, setMessage]           = useState('');
   const [allMessages, setAllMessages]   = useState(MESSAGES);
-  const [showMobileList, setShowMobileList] = useState(true);
   const [search, setSearch]             = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -68,116 +59,86 @@ export default function MessagesPage() {
 
   const filteredChats = CHATS.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
-  const navItems = user?.role === 'admin' ? [
-    { href:'/dashboard/admin', label:'Dashboard',    icon:'📊' },
-    { href:'/admin/users',     label:'Users',         icon:'👥' },
-    { href:'/admin/courses',   label:'Courses',       icon:'📚' },
-    { href:'/admin/analytics', label:'Analytics',     icon:'📈' },
-    { href:'/admin/logs',      label:'Activity Logs', icon:'📋' },
-    { href:'/profile',         label:'Profile',       icon:'👤' },
-  ] : user?.role === 'teacher' ? [
-    { href:'/dashboard/teacher', label:'Dashboard',     icon:'📊' },
-    { href:'/courses',           label:'My Courses',    icon:'📚' },
-    { href:'/messages',          label:'Messages',      icon:'💬', active:true },
-    { href:'/notifications',     label:'Notifications', icon:'🔔' },
-    { href:'/profile',           label:'Profile',       icon:'👤' },
-  ] : [
-    { href:'/dashboard/student', label:'Dashboard',     icon:'📊' },
-    { href:'/courses',           label:'My Courses',    icon:'📚' },
-    { href:'/messages',          label:'Messages',      icon:'💬', active:true },
-    { href:'/notifications',     label:'Notifications', icon:'🔔' },
-    { href:'/profile',           label:'Profile',       icon:'👤' },
-  ];
-
-  const avatarBg = user?.role === 'teacher' ? '#faf5ff' : user?.role === 'admin' ? '#e0e7ff' : '#d1fae5';
-  const avatarColor = user?.role === 'teacher' ? '#7c3aed' : user?.role === 'admin' ? '#4338ca' : '#065f46';
-  const roleBadgeBg = user?.role === 'teacher' ? '#faf5ff' : user?.role === 'admin' ? '#e0e7ff' : '#d1fae5';
-
   return (
-    <div style={S.wrap}>
-      {/* Sidebar */}
-      <aside style={S.sidebar}>
-        <div style={S.logoBox}>
-          <div style={S.logoInner}>
-            <div style={S.logoIcon}>
-              <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-              </svg>
-            </div>
-            <span style={{ fontWeight:700, fontSize:16, color:'#0f172a' }}>UniLearn</span>
-          </div>
-        </div>
-        <div style={{ padding:'12px 16px', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:36, height:36, borderRadius:10, backgroundColor: avatarBg, display:'flex', alignItems:'center', justifyContent:'center', color: avatarColor, fontWeight:700, fontSize:14, flexShrink:0 }}>
-            {user?.name?.charAt(0)?.toUpperCase() || '?'}
-          </div>
-          <div style={{ minWidth:0 }}>
-            <p style={{ fontSize:13, fontWeight:600, color:'#0f172a', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.name}</p>
-            <span style={{ fontSize:11, fontWeight:500, backgroundColor: roleBadgeBg, color: avatarColor, padding:'1px 8px', borderRadius:9999 }}>{user?.role}</span>
-          </div>
-        </div>
-        <nav style={S.nav}>
-          {navItems.map(item => (
-            <Link key={item.href} href={item.href} style={item.active ? S.linkActive : S.link}>
-              <span style={{ fontSize:16 }}>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div style={{ padding:'10px', borderTop:'1px solid #f1f5f9' }}>
-          <button onClick={logout} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#ef4444', background:'transparent', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" }}>
-            <span>🚪</span><span>Sign out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Chat Interface */}
-      <main style={{ ...S.main, padding:24 }}>
-        <div style={{ display:'flex', height:'100%', backgroundColor:'#fff', borderRadius:24, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 4px 6px -1px rgb(0 0 0/0.05), 0 2px 4px -2px rgb(0 0 0/0.05)' }}>
-          {/* Left Panel */}
-          <div style={{ width:320, borderRight:'1px solid #e2e8f0', display:'flex', flexDirection:'column', backgroundColor:'#f8fafc', flexShrink:0 }}>
+    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+      <Sidebar />
+      
+      <main className="flex-1 flex p-6 lg:p-8 h-full min-w-0">
+        <div className="flex w-full h-full bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
+          
+          {/* Chat List Sidebar */}
+          <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/50 shrink-0">
             {/* Header */}
-            <div style={{ padding:20, borderBottom:'1px solid #e2e8f0' }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-                <h1 style={{ fontSize:20, fontWeight:700, color:'#0f172a', margin:0 }}>Messages</h1>
-                <button style={{ padding:'6px 10px', backgroundColor:'#4f46e5', color:'#fff', borderRadius:10, border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:6, fontSize:13, fontWeight:600 }}>
-                  <span>+</span> New
+            <div className="p-6 pb-4">
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Messages</h1>
+                <button className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all shadow-sm">
+                  <Plus size={20} />
                 </button>
               </div>
-              <input
-                type="text"
-                placeholder="🔍 Search conversations..."
-                style={{ ...S.input, width:'100%', padding:'10px 14px', borderRadius:10 }}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  className="w-full bg-white border border-slate-200 text-slate-900 pl-11 pr-4 h-12 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-sm shadow-sm"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
             </div>
-            
-            {/* List */}
-            <div style={{ flex:1, overflowY:'auto' }}>
+
+            {/* Chat List */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 scrollbar-none">
               {filteredChats.map(chat => (
                 <button
                   key={chat.id}
                   onClick={() => setActiveChat(chat.id)}
-                  style={{ width:'100%', textAlign:'left', padding:'16px 20px', backgroundColor: activeChat === chat.id ? '#fff' : 'transparent', border:'none', borderBottom:'1px solid #f1f5f9', cursor:'pointer', display:'flex', gap:12, alignItems:'center', transition:'all 0.2s', borderLeft: activeChat === chat.id ? '3px solid #4f46e5' : '3px solid transparent' }}
+                  className={`w-full text-left p-3 rounded-2xl flex gap-3 items-center transition-all group relative overflow-hidden ${
+                    activeChat === chat.id 
+                      ? 'bg-blue-600 shadow-md shadow-blue-600/20' 
+                      : 'hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm'
+                  }`}
                 >
-                  <div style={{ position:'relative', flexShrink:0 }}>
-                    <div style={{ width:44, height:44, borderRadius:14, backgroundColor:'#e0e7ff', color:'#4338ca', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:14 }}>
+                  <div className="relative shrink-0">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm transition-colors ${
+                      activeChat === chat.id 
+                        ? 'bg-white/20 text-white' 
+                        : 'bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100'
+                    }`}>
                       {chat.avatar}
                     </div>
                     {chat.online && (
-                      <span style={{ position:'absolute', bottom:-2, right:-2, width:12, height:12, backgroundColor:'#10b981', border:'2px solid #fff', borderRadius:'50%' }} />
+                      <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 ${
+                        activeChat === chat.id ? 'border-blue-600 bg-emerald-400' : 'border-white bg-emerald-500'
+                      }`} />
                     )}
                   </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:2 }}>
-                      <span style={{ fontSize:14, fontWeight:600, color: activeChat === chat.id ? '#4338ca' : '#0f172a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{chat.name}</span>
-                      <span style={{ fontSize:11, color:'#94a3b8', flexShrink:0 }}>{chat.time}</span>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-0.5">
+                      <span className={`font-bold text-sm truncate ${
+                        activeChat === chat.id ? 'text-white' : 'text-slate-900'
+                      }`}>
+                        {chat.name}
+                      </span>
+                      <span className={`text-[10px] font-bold tracking-wider shrink-0 ${
+                        activeChat === chat.id ? 'text-blue-200' : 'text-slate-400'
+                      }`}>
+                        {chat.time}
+                      </span>
                     </div>
-                    <p style={{ fontSize:13, color:'#64748b', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{chat.lastMessage}</p>
+                    <p className={`text-xs truncate ${
+                      activeChat === chat.id ? 'text-blue-100' : 'text-slate-500 font-medium'
+                    }`}>
+                      {chat.lastMessage}
+                    </p>
                   </div>
+
                   {chat.unread > 0 && (
-                    <span style={{ padding:'2px 6px', borderRadius:10, backgroundColor:'#ef4444', color:'#fff', fontSize:11, fontWeight:700, flexShrink:0 }}>
+                    <span className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${
+                      activeChat === chat.id ? 'bg-white text-blue-600' : 'bg-red-500 text-white shadow-sm shadow-red-500/20'
+                    }`}>
                       {chat.unread}
                     </span>
                   )}
@@ -186,75 +147,108 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* Right Panel */}
-          <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col min-w-0 bg-white relative">
             {activeChat && activeContact ? (
               <>
                 {/* Chat Header */}
-                <div style={{ padding:'16px 24px', borderBottom:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <div style={{ position:'relative' }}>
-                      <div style={{ width:40, height:40, borderRadius:12, backgroundColor:'#e0e7ff', color:'#4338ca', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:14 }}>
+                <div className="h-20 px-8 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 z-10 relative">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold shadow-sm border border-indigo-100">
                         {activeContact.avatar}
                       </div>
                       {activeContact.online && (
-                        <span style={{ position:'absolute', bottom:-2, right:-2, width:10, height:10, backgroundColor:'#10b981', border:'2px solid #fff', borderRadius:'50%' }} />
+                        <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm" />
                       )}
                     </div>
                     <div>
-                      <p style={{ fontSize:15, fontWeight:700, color:'#0f172a', margin:'0 0 2px' }}>{activeContact.name}</p>
-                      <p style={{ fontSize:12, fontWeight:500, margin:0, color: activeContact.online ? '#10b981' : '#94a3b8' }}>
-                        {activeContact.online ? 'Online' : 'Offline'}
+                      <h2 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
+                        {activeContact.name}
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] uppercase tracking-wider">
+                          {activeContact.role}
+                        </span>
+                      </h2>
+                      <p className={`text-xs font-bold ${activeContact.online ? 'text-emerald-500' : 'text-slate-400'}`}>
+                        {activeContact.online ? 'Online now' : 'Offline'}
                       </p>
                     </div>
                   </div>
-                  <div style={{ display:'flex', gap:8 }}>
-                    <button style={{ width:36, height:36, borderRadius:10, border:'none', backgroundColor:'#f8fafc', color:'#64748b', cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>📞</button>
-                    <button style={{ width:36, height:36, borderRadius:10, border:'none', backgroundColor:'#f8fafc', color:'#64748b', cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>📹</button>
-                    <button style={{ width:36, height:36, borderRadius:10, border:'none', backgroundColor:'#f8fafc', color:'#64748b', cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>⋮</button>
+                  
+                  <div className="flex gap-2">
+                    <button className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                      <Phone size={18} />
+                    </button>
+                    <button className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                      <Video size={18} />
+                    </button>
+                    <button className="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center hover:bg-slate-100 transition-colors">
+                      <Info size={18} />
+                    </button>
                   </div>
                 </div>
 
-                {/* Messages */}
-                <div style={{ flex:1, overflowY:'auto', padding:24, backgroundColor:'#f8fafc', display:'flex', flexDirection:'column', gap:16 }}>
-                  {currentMessages.map(msg => (
-                    <div key={msg.id} style={{ display:'flex', justifyContent: msg.sender === 'me' ? 'flex-end' : 'flex-start' }}>
-                      <div style={{ maxWidth:'70%', display:'flex', flexDirection:'column', alignItems: msg.sender === 'me' ? 'flex-end' : 'flex-start', gap:4 }}>
-                        <div style={{ padding:'12px 16px', fontSize:14, lineHeight:1.5,
-                          backgroundColor: msg.sender === 'me' ? '#4f46e5' : '#fff', 
-                          color: msg.sender === 'me' ? '#fff' : '#0f172a',
-                          border: msg.sender === 'me' ? 'none' : '1px solid #e2e8f0',
-                          borderRadius: msg.sender === 'me' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          boxShadow: '0 1px 2px rgb(0 0 0/0.05)'
-                        }}>
-                          {msg.text}
-                        </div>
-                        <span style={{ fontSize:11, color:'#94a3b8', padding:'0 4px' }}>{msg.time}</span>
-                      </div>
-                    </div>
-                  ))}
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50 flex flex-col gap-6">
+                  <AnimatePresence initial={false}>
+                    {currentMessages.map(msg => {
+                      const isMe = msg.sender === 'me';
+                      return (
+                        <motion.div 
+                          key={msg.id}
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-1.5`}>
+                            <div className={`px-5 py-3.5 text-[15px] leading-relaxed shadow-sm ${
+                              isMe 
+                                ? 'bg-blue-600 text-white rounded-[24px] rounded-br-[8px]' 
+                                : 'bg-white text-slate-700 rounded-[24px] rounded-bl-[8px] border border-slate-200'
+                            }`}>
+                              {msg.text}
+                            </div>
+                            <span className="text-[11px] font-bold text-slate-400 px-2 tracking-wide uppercase">
+                              {msg.time}
+                            </span>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
                   <div ref={endRef} />
                 </div>
 
-                {/* Input form */}
-                <form onSubmit={handleSend} style={{ padding:'16px 24px', borderTop:'1px solid #e2e8f0', display:'flex', gap:12, backgroundColor:'#fff' }}>
-                  <input
-                    type="text"
-                    placeholder="Type your message here..."
-                    style={{ ...S.input, flex:1, borderRadius:12, backgroundColor:'#f1f5f9', border:'none' }}
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                  />
-                  <button type="submit" disabled={!message.trim()} style={{ width:44, height:44, borderRadius:12, backgroundColor:'#4f46e5', color:'#fff', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, opacity: !message.trim() ? 0.5 : 1 }}>
-                    🚀
-                  </button>
-                </form>
+                {/* Chat Input */}
+                <div className="p-6 bg-white border-t border-slate-100 shrink-0">
+                  <form onSubmit={handleSend} className="flex gap-3 relative">
+                    <button type="button" className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 hover:text-slate-600 transition-colors shrink-0">
+                      <Plus size={20} />
+                    </button>
+                    <input
+                      type="text"
+                      placeholder="Type a message..."
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-16 pr-4 h-14 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium shadow-sm"
+                      value={message}
+                      onChange={e => setMessage(e.target.value)}
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={!message.trim()} 
+                      className="w-14 h-14 rounded-2xl bg-blue-600 text-white border-none cursor-pointer flex items-center justify-center shadow-md shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none hover:bg-blue-700 transition-all shrink-0"
+                    >
+                      <Send size={20} className="ml-1" />
+                    </button>
+                  </form>
+                </div>
               </>
             ) : (
-              <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', backgroundColor:'#f8fafc' }}>
-                <div style={{ fontSize:48, marginBottom:16 }}>💬</div>
-                <h3 style={{ fontSize:18, fontWeight:700, color:'#0f172a', margin:'0 0 8px' }}>Select a conversation</h3>
-                <p style={{ fontSize:14, color:'#64748b', margin:0 }}>Choose a contact from the list to start messaging.</p>
+              <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50">
+                <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center border border-slate-200 shadow-sm mb-6">
+                  <MessageSquare size={40} className="text-slate-300" />
+                </div>
+                <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-2">Select a conversation</h3>
+                <p className="text-slate-500 font-medium">Choose a contact from the sidebar to start messaging.</p>
               </div>
             )}
           </div>
