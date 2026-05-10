@@ -53,8 +53,9 @@ app.use(cors({
       process.env.CLIENT_URL,
       // Add your Vercel/Netlify/Render frontend URL here once deployed:
       'https://virtual-learning-environment.vercel.app',
-      'https://virtual-learning-environment-th7m.onrender.com', // Added the render backend itself just in case
-      'https://unilearn-frontend.onrender.com', // Expected Render frontend URL
+      'https://virtual-learning-environment.vercel.app/',
+      'https://virtual-learning-environment-th7m.onrender.com', 
+      'https://unilearn-frontend.onrender.com', 
     ].filter(Boolean);
 
     // Allow requests with no origin (mobile apps, Postman, curl)
