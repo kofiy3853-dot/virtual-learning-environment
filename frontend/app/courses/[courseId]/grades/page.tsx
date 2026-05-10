@@ -196,12 +196,12 @@ export default function GradesPage() {
               <form onSubmit={handleSaveWeights}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                   <div>
-                    <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Assignments Weight (%)</label>
-                    <input type="number" min="0" max="100" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 font-bold focus:bg-white focus:border-blue-500 transition-all outline-none" value={wForm.assignmentWeight} onChange={e => { const v = parseInt(e.target.value) || 0; setWForm({ assignmentWeight: v, quizWeight: 100 - v }); }} />
+                    <label htmlFor="assignment-weight" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Assignments Weight (%)</label>
+                    <input id="assignment-weight" type="number" min="0" max="100" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 font-bold focus:bg-white focus:border-blue-500 transition-all outline-none" value={wForm.assignmentWeight} onChange={e => { const v = parseInt(e.target.value) || 0; setWForm({ assignmentWeight: v, quizWeight: 100 - v }); }} />
                   </div>
                   <div>
-                    <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Quizzes Weight (%)</label>
-                    <input type="number" min="0" max="100" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 font-bold focus:bg-white focus:border-blue-500 transition-all outline-none" value={wForm.quizWeight} onChange={e => { const v = parseInt(e.target.value) || 0; setWForm({ quizWeight: v, assignmentWeight: 100 - v }); }} />
+                    <label htmlFor="quiz-weight" className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Quizzes Weight (%)</label>
+                    <input id="quiz-weight" type="number" min="0" max="100" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 h-14 text-slate-900 font-bold focus:bg-white focus:border-blue-500 transition-all outline-none" value={wForm.quizWeight} onChange={e => { const v = parseInt(e.target.value) || 0; setWForm({ quizWeight: v, assignmentWeight: 100 - v }); }} />
                   </div>
                 </div>
                 
@@ -373,7 +373,11 @@ export default function GradesPage() {
                <h3 className="text-xl font-black text-slate-900 tracking-tight">Course Gradebook</h3>
                <div className="relative group">
                   <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input placeholder="Filter by student name..." className="h-10 pl-10 pr-4 rounded-xl bg-white border border-slate-200 text-xs font-bold outline-none focus:border-blue-500 transition-colors" />
+                  <input 
+                    aria-label="Filter students by name"
+                    placeholder="Filter by student name..." 
+                    className="h-10 pl-10 pr-4 rounded-xl bg-white border border-slate-200 text-xs font-bold outline-none focus:border-blue-500 transition-colors" 
+                  />
                </div>
             </div>
             
