@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -15,12 +15,19 @@ import {
 import { Suspense } from 'react';
 
 function LoginContent() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState({ email: '', password: '', rememberMe: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      router.push(`/dashboard/${user.role}`);
+    }
+  }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,13 +38,15 @@ function LoginContent() {
     }
     setLoading(true);
     try {
-      const user = await login(form.email, form.password);
+      const loggedInUser = await login(form.email, form.password);
       toast.success('Welcome back to UniLearn!');
       
-      // Respect redirect parameter
+      // Respect redirect parameter or use default
       const redirectTo = searchParams.get('redirect');
       if (redirectTo) {
         router.push(redirectTo);
+      } else {
+        router.push(`/dashboard/${loggedInUser.role}`);
       }
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Invalid email or password';

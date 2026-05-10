@@ -50,10 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 2. Update local state
     setUser(data);
     
-    // 3. Navigate to dashboard
-    router.push(`/dashboard/${data.role}`);
     return data;
-  }, [router]);
+  }, []);
 
   const logout = useCallback(async () => {
     try {
