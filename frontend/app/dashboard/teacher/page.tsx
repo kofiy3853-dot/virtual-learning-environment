@@ -336,7 +336,7 @@ export default function TeacherDashboard() {
                   <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Create Workspace</h2>
                   <p className="text-surface-400 text-sm">Configure your new course environment.</p>
                 </div>
-                <button onClick={() => setShowForm(false)} className="p-3 bg-white/5 text-surface-400 hover:text-white hover:bg-white/10 rounded-2xl transition-all">
+                <button onClick={() => setShowForm(false)} aria-label="Close" title="Close" className="p-3 bg-white/5 text-surface-400 hover:text-white hover:bg-white/10 rounded-2xl transition-all">
                   <X size={20} />
                 </button>
               </div>
