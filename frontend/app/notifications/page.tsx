@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/shared/Sidebar';
 import { 
   Bell, CheckCircle2, MessageSquare, Megaphone, 
-  Check, CheckAll, Filter
+  Check, CheckCheck, Filter
 } from 'lucide-react';
 
 type FilterType = 'all' | 'unread' | 'grades' | 'messages' | 'announcements';
@@ -79,7 +79,7 @@ export default function NotificationsPage() {
             </div>
             {unreadCount > 0 && (
               <button onClick={markAllRead} className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm">
-                <CheckAll size={18} />
+                <CheckCheck size={18} />
                 Mark all as read
               </button>
             )}
