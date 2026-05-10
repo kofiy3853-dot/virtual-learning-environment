@@ -9,7 +9,8 @@ import Sidebar from '@/components/shared/Sidebar';
 import { Course } from '@/types';
 import { 
   Home, BookOpen, FileText, FlaskConical, BarChart3, 
-  CheckSquare, MessageSquare, Bell, Video, ChevronRight, Loader2 
+  CheckSquare, MessageSquare, Bell, Video, ChevronRight, 
+  Loader2, Sparkles, GraduationCap, Settings as SettingsIcon 
 } from 'lucide-react';
 
 export default function CourseLayout({ children }: { children: React.ReactNode }) {
@@ -20,12 +21,9 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
   const router = useRouter();
 
   const [course, setCourse] = useState<Course | null>(null);
-  const [enrolled, setEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState(false);
   const [toast, setToast] = useState<{ msg: string, type: string } | null>(null);
 
-  const isStudent = user?.role === 'student';
   const isTeacher = user?.role === 'teacher';
   const isOwner = isTeacher && (
     (typeof course?.teacher === 'object' && course.teacher?._id === user?._id) ||
@@ -49,46 +47,16 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
       } finally {
         if (!ignore) setLoading(false);
       }
-
-      if (isStudent && !ignore) {
-        try {
-          const res = await courseApi.getMyCourses();
-          const ids = (res.data.data || []).map((c: { _id: string }) => c._id);
-          if (!ignore) setEnrolled(ids.includes(courseId));
-        } catch {}
-      }
     }
     startFetching();
     return () => { ignore = true; };
-  }, [courseId, isStudent]);
-
-  const handleEnroll = async () => {
-    setEnrolling(true);
-    try {
-      await courseApi.enroll(courseId);
-      setEnrolled(true);
-      showToast('Enrolled successfully!');
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Enrollment failed.', 'error');
-    } finally { setEnrolling(false); }
-  };
-
-  const handleDrop = async () => {
-    setEnrolling(true);
-    try {
-      await courseApi.drop(courseId);
-      setEnrolled(false);
-      showToast('Course dropped.');
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Failed to drop course.', 'error');
-    } finally { setEnrolling(false); }
-  };
+  }, [courseId]);
 
   const tabs = [
     { label: 'Overview',     href: `/courses/${courseId}`,               icon: Home },
     { label: 'Modules',      href: `/courses/${courseId}/modules`,       icon: BookOpen },
     { label: 'Assignments',  href: `/courses/${courseId}/assignments`,    icon: FileText },
-    { label: 'Quizzes',      href: `/courses/${courseId}/quizzes`,        icon: FlaskConical },
+    { label: 'Quizzes',       href: `/courses/${courseId}/quizzes`,        icon: FlaskConical },
     { label: 'Grades',       href: `/courses/${courseId}/grades`,         icon: BarChart3 },
     { label: 'Attendance',   href: `/courses/${courseId}/attendance`,     icon: CheckSquare },
     { label: 'Discussions',  href: `/courses/${courseId}/discussions`,    icon: MessageSquare },
@@ -102,7 +70,7 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
       <main className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-slate-500 font-medium">Loading course details...</p>
+          <p className="text-slate-500 font-medium">Loading workspace environment...</p>
         </div>
       </main>
     </div>
@@ -112,19 +80,21 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
     <div className="flex h-screen bg-slate-50 font-sans">
       <Sidebar />
       <main className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center bg-white border border-slate-200 rounded-[32px] p-12 max-w-lg shadow-sm">
-          <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
-            <BookOpen size={32} className="text-slate-400" />
+        <div className="text-center bg-white border border-slate-200 rounded-[40px] p-16 max-w-lg shadow-sm">
+          <div className="w-20 h-20 bg-rose-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-rose-100 text-rose-600">
+            <GraduationCap size={32} />
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Course not found</h2>
-          <p className="text-slate-500 mb-8 font-medium">The course you are looking for does not exist or you do not have permission to view it.</p>
-          <Link href="/courses" className="inline-flex items-center justify-center h-12 px-8 rounded-full bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-md shadow-blue-600/20 transition-all hover:-translate-y-0.5">
+          <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Course not found.</h2>
+          <p className="text-slate-500 mb-10 font-medium leading-relaxed">The academic program you are looking for does not exist or has been archived.</p>
+          <Link href="/courses" className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 shadow-xl shadow-blue-600/20 transition-all active:scale-95 uppercase tracking-widest text-xs">
             Back to Catalog
           </Link>
         </div>
       </main>
     </div>
   );
+
+  const activeTab = tabs.find(t => pathname === t.href || (t.href !== `/courses/${courseId}` && pathname.startsWith(t.href)));
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -149,72 +119,60 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
       <main className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
         
         {/* Top Header */}
-        <div className="bg-white border-b border-slate-200 px-8 lg:px-12 pt-8 pb-0 shrink-0">
+        <div className="bg-white border-b border-slate-200 px-8 lg:px-12 pt-8 pb-0 shrink-0 shadow-sm relative z-20">
           
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-400 mb-6 uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">
             <Link href="/courses" className="hover:text-blue-600 transition-colors">Courses</Link>
-            <ChevronRight size={14} />
-            <span className="text-slate-900 truncate max-w-[200px]">{course.title}</span>
+            <ChevronRight size={12} className="text-slate-300" />
+            <Link href={`/courses/${courseId}`} className="hover:text-blue-600 transition-colors truncate max-w-[200px]">{course.title}</Link>
+            <ChevronRight size={12} className="text-slate-300" />
+            <span className="text-slate-900">{activeTab?.label || 'Overview'}</span>
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-3 flex-wrap">
-                <span className="px-3 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-3 mb-4 flex-wrap">
+                <span className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-black uppercase tracking-widest shadow-sm">
                   {course.code}
                 </span>
-                <span className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                  course.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                  course.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-100 text-slate-600 border border-slate-200'
                 }`}>
                   {course.status}
                 </span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  <Sparkles size={12} className="text-amber-400" />
                   {course.semester} · {course.academicYear}
-                </span>
+                </div>
               </div>
               
-              <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight mb-2 truncate">
+              <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter mb-2 truncate">
                 {course.title}
               </h1>
-              
-              {course.description && (
-                <p className="text-slate-500 font-medium max-w-3xl truncate">{course.description}</p>
-              )}
             </div>
 
             {/* Actions */}
             <div className="shrink-0 flex items-center gap-3">
-              {isStudent && course.status === 'active' && (
-                enrolled ? (
-                  <button onClick={handleDrop} disabled={enrolling} className="flex items-center justify-center h-11 px-6 rounded-xl bg-white border border-rose-200 text-rose-600 font-bold hover:bg-rose-50 shadow-sm transition-all disabled:opacity-50">
-                    {enrolling ? <Loader2 size={18} className="animate-spin" /> : 'Drop Course'}
-                  </button>
-                ) : (
-                  <button onClick={handleEnroll} disabled={enrolling} className="flex items-center justify-center h-11 px-6 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-md shadow-blue-600/20 transition-all disabled:opacity-50 hover:-translate-y-0.5">
-                    {enrolling ? <Loader2 size={18} className="animate-spin" /> : 'Enroll Now'}
-                  </button>
-                )
-              )}
               {isOwner && (
-                <Link href={`/courses/${courseId}/settings`} className="flex items-center justify-center h-11 px-6 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 shadow-md shadow-slate-900/10 transition-all hover:-translate-y-0.5">
-                  Manage Course
+                <Link href={`/courses/${courseId}/settings`} className="flex items-center justify-center gap-3 h-12 px-8 rounded-xl bg-slate-900 text-white font-black text-xs hover:bg-slate-800 shadow-xl shadow-slate-900/10 transition-all hover:-translate-y-0.5 active:scale-95 uppercase tracking-widest">
+                  <SettingsIcon size={16} /> Manage Workspace
                 </Link>
               )}
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0 border-b-0 border-slate-200">
+          <div className="flex items-center gap-0 overflow-x-auto no-scrollbar pb-0 border-b-0 border-slate-200">
             {tabs.map(tab => {
-              const isActive = pathname === tab.href;
+              const isActive = pathname === tab.href || (tab.href !== `/courses/${courseId}` && pathname.startsWith(tab.href));
               return (
-                <Link key={tab.href} href={tab.href} className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm whitespace-nowrap transition-colors ${
+                <Link key={tab.href} href={tab.href} className={`flex items-center gap-2.5 px-6 py-4 border-b-[3px] font-black text-[11px] uppercase tracking-[0.1em] whitespace-nowrap transition-all duration-300 ${
                   isActive 
-                    ? 'border-blue-600 text-blue-600' 
-                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                    ? 'border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-xl' 
+                    : 'border-transparent text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-t-xl'
                 }`}>
-                  <tab.icon size={16} />
+                  <tab.icon size={16} strokeWidth={isActive ? 3 : 2} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
                   {tab.label}
                 </Link>
               );
@@ -223,10 +181,15 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
         </div>
 
         {/* Dynamic Content Area */}
-        <div className="flex-1 overflow-y-auto p-8 lg:p-12 scroll-smooth">
-          <div className="max-w-[1400px] mx-auto">
+        <div className="flex-1 overflow-y-auto p-8 lg:p-12 scroll-smooth bg-slate-50/30">
+          <motion.div 
+            key={pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-[1400px] mx-auto"
+          >
             {children}
-          </div>
+          </motion.div>
         </div>
 
       </main>
