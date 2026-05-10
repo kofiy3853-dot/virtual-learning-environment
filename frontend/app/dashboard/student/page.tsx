@@ -1,8 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { courseApi } from '@/utils/api/courseApi';
+import { 
+  LayoutDashboard, BookOpen, MessageSquare, Bell, User as UserIcon, 
+  LogOut, GraduationCap, Calendar, Clock, ChevronRight, Activity, 
+  Sparkles, TrendingUp, CheckCircle2, AlertCircle
+} from 'lucide-react';
 
 interface Course {
   _id: string;
@@ -13,40 +19,10 @@ interface Course {
   academicYear: string;
 }
 
-const S: Record<string, React.CSSProperties> = {
-  wrap:     { display:'flex', minHeight:'100vh', backgroundColor:'#f8fafc', fontFamily:"'Sora','Inter',sans-serif" },
-  sidebar:  { width:240, backgroundColor:'#fff', borderRight:'1px solid #e2e8f0', display:'flex', flexDirection:'column', flexShrink:0 },
-  logoBox:  { padding:'20px 16px 16px', borderBottom:'1px solid #f1f5f9' },
-  logoInner:{ display:'flex', alignItems:'center', gap:10 },
-  logoIcon: { width:34, height:34, borderRadius:10, backgroundColor:'#4f46e5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-  logoText: { fontWeight:700, fontSize:16, color:'#0f172a' },
-  userCard: { padding:'12px 16px', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', gap:10 },
-  avatar:   { width:36, height:36, borderRadius:10, backgroundColor:'#e0e7ff', display:'flex', alignItems:'center', justifyContent:'center', color:'#4338ca', fontWeight:700, fontSize:14, flexShrink:0 },
-  nav:      { flex:1, padding:'10px', display:'flex', flexDirection:'column', gap:2 },
-  link:     { display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#475569', textDecoration:'none', border:'none', background:'transparent', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  linkActive:{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#4338ca', textDecoration:'none', background:'#eef2ff', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" },
-  main:     { flex:1, overflowY:'auto', padding:'40px' },
-  h1:       { fontSize:24, fontWeight:700, color:'#0f172a', letterSpacing:'-0.025em', margin:0 },
-  subtitle: { fontSize:14, color:'#64748b', marginTop:4, marginBottom:0 },
-  grid3:    { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:32 },
-  statCard: { backgroundColor:'#fff', borderRadius:16, border:'1px solid #e2e8f0', boxShadow:'0 1px 3px rgb(0 0 0/0.07)', padding:24, display:'flex', alignItems:'center', gap:16 },
-  statIcon: { width:48, height:48, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:22 },
-  courseCard:{ backgroundColor:'#fff', borderRadius:16, border:'1px solid #e2e8f0', boxShadow:'0 1px 3px rgb(0 0 0/0.07)', padding:20, textDecoration:'none', display:'block', transition:'all 0.2s' },
-};
-
-const navItems = [
-  { href:'/dashboard/student', label:'Dashboard',     icon:'📊', active:true },
-  { href:'/courses',           label:'My Courses',    icon:'📚' },
-  { href:'/messages',          label:'Messages',      icon:'💬' },
-  { href:'/notifications',     label:'Notifications', icon:'🔔' },
-  { href:'/profile',           label:'Profile',       icon:'👤' },
-];
-
 export default function StudentDashboard() {
-  const { user, logout }      = useAuth();
+  const { user, logout } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hovered, setHovered] = useState<string | null>(null);
 
   useEffect(() => {
     courseApi.getMyCourses()
@@ -55,7 +31,9 @@ export default function StudentDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  const active   = courses.filter(c => c.status === 'active').length;
+  const activeCourses = courses.filter(c => c.status === 'active');
+  const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return 'Good morning';
@@ -64,116 +42,248 @@ export default function StudentDashboard() {
   })();
 
   return (
-    <div style={S.wrap}>
+    <div className="min-h-screen bg-slate-50 flex overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900 relative">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-100/50 rounded-full blur-[140px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-50/60 rounded-full blur-[120px]" />
+      </div>
+
       {/* Sidebar */}
-      <aside style={S.sidebar}>
-        <div style={S.logoBox}>
-          <div style={S.logoInner}>
-            <div style={S.logoIcon}>
-              <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-              </svg>
+      <aside className="w-64 border-r border-slate-200 bg-white/80 backdrop-blur-xl flex flex-col z-20 relative shadow-sm">
+        <div className="p-6 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/20">
+              <GraduationCap size={20} className="text-white" />
             </div>
-            <span style={S.logoText}>UniLearn</span>
+            <span className="font-extrabold text-xl tracking-tight text-slate-900">UniLearn</span>
           </div>
         </div>
-        <div style={S.userCard}>
-          <div style={S.avatar}>{user?.name?.charAt(0)?.toUpperCase() || 'S'}</div>
-          <div style={{ minWidth:0 }}>
-            <p style={{ fontSize:13, fontWeight:600, color:'#0f172a', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user?.name || 'Student'}</p>
-            <span style={{ fontSize:11, fontWeight:500, backgroundColor:'#d1fae5', color:'#065f46', padding:'1px 8px', borderRadius:9999 }}>student</span>
-          </div>
-        </div>
-        <nav style={S.nav}>
-          {navItems.map(item => (
-            <Link key={item.href} href={item.href} style={item.active ? S.linkActive : S.link}>
-              <span style={{ fontSize:16 }}>{item.icon}</span>
-              <span>{item.label}</span>
+
+        <div className="px-4 py-8 flex-1">
+          <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-4">Workspace</p>
+          <nav className="flex flex-col gap-1.5">
+            <Link href="/dashboard/student" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-blue-50 text-blue-700 font-bold border border-blue-100 transition-all">
+              <LayoutDashboard size={18} />
+              <span className="text-sm">Dashboard</span>
             </Link>
-          ))}
-        </nav>
-        <div style={{ padding:'10px', borderTop:'1px solid #f1f5f9' }}>
-          <button onClick={logout} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:10, fontSize:14, fontWeight:500, color:'#ef4444', background:'transparent', border:'none', cursor:'pointer', width:'100%', fontFamily:"'Sora','Inter',sans-serif" }}>
-            <span style={{ fontSize:16 }}>🚪</span><span>Sign out</span>
+            <Link href="/courses" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group">
+              <BookOpen size={18} className="group-hover:text-blue-600 transition-colors" />
+              <span className="text-sm">My Courses</span>
+            </Link>
+            <Link href="/messages" className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group">
+              <div className="flex items-center gap-3">
+                <MessageSquare size={18} className="group-hover:text-blue-600 transition-colors" />
+                <span className="text-sm">Messages</span>
+              </div>
+              <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">1</span>
+            </Link>
+            <Link href="/notifications" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group">
+              <Bell size={18} className="group-hover:text-blue-600 transition-colors" />
+              <span className="text-sm">Notifications</span>
+            </Link>
+            <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-all group">
+              <UserIcon size={18} className="group-hover:text-blue-600 transition-colors" />
+              <span className="text-sm">Profile</span>
+            </Link>
+          </nav>
+        </div>
+
+        <div className="p-4 mt-auto border-t border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white border border-slate-200 mb-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm border border-blue-200 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              {user?.name?.charAt(0) || 'S'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-900 truncate">{user?.name || 'Student'}</p>
+              <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-wider">{user?.role || 'Student'}</p>
+            </div>
+          </div>
+          
+          <button onClick={logout} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 font-bold hover:bg-red-50 hover:text-red-700 transition-all w-full text-left">
+            <LogOut size={18} />
+            <span className="text-sm">Sign out securely</span>
           </button>
         </div>
       </aside>
 
-      {/* Main */}
-      <main style={S.main}>
-        {/* Header */}
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:32 }}>
-          <div>
-            <h1 style={S.h1}>{greeting}, {user?.name?.split(' ')[0]} 👋</h1>
-            <p style={S.subtitle}>Here&apos;s what&apos;s happening with your courses today.</p>
-          </div>
-          <Link href="/courses" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:12, backgroundColor:'#4f46e5', fontSize:14, fontWeight:500, color:'#fff', textDecoration:'none' }}>
-            + Browse Courses
-          </Link>
-        </div>
-
-        {/* Stats */}
-        <div style={S.grid3}>
-          {[
-            { label:'Enrolled Courses', value: courses.length,               icon:'📚', bg:'#eef2ff' },
-            { label:'Active Courses',   value: active,                        icon:'✅', bg:'#f0fdf4' },
-            { label:'Department',       value: user?.department || 'N/A',     icon:'🏛️', bg:'#fffbeb' },
-          ].map(s => (
-            <div key={s.label} style={S.statCard}>
-              <div style={{ ...S.statIcon, backgroundColor: s.bg }}>{s.icon}</div>
-              <div>
-                <p style={{ fontSize:26, fontWeight:700, color:'#0f172a', margin:0, letterSpacing:'-0.02em' }}>{s.value}</p>
-                <p style={{ fontSize:13, color:'#64748b', margin:0, marginTop:2 }}>{s.label}</p>
-              </div>
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto relative z-10 scroll-smooth">
+        <div className="max-w-[1400px] mx-auto p-8 lg:p-12">
+          
+          {/* Header */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <div>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider mb-3">
+                <Calendar size={14} />
+                <span>{currentDate}</span>
+              </motion.div>
+              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
+                {greeting}, {user?.name?.split(' ')[0]} 👋
+              </motion.h1>
+              <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-slate-500 text-lg max-w-xl leading-relaxed font-medium">
+                You have <strong className="text-slate-900 font-bold">2 assignments due soon</strong> and <strong className="text-slate-900 font-bold">1 upcoming lecture</strong> today.
+              </motion.p>
             </div>
-          ))}
-        </div>
-
-        {/* Courses section */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-          <h2 style={{ fontSize:16, fontWeight:600, color:'#0f172a', margin:0 }}>My Courses</h2>
-          <Link href="/courses" style={{ fontSize:13, fontWeight:500, color:'#4f46e5', textDecoration:'none' }}>Browse all →</Link>
-        </div>
-
-        {loading ? (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
-            {[1,2,3].map(i => (
-              <div key={i} style={{ height:130, borderRadius:16, background:'linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%)', backgroundSize:'200% 100%' }} />
-            ))}
-          </div>
-        ) : courses.length === 0 ? (
-          <div style={{ backgroundColor:'#fff', borderRadius:16, border:'1px solid #e2e8f0', padding:'48px 24px', textAlign:'center' }}>
-            <p style={{ fontSize:40, margin:'0 0 12px' }}>📚</p>
-            <h3 style={{ fontSize:15, fontWeight:600, color:'#334155', margin:'0 0 6px' }}>No courses yet</h3>
-            <p style={{ fontSize:13, color:'#94a3b8', margin:'0 0 20px' }}>Browse available courses and enroll to get started.</p>
-            <Link href="/courses" style={{ display:'inline-flex', padding:'9px 20px', borderRadius:12, backgroundColor:'#4f46e5', color:'#fff', fontSize:14, fontWeight:500, textDecoration:'none' }}>
-              Browse Courses
-            </Link>
-          </div>
-        ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
-            {courses.map(course => (
-              <Link key={course._id} href={`/courses/${course._id}`}
-                onMouseEnter={() => setHovered(course._id)}
-                onMouseLeave={() => setHovered(null)}
-                style={{ ...S.courseCard, boxShadow: hovered===course._id ? '0 8px 24px rgb(0 0 0/0.1)' : S.courseCard?.boxShadow, transform: hovered===course._id ? 'translateY(-3px)' : 'none' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-                  <span style={{ fontSize:11, fontWeight:600, backgroundColor:'#e0e7ff', color:'#4338ca', padding:'2px 10px', borderRadius:9999 }}>{course.code}</span>
-                  <span style={{ fontSize:11, fontWeight:500, backgroundColor: course.status==='active' ? '#d1fae5' : '#f1f5f9', color: course.status==='active' ? '#065f46' : '#475569', padding:'2px 10px', borderRadius:9999 }}>{course.status}</span>
-                </div>
-                <h3 style={{ fontSize:14, fontWeight:600, color:'#0f172a', margin:'0 0 6px', lineHeight:1.4 }}>{course.title}</h3>
-                <p style={{ fontSize:12, color:'#94a3b8', margin:0 }}>{course.semester} · {course.academicYear}</p>
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
+            >
+              <Link href="/courses" className="group flex items-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5">
+                <BookOpen size={18} />
+                Browse Catalog
               </Link>
+            </motion.div>
+          </header>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {[
+              { label: 'Enrolled Courses', value: courses.length, icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+              { label: 'Active Courses', value: activeCourses.length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+              { label: 'Department', value: user?.department || 'N/A', icon: GraduationCap, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' }
+            ].map((stat, i) => (
+              <motion.div 
+                key={i} 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }}
+                className="relative overflow-hidden rounded-[24px] bg-white border border-slate-200 p-6 group hover:border-slate-300 transition-colors shadow-sm hover:shadow-xl hover:shadow-slate-200/50"
+              >
+                <div className="relative z-10 flex items-center gap-5">
+                  <div className={`w-14 h-14 rounded-2xl ${stat.bg} ${stat.border} border flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500`}>
+                    <stat.icon size={24} className={stat.color} />
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-1">{loading ? '-' : stat.value}</h3>
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
+                  </div>
+                </div>
+              </motion.div>
             ))}
           </div>
-        )}
 
-        {/* Info footer */}
-        <div style={{ marginTop:32, padding:'16px 20px', backgroundColor:'#fff', borderRadius:14, border:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'#f0fdf4', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>💡</div>
-          <div>
-            <p style={{ fontSize:13, fontWeight:600, color:'#0f172a', margin:0 }}>Stay on top of your assignments</p>
-            <p style={{ fontSize:12, color:'#94a3b8', margin:0 }}>Check each course for upcoming deadlines and new content.</p>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            {/* Main Content Area (Courses) */}
+            <div className="xl:col-span-2 space-y-8">
+              
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                  My Learning Workspace <Sparkles size={18} className="text-blue-600" />
+                </h2>
+                <Link href="/courses" className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 group">
+                  View all <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+
+              {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {[1,2,3,4].map(i => <div key={i} className="h-32 rounded-[24px] bg-slate-100 animate-pulse border border-slate-200" />)}
+                </div>
+              ) : courses.length === 0 ? (
+                /* Premium Empty State */
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+                  className="rounded-[32px] bg-white border border-slate-200 p-12 text-center shadow-sm"
+                >
+                  <div className="w-24 h-24 mx-auto bg-blue-50 rounded-3xl border border-blue-100 flex items-center justify-center mb-8 shadow-sm">
+                    <BookOpen size={40} className="text-blue-600" />
+                  </div>
+                  <h3 className="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">No courses enrolled yet</h3>
+                  <p className="text-slate-500 text-lg max-w-md mx-auto mb-8 font-medium">
+                    Browse the catalog and enroll in courses to start your academic journey.
+                  </p>
+                  <Link href="/courses" className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/10">
+                    Browse Catalog
+                  </Link>
+                </motion.div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {courses.map((course, idx) => (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                      key={course._id} 
+                    >
+                      <Link href={`/courses/${course._id}`} className="group block p-6 rounded-[24px] bg-white border border-slate-200 hover:border-blue-300 transition-all shadow-sm hover:shadow-xl hover:shadow-blue-900/5 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        
+                        <div className="flex items-start justify-between mb-4">
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wider">
+                            {course.code}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider ${
+                            course.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                          }`}>{course.status}</span>
+                        </div>
+                        
+                        <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors mb-2 leading-tight pr-4">
+                          {course.title}
+                        </h3>
+                        <p className="text-sm text-slate-500 font-medium">
+                          {course.semester} • {course.academicYear}
+                        </p>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar Widgets */}
+            <div className="space-y-6">
+              
+              {/* Productivity Widget */}
+              <div className="rounded-[24px] bg-white border border-slate-200 p-7 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-900 mb-6 uppercase tracking-widest flex items-center gap-2">
+                  <Activity size={16} className="text-blue-600" /> Academic Progress
+                </h3>
+                
+                <div className="space-y-5">
+                  {[
+                    { label: 'Overall Completion', val: 68, color: 'bg-blue-600' },
+                    { label: 'Assignments Submitted', val: 85, color: 'bg-emerald-500' },
+                  ].map((item, i) => (
+                    <div key={i}>
+                      <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
+                        <span>{item.label}</span>
+                        <span>{item.val}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.val}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reminders Widget */}
+              <div className="rounded-[24px] bg-white border border-slate-200 p-7 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-900 mb-6 uppercase tracking-widest flex items-center gap-2">
+                  <AlertCircle size={16} className="text-rose-500" /> Action Required
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 mb-1">Advanced AI Midterm</p>
+                      <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                        <Clock size={12} /> Due in 2 days
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 mb-1">Database Project Proposal</p>
+                      <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                        <Clock size={12} /> Due this Friday
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       </main>
