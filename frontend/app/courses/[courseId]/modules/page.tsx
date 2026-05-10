@@ -1,11 +1,14 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { courseApi } from '@/utils/api/courseApi';
 import { Course } from '@/types';
-import styles from './modules.module.css';
+import { 
+  FileText, Video, Presentation, FileCode2, Image as ImageIcon, 
+  ChevronDown, Plus, ExternalLink, Trash2, Paperclip, Loader2, BookOpen
+} from 'lucide-react';
 
 interface Module {
   _id: string;
@@ -21,9 +24,13 @@ interface ContentItem {
   fileUrl: string;
 }
 
-const contentTypeIcon = { pdf:'📄', video:'🎬', slide:'📑', note:'📝', image:'🖼️' };
-const contentTypeBg   = { pdf:'#fee2e2', video:'#dbeafe', slide:'#fef3c7', note:'#d1fae5', image:'#faf5ff' };
-const contentTypeColor= { pdf:'#991b1b', video:'#1e40af', slide:'#92400e', note:'#065f46', image:'#6b21a8' };
+const contentMeta = {
+  pdf:   { icon: FileText,     bg: 'bg-rose-50',    text: 'text-rose-600',    border: 'border-rose-100' },
+  video: { icon: Video,        bg: 'bg-blue-50',    text: 'text-blue-600',    border: 'border-blue-100' },
+  slide: { icon: Presentation, bg: 'bg-amber-50',   text: 'text-amber-600',   border: 'border-amber-100' },
+  note:  { icon: FileCode2,    bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100' },
+  image: { icon: ImageIcon,    bg: 'bg-purple-50',  text: 'text-purple-600',  border: 'border-purple-100' }
+};
 
 export default function ModulesPage() {
   const params = useParams();
@@ -40,18 +47,12 @@ export default function ModulesPage() {
   const [modForm, setModForm]  = useState({ title:'', weekNumber:'', order:'' });
   const [creating, setCreating]= useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [toast, setToast]      = useState<{ msg: string, type: string } | null>(null);
 
   const isTeacher = user?.role === 'teacher';
   const isOwner = isTeacher && (
     (typeof course?.teacher === 'object' && course.teacher?._id === user?._id) ||
     (course?.teacher === user?._id)
   );
-
-  const showToast = (msg: string, type: string = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  };
 
   const loadContent = useCallback(async (moduleId: string) => {
     if (content[moduleId]) return;
@@ -78,15 +79,12 @@ export default function ModulesPage() {
           setModules(mods);
           if (mods.length > 0) {
             setExpanded({ [mods[0]._id]: true });
-            // For the first module, we can also load content here or let the toggle handle it
             courseApi.getModuleContent(mods[0]._id).then(res => {
               if (!ignore) setContent(p => ({ ...p, [mods[0]._id]: res.data.data || [] }));
             });
           }
         }
-      } catch (err) {
-        // Handle error
-      } finally {
+      } catch (err) {} finally {
         if (!ignore) setLoading(false);
       }
     }
@@ -113,10 +111,8 @@ export default function ModulesPage() {
       setModules(p => [...p, res.data.data]);
       setModForm({ title:'', weekNumber:'', order:'' });
       setShowModForm(false);
-      showToast('Module created!');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      showToast(error.response?.data?.message || 'Failed to create module.', 'error');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to create module.');
     } finally { setCreating(false); }
   };
 
@@ -140,10 +136,8 @@ export default function ModulesPage() {
       fd.append('order', String((content[moduleId]?.length || 0) + 1));
       const res = await courseApi.uploadContent(moduleId, fd);
       setContent(p => ({ ...p, [moduleId]: [...(p[moduleId] || []), res.data.data] }));
-      showToast('Content uploaded!');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      showToast(error.response?.data?.message || 'Upload failed.', 'error');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Upload failed.');
     } finally { setUploading(null); if (e.target) e.target.value = ''; }
   };
 
@@ -151,135 +145,182 @@ export default function ModulesPage() {
     try {
       await courseApi.deleteContent(contentId);
       setContent(p => ({ ...p, [moduleId]: p[moduleId].filter(c => c._id !== contentId) }));
-      showToast('Content removed.');
     } catch { 
-      showToast('Delete failed.', 'error'); 
+      alert('Delete failed.'); 
     }
   };
 
   return (
-    <div style={{ maxWidth: 900 }}>
-      {toast && (
-        <div className={styles.toast} style={{ backgroundColor: toast.type==='error'?'#fee2e2':'#d1fae5', color: toast.type==='error'?'#991b1b':'#065f46' }}>
-          {toast.msg}
-        </div>
-      )}
-
-      {/* Actions bar */}
-      <div className={styles.actionsBar}>
+    <div className="max-w-4xl mx-auto pb-20">
+      
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h2 style={{ fontSize:20, fontWeight:700, color:'#0f172a', margin:0 }}>Course Content</h2>
-          <p style={{ fontSize:14, color:'#64748b', margin:0 }}>{modules.length} module{modules.length !== 1 ? 's' : ''} total</p>
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Course Modules</h2>
+          <p className="text-slate-500 font-medium">{modules.length} module{modules.length !== 1 ? 's' : ''} structured for this course</p>
         </div>
         {isOwner && (
-          <button onClick={() => setShowModForm(p => !p)} className={`${styles.btnAdd} ${showModForm ? styles.btnAddActive : ''}`}>
-            {showModForm ? '✕ Cancel' : '+ Add Module'}
+          <button 
+            onClick={() => setShowModForm(p => !p)} 
+            className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all ${
+              showModForm 
+                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' 
+                : 'bg-slate-900 text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800 hover:-translate-y-0.5'
+            }`}
+          >
+            {showModForm ? 'Cancel' : <><Plus size={18} /> Add Module</>}
           </button>
         )}
       </div>
 
-      {/* Create module form */}
-      {showModForm && (
-        <div className={styles.formCard}>
-          <h3 style={{ fontSize:15, fontWeight:600, color:'#0f172a', margin:'0 0 16px' }}>New Module</h3>
-          <form onSubmit={handleCreateModule}>
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:14, marginBottom:16 }}>
-              <div>
-                <label style={{ display:'block', fontSize:13, fontWeight:500, color:'#334155', marginBottom:6 }}>Module Title *</label>
-                <input className={styles.input} placeholder="Week 1 — Introduction" value={modForm.title} onChange={e => setModForm(p=>({...p,title:e.target.value}))} required />
-              </div>
-              <div>
-                <label style={{ display:'block', fontSize:13, fontWeight:500, color:'#334155', marginBottom:6 }}>Week Number *</label>
-                <input type="number" min="1" className={styles.input} placeholder="1" value={modForm.weekNumber} onChange={e => setModForm(p=>({...p,weekNumber:e.target.value}))} required />
-              </div>
-              <div>
-                <label style={{ display:'block', fontSize:13, fontWeight:500, color:'#334155', marginBottom:6 }}>Order</label>
-                <input type="number" min="1" className={styles.input} placeholder={String(modules.length + 1)} value={modForm.order} onChange={e => setModForm(p=>({...p,order:e.target.value}))} />
-              </div>
+      {/* Create Module Form */}
+      <AnimatePresence>
+        {showModForm && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginBottom: 32 }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm">
+              <h3 className="text-lg font-extrabold text-slate-900 mb-6">Create New Module</h3>
+              <form onSubmit={handleCreateModule}>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 mb-8">
+                  <div className="sm:col-span-6">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Module Title *</label>
+                    <input className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 h-12 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium" placeholder="e.g. Week 1 — Introduction" value={modForm.title} onChange={e => setModForm(p=>({...p,title:e.target.value}))} required />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Week Number *</label>
+                    <input type="number" min="1" className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 h-12 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium" placeholder="1" value={modForm.weekNumber} onChange={e => setModForm(p=>({...p,weekNumber:e.target.value}))} required />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Order</label>
+                    <input type="number" min="1" className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 h-12 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium" placeholder={String(modules.length + 1)} value={modForm.order} onChange={e => setModForm(p=>({...p,order:e.target.value}))} />
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <button type="submit" disabled={creating} className="h-12 px-8 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-md shadow-blue-600/20 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2">
+                    {creating ? <Loader2 size={18} className="animate-spin" /> : 'Create Module'}
+                  </button>
+                  <button type="button" onClick={() => setShowModForm(false)} className="h-12 px-8 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 transition-all">
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </div>
-            <div style={{ display:'flex', gap:10 }}>
-              <button type="submit" disabled={creating} className={styles.btnAdd} style={{ opacity: creating?0.6:1 }}>
-                {creating ? 'Creating...' : 'Create Module'}
-              </button>
-              <button type="button" onClick={() => setShowModForm(false)} className={styles.btnAdd} style={{ backgroundColor:'#f1f5f9', color:'#334155' }}>
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Module list */}
+      {/* Module List */}
       {loading ? (
-        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          {[1,2,3].map(i => <div key={i} className={styles.skeleton} />)}
+        <div className="space-y-4">
+          {[1,2,3].map(i => <div key={i} className="h-20 bg-slate-200/50 rounded-2xl animate-pulse" />)}
         </div>
       ) : modules.length === 0 ? (
-        <div style={{ backgroundColor:'#fff', borderRadius:16, border:'1px solid #e2e8f0', padding:'56px 24px', textAlign:'center' }}>
-          <p style={{ fontSize:40, margin:'0 0 12px' }}>📖</p>
-          <h3 style={{ fontSize:15, fontWeight:600, color:'#334155', margin:'0 0 6px' }}>No modules yet</h3>
-          <p style={{ fontSize:13, color:'#94a3b8' }}>{isOwner ? 'Create your first module to start adding content.' : 'No modules have been added to this course yet.'}</p>
+        <div className="bg-white rounded-[32px] border border-slate-200 p-16 text-center shadow-sm">
+          <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-100">
+            <BookOpen size={32} className="text-blue-600" />
+          </div>
+          <h3 className="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">No modules yet</h3>
+          <p className="text-slate-500 font-medium">
+            {isOwner ? 'Create your first module to start adding course materials.' : 'No modules have been published for this course yet.'}
+          </p>
         </div>
       ) : (
-        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        <div className="space-y-4">
           {modules.sort((a,b) => a.weekNumber - b.weekNumber).map(mod => {
             const isOpen = expanded[mod._id];
             const items  = content[mod._id] || [];
             return (
-              <div key={mod._id} className={styles.moduleItem}>
-                {/* Module header */}
-                <button onClick={() => toggleModule(mod._id)} className={styles.moduleHeader}>
-                  <div className={styles.weekBadge}>W{mod.weekNumber}</div>
-                  <div style={{ flex:1 }}>
-                    <p style={{ fontSize:14, fontWeight:600, color:'#0f172a', margin:0 }}>{mod.title}</p>
-                    <p style={{ fontSize:12, color:'#94a3b8', margin:0 }}>Week {mod.weekNumber} · {items.length || 0} items</p>
+              <div key={mod._id} className={`bg-white rounded-[24px] border transition-all duration-300 ${isOpen ? 'border-blue-300 shadow-xl shadow-blue-900/5' : 'border-slate-200 shadow-sm hover:border-slate-300'}`}>
+                
+                {/* Module Header */}
+                <button onClick={() => toggleModule(mod._id)} className="w-full flex items-center gap-4 p-5 text-left">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-lg transition-colors shrink-0 ${isOpen ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>
+                    W{mod.weekNumber}
                   </div>
-                  <span style={{ fontSize:16, color:'#94a3b8', transform: isOpen ? 'rotate(180deg)' : 'none', transition:'transform 0.2s' }}>▾</span>
+                  <div className="flex-1 min-w-0">
+                    <h4 className={`font-extrabold text-lg truncate transition-colors ${isOpen ? 'text-blue-700' : 'text-slate-900'}`}>{mod.title}</h4>
+                    <p className="text-sm font-medium text-slate-500">Week {mod.weekNumber} · {items.length} items</p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isOpen ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'}`}>
+                    <ChevronDown size={20} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                  </div>
                 </button>
 
-                {/* Content items */}
-                {isOpen && (
-                  <div className={styles.contentList}>
-                    {items.length === 0 ? (
-                      <p style={{ fontSize:13, color:'#94a3b8', padding:'8px 0', margin:0 }}>No content yet.{isOwner ? ' Upload files below.' : ''}</p>
-                    ) : (
-                      <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom: isOwner ? 12 : 0 }}>
-                        {items.map(item => (
-                          <div key={item._id} className={styles.contentItem}>
-                            <div className={styles.iconBox} style={{ backgroundColor: contentTypeBg[item.type] || '#f1f5f9', color: contentTypeColor[item.type] || '#475569' }}>
-                              {contentTypeIcon[item.type] || '📄'}
-                            </div>
-                            <div style={{ flex:1, minWidth:0 }}>
-                              <p style={{ fontSize:13, fontWeight:600, color:'#0f172a', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.title}</p>
-                              <span style={{ fontSize:11, fontWeight:500, backgroundColor: contentTypeBg[item.type] || '#f1f5f9', color: contentTypeColor[item.type] || '#475569', padding:'1px 8px', borderRadius:9999 }}>{item.type}</span>
-                            </div>
-                            <a href={item.fileUrl} target="_blank" rel="noopener noreferrer"
-                              style={{ padding:'5px 12px', borderRadius:8, backgroundColor:'#eef2ff', color:'#4338ca', fontSize:12, fontWeight:500, textDecoration:'none' }}>
-                              Open ↗
-                            </a>
-                            {isOwner && (
-                              <button onClick={() => handleDeleteContent(mod._id, item._id)}
-                                style={{ padding:'5px 10px', borderRadius:8, backgroundColor:'#fee2e2', color:'#991b1b', fontSize:12, border:'none', cursor:'pointer', fontFamily:"'Sora','Inter',sans-serif" }}>
-                                🗑️
-                              </button>
-                            )}
+                {/* Content Items */}
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-5 pt-2 border-t border-slate-100">
+                        {items.length === 0 ? (
+                          <div className="py-6 text-center rounded-2xl bg-slate-50 border border-slate-100 border-dashed">
+                            <p className="text-slate-500 font-medium">No content has been added to this module yet.</p>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        ) : (
+                          <div className="space-y-3 mb-6">
+                            {items.map((item, idx) => {
+                              const meta = contentMeta[item.type] || contentMeta.note;
+                              const MetaIcon = meta.icon;
+                              return (
+                                <motion.div 
+                                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                                  key={item._id} 
+                                  className="group flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-200 hover:shadow-md transition-all"
+                                >
+                                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${meta.bg} ${meta.color} ${meta.border}`}>
+                                    <MetaIcon size={20} />
+                                  </div>
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="font-bold text-slate-900 truncate mb-1">{item.title}</h5>
+                                    <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${meta.bg} ${meta.color} ${meta.border}`}>
+                                      {item.type}
+                                    </span>
+                                  </div>
 
-                    {/* Upload button for teachers */}
-                    {isOwner && (
-                      <label className={styles.uploadLabel} style={{ backgroundColor: uploading===mod._id ? '#f1f5f9' : '#f0fdf4' }}>
-                        <span>📎</span>
-                        <span>{uploading === mod._id ? 'Uploading...' : 'Upload Content'}</span>
-                        <input type="file" style={{ display:'none' }} disabled={uploading === mod._id}
-                          accept=".pdf,.ppt,.pptx,.mp4,.mov,.txt,.md,.png,.jpg,.jpeg"
-                          onChange={e => handleUploadContent(mod._id, e)} />
-                      </label>
-                    )}
-                  </div>
-                )}
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                      <ExternalLink size={18} />
+                                    </a>
+                                    {isOwner && (
+                                      <button onClick={() => handleDeleteContent(mod._id, item._id)} className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors">
+                                        <Trash2 size={18} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Upload Button */}
+                        {isOwner && (
+                          <label className={`flex items-center justify-center gap-2 w-full h-14 rounded-xl border-2 border-dashed font-bold transition-all cursor-pointer ${
+                            uploading === mod._id 
+                              ? 'border-blue-300 bg-blue-50 text-blue-600' 
+                              : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600'
+                          }`}>
+                            {uploading === mod._id ? (
+                              <><Loader2 size={18} className="animate-spin" /> Uploading...</>
+                            ) : (
+                              <><Paperclip size={18} /> Upload Material</>
+                            )}
+                            <input type="file" className="hidden" disabled={uploading === mod._id} accept=".pdf,.ppt,.pptx,.mp4,.mov,.txt,.md,.png,.jpg,.jpeg" onChange={e => handleUploadContent(mod._id, e)} />
+                          </label>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}
