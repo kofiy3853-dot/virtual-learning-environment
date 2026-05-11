@@ -138,7 +138,7 @@ export default function AssignmentDetailPage() {
                 )}
              </AnimatePresence>
 
-             {isStudent && (
+             {isStudent && assignment && (
                 <SubmissionStudio 
                   assignment={assignment} 
                   submission={submission} 
@@ -252,7 +252,7 @@ export default function AssignmentDetailPage() {
   );
 }
 
-function TechnicalRow({ icon, label, value }: any) {
+function TechnicalRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
     <div className="flex items-center justify-between py-2">
        <div className="flex items-center gap-3 text-slate-400">

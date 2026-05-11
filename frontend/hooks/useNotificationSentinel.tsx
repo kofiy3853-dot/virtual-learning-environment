@@ -19,7 +19,7 @@ export default function useNotificationSentinel() {
 
     // Initial fetch of unread count
     communicationApi.getMyNotifications().then(res => {
-      const unread = res.data.data.filter((n: any) => !n.isRead).length;
+      const unread = res.data.data.filter((n: { isRead: boolean }) => !n.isRead).length;
       setUnreadCount(unread);
     });
   }, [user]);
@@ -27,7 +27,7 @@ export default function useNotificationSentinel() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('new_notification', (notif: any) => {
+    socket.on('new_notification', (notif: { message?: string }) => {
       setUnreadCount(prev => prev + 1);
       
       // Premium SaaS Toast
@@ -72,7 +72,7 @@ export default function useNotificationSentinel() {
       ), { duration: 5000 });
     });
 
-    socket.on('new_message', (msg: any) => {
+    socket.on('new_message', (msg: { senderName: string; body: string }) => {
        // Only toast if not on messages page
        if (window.location.pathname !== '/messages') {
           toast.custom((t) => (

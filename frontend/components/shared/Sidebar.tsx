@@ -35,7 +35,7 @@ const adminLinks = [
 
 const linksByRole: Record<string, any> = { student: studentLinks, teacher: teacherLinks, admin: adminLinks };
 
-import { useNotificationSentinel } from '@/hooks/useNotificationSentinel';
+import useNotificationSentinel from '@/hooks/useNotificationSentinel';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();

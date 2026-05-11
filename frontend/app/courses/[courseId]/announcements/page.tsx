@@ -16,7 +16,7 @@ import { AxiosError } from 'axios';
 interface Announcement {
   _id: string;
   title: string;
-  body: string; // The legacy snippet uses 'body', existing code used 'content'. I'll support 'body' as per snippet.
+  content: string;
   isPinned?: boolean;
   createdAt: string;
   author: {
@@ -36,7 +36,7 @@ export default function AnnouncementsPage() {
   
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ title: '', body: '' });
+  const [form, setForm] = useState({ title: '', content: '' });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<{ msg: string, type: string } | null>(null);
 
@@ -71,7 +71,7 @@ export default function AnnouncementsPage() {
     try {
       const res = await courseApi.createAnnouncement(courseId, form);
       setAnnouncements(p => [res.data.data, ...p]);
-      setForm({ title: '', body: '' });
+      setForm({ title: '', content: '' });
       setShowForm(false);
       showToast('Announcement broadcast successfully!');
     } catch (err) {
@@ -84,7 +84,7 @@ export default function AnnouncementsPage() {
 
   const filteredAnnouncements = announcements.filter(a => 
     a.title.toLowerCase().includes(search.toLowerCase()) || 
-    (a.body || '').toLowerCase().includes(search.toLowerCase())
+    (a.content || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -159,7 +159,7 @@ export default function AnnouncementsPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Message Content *</label>
-                    <textarea rows={6} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-5 text-slate-900 focus:bg-white focus:border-blue-500 transition-all outline-none font-medium resize-none" placeholder="Provide detailed information for students..." value={form.body} onChange={e => setForm({...form, body: e.target.value})} required />
+                    <textarea rows={6} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-5 text-slate-900 focus:bg-white focus:border-blue-500 transition-all outline-none font-medium resize-none" placeholder="Provide detailed information for students..." value={form.content} onChange={e => setForm({...form, content: e.target.value})} required />
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -215,8 +215,8 @@ export default function AnnouncementsPage() {
         <div className="space-y-6">
           {filteredAnnouncements.map((ann, i) => {
             const isExpanded = expanded[ann._id];
-            const isLong = ann.body?.length > 280;
-            const content = isLong && !isExpanded ? ann.body.slice(0, 280) + '...' : ann.body;
+            const isLong = ann.content?.length > 280;
+            const content = isLong && !isExpanded ? ann.content.slice(0, 280) + '...' : ann.content;
 
             return (
               <motion.div

@@ -20,7 +20,7 @@ interface Assignment {
 interface Submission {
   status: string;
   feedback?: string;
-  grade: number;
+  grade?: number;
   textContent?: string;
   files?: string[];
 }
@@ -123,7 +123,7 @@ export default function SubmissionStudio({ assignment, submission, onSubmit }: S
                         <div className="text-right">
                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Grade</p>
                            <p className="text-4xl font-black text-indigo-400">
-                              {Math.round((submission.grade / assignment.totalMarks) * 100)}%
+                              {Math.round(((submission.grade ?? 0) / assignment.totalMarks) * 100)}%
                            </p>
                         </div>
                      </div>

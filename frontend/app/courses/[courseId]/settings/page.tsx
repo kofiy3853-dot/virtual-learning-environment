@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { courseApi } from '@/utils/api/courseApi';
+import type { Course } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Settings, Save, Trash2, AlertTriangle, 
@@ -16,7 +17,7 @@ export default function CourseSettingsPage() {
   const router = useRouter();
   const { user } = useAuth();
   
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<Partial<Course>>({
     title: '',
     code: '',
     description: '',
@@ -214,7 +215,7 @@ export default function CourseSettingsPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {['active', 'draft', 'archived'].map((s) => (
+            {(['active', 'draft', 'archived'] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setForm({...form, status: s})}

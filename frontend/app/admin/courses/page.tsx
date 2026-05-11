@@ -15,7 +15,7 @@ interface Course {
   _id: string;
   code: string;
   title: string;
-  status: string;
+  status: 'active' | 'draft' | 'archived';
   semester: string;
   academicYear: string;
   enrollmentCount?: number;
@@ -102,7 +102,7 @@ export default function AdminCoursesPage() {
       .catch(() => {});
   }, []);
 
-  const handleStatusChange = async (course: Course, newStatus: string) => {
+  const handleStatusChange = async (course: Course, newStatus: 'active' | 'draft' | 'archived') => {
     setActionLoading(course._id + '_status');
     try {
       await adminApi.changeCourseStatus(course._id, newStatus);
