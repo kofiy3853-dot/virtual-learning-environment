@@ -58,13 +58,14 @@ app.use(cors({
       'https://virtual-learning-environment.vercel.app',
       'https://virtual-learning-environment.vercel.app/',
       'https://virtual-learning-environment-th7m.onrender.com', 
-      'https://unilearn-frontend.onrender.com', 
+      'https://unilearn-frontend.onrender.com',
+      'https://virtual-learning-environment-nicvgjzhp-kofiy3853-dots-projects.vercel.app'
     ].filter(Boolean);
 
     // Allow requests with no origin (mobile apps, Postman, curl)
     if (!origin) return callback(null, true);
 
-    if (allowed.indexOf(origin) !== -1) {
+    if (allowed.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
       callback(new Error(`CORS blocked: ${origin} not in allowed list`));
@@ -179,7 +180,11 @@ const PORT = process.env.PORT || 5000;
 const httpServer = require('http').createServer(app);
 const io = require('socket.io')(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: [
+      process.env.CLIENT_URL || 'http://localhost:3000',
+      'https://virtual-learning-environment.vercel.app',
+      'https://virtual-learning-environment-nicvgjzhp-kofiy3853-dots-projects.vercel.app'
+    ],
     methods: ['GET', 'POST'],
   },
 });
