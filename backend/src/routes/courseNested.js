@@ -14,6 +14,7 @@ const { createSession, getCourseSessions, getCourseAttendanceSummary } = require
 const { createAnnouncement, getAnnouncements, startDiscussion, getDiscussions } = require('../controllers/communicationController');
 const { createLiveSession, getLiveSessions } = require('../controllers/liveSessionController');
 const { enrollCourse, dropCourse } = require('../controllers/enrollmentController');
+const { getMyCourseSubmissions } = require('../controllers/submissionController');
 
 // ─── ENROLLMENT ─────────────────────────────────────────────────────────────
 router.post('/enroll', protect, authorize('student'), enrollCourse);
@@ -86,5 +87,6 @@ router.post(
   createLiveSession
 );
 router.get('/live-sessions', protect, getLiveSessions);
+router.get('/my-submissions', protect, authorize('student'), getMyCourseSubmissions);
 
 module.exports = router;

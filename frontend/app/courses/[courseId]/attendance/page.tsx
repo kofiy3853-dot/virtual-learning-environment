@@ -8,65 +8,150 @@ import {
   Users, Calendar, CheckCircle2, XCircle, 
   Clock, Filter, Search, Plus, 
   BarChart3, UserCheck, AlertCircle, 
-  ChevronRight, ArrowRight, Loader2, Sparkles
+  ChevronRight, ArrowRight, Loader2, X, Save,
+  MoreVertical, Info, RefreshCw
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+interface Student {
+  _id: string;
+  name: string;
+  email: string;
+}
 
 interface AttendanceRecord {
   _id: string;
-  date: string;
-  isPresent: boolean;
-  notes?: string;
-  course: string;
-  student: {
+  session: {
     _id: string;
-    name: string;
-    email: string;
+    date: string;
+    topic?: string;
   };
+  student: Student;
+  status: 'present' | 'absent' | 'late' | 'excused';
+  markedAt: string;
 }
 
 interface AttendanceSession {
+  _id: string;
   date: string;
-  presentCount: number;
-  absentCount: number;
-  totalCount: number;
+  topic?: string;
+  teacher: string;
+  course: string;
 }
 
 export default function AttendancePage() {
   const { courseId } = useParams() as { courseId: string };
   const { user } = useAuth();
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  
+  const [sessions, setSessions] = useState<AttendanceSession[]>([]);
+  const [myRecords, setMyRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'calendar' | 'list'>('list');
+  
+  // Teacher UI state
+  const [showMarkModal, setShowMarkModal] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [markingData, setMarkingData] = useState<Record<string, 'present' | 'absent' | 'late' | 'excused'>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [newSessionTopic, setNewSessionTopic] = useState('');
+
+  const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      if (isTeacher) {
+        const [sessRes, studRes] = await Promise.all([
+          courseApi.getAttendance(courseId),
+          courseApi.getStudents(courseId)
+        ]);
+        setSessions(sessRes.data.data || []);
+        setStudents(studRes.data.data || []);
+      } else {
+        const res = await courseApi.getStudentAttendance(courseId);
+        setMyRecords(res.data.data || []);
+      }
+    } catch (err) {
+      toast.error('Failed to load attendance data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    courseApi.getAttendance(courseId)
-      .then(res => setAttendance(res.data.data || []))
-      .catch(() => setAttendance([]))
-      .finally(() => setLoading(false));
-  }, [courseId]);
+    fetchData();
+  }, [courseId, isTeacher]);
 
-  // Aggregate stats for teachers
-  const sessions: AttendanceSession[] = Array.from(new Set(attendance.map(a => a.date.split('T')[0]))).map(date => {
-    const records = attendance.filter(a => a.date.startsWith(date));
-    return {
-      date,
-      presentCount: records.filter(r => r.isPresent).length,
-      absentCount: records.filter(r => !r.isPresent).length,
-      totalCount: records.length
-    };
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const handleCreateSession = async () => {
+    try {
+      const res = await courseApi.createAttendanceSession(courseId, { 
+        topic: newSessionTopic || 'Regular Class',
+        date: new Date().toISOString()
+      });
+      setSessions(prev => [res.data.data, ...prev]);
+      setShowSessionModal(false);
+      setNewSessionTopic('');
+      toast.success('Session created');
+      
+      // Open marking modal for the new session
+      openMarkingModal(res.data.data._id);
+    } catch (err) {
+      toast.error('Failed to create session');
+    }
+  };
 
-  // Student specific stats
-  const studentStats = {
-    present: attendance.filter(a => a.isPresent).length,
-    absent: attendance.filter(a => !a.isPresent).length,
-    total: attendance.length,
-    rate: attendance.length > 0 ? Math.round((attendance.filter(a => a.isPresent).length / attendance.length) * 100) : 0
+  const openMarkingModal = async (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    setShowMarkModal(true);
+    try {
+      const res = await courseApi.getSessionRecords(sessionId);
+      const existingRecords = res.data.data || [];
+      const initialMarking: Record<string, any> = {};
+      
+      // Pre-fill with existing or default 'present'
+      students.forEach(s => {
+        const record = existingRecords.find((r: any) => r.student._id === s._id);
+        initialMarking[s._id] = record ? record.status : 'present';
+      });
+      setMarkingData(initialMarking);
+    } catch (err) {
+      toast.error('Failed to load session records');
+    }
+  };
+
+  const handleSaveAttendance = async () => {
+    if (!activeSessionId) return;
+    setSubmitting(true);
+    try {
+      const records = Object.entries(markingData).map(([studentId, status]) => ({
+        studentId,
+        status
+      }));
+      await courseApi.markAttendance(activeSessionId, records);
+      toast.success('Attendance saved successfully');
+      setShowMarkModal(false);
+      fetchData();
+    } catch (err) {
+      toast.error('Failed to save attendance');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'present': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'absent':  return 'bg-rose-50 text-rose-700 border-rose-100';
+      case 'late':    return 'bg-amber-50 text-amber-700 border-amber-100';
+      case 'excused': return 'bg-blue-50 text-blue-700 border-blue-100';
+      default:        return 'bg-slate-50 text-slate-700 border-slate-100';
+    }
   };
 
   return (
     <div className="max-w-[1200px] mx-auto p-8 lg:p-12">
-      {/* Header Area */}
+      {/* ── Header ──────────────────────────────────────────────── */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
         <div className="flex-1">
           <motion.div 
@@ -86,54 +171,86 @@ export default function AttendancePage() {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="text-slate-500 text-lg font-medium max-w-xl leading-relaxed"
           >
-            {user?.role === 'teacher' 
-              ? 'Oversee and manage student attendance records for your course sessions.' 
-              : 'Track your attendance history and maintain your academic standing.'}
+            {isTeacher 
+              ? 'Manage course sessions and verify student participation in real-time.' 
+              : 'Keep track of your attendance history and maintain your academic standing.'}
           </motion.p>
         </div>
 
-        {user?.role === 'teacher' && (
+        {isTeacher && (
           <motion.button 
             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-blue-600 text-white font-black text-lg shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all hover:-translate-y-1 active:scale-95 uppercase tracking-widest"
+            onClick={() => setShowSessionModal(true)}
+            className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all hover:-translate-y-1 active:scale-95 uppercase tracking-widest"
           >
-            <Plus size={20} strokeWidth={3} /> Mark Attendance
+            <Plus size={20} strokeWidth={3} /> New Session
           </motion.button>
         )}
       </header>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        {[
-          { label: user?.role === 'student' ? 'My Presence' : 'Overall Attendance', value: `${studentStats.rate}%`, icon: UserCheck, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-          { label: 'Sessions Logged', value: user?.role === 'student' ? studentStats.total : sessions.length, icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
-          { label: 'Status', value: studentStats.rate > 75 ? 'Healthy' : 'At Risk', icon: AlertCircle, color: studentStats.rate > 75 ? 'text-emerald-600' : 'text-rose-600', bg: studentStats.rate > 75 ? 'bg-emerald-50' : 'bg-rose-50', border: studentStats.rate > 75 ? 'border-emerald-100' : 'border-rose-100' }
-        ].map((stat, i) => (
-          <motion.div 
-            key={i}
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-            className="p-8 rounded-[32px] bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all group"
-          >
-            <div className={`w-14 h-14 rounded-2xl ${stat.bg} ${stat.border} border flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500`}>
-              <stat.icon size={28} className={stat.color} />
-            </div>
-            <p className="text-4xl font-black text-slate-900 mb-1 tracking-tighter">{stat.value}</p>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
-          </motion.div>
-        ))}
-      </div>
-
       {loading ? (
-        <div className="space-y-4">
-          {[1,2,3,4,5].map(i => <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse" />)}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1,2,3].map(i => <div key={i} className="h-64 bg-slate-100 rounded-[32px] animate-pulse border border-slate-200" />)}
         </div>
-      ) : user?.role === 'student' ? (
-        /* Student View: History List */
+      ) : isTeacher ? (
+        /* ── Teacher View: Sessions Grid ────────────────────────── */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sessions.length === 0 ? (
+            <div className="col-span-full bg-white rounded-[40px] border border-slate-200 p-20 text-center shadow-sm">
+               <div className="w-24 h-24 bg-blue-50 rounded-[32px] flex items-center justify-center mx-auto mb-8">
+                  <Calendar size={48} className="text-blue-200" />
+               </div>
+               <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">No sessions logged yet</h3>
+               <p className="text-slate-500 font-medium max-w-xs mx-auto mb-10 leading-relaxed">
+                 Create a new attendance session to start tracking student participation for this course.
+               </p>
+               <button onClick={() => setShowSessionModal(true)} className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all uppercase tracking-widest text-sm">
+                 Create First Session
+               </button>
+            </div>
+          ) : sessions.map((session, i) => (
+            <motion.div 
+              key={session._id}
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              className="bg-white rounded-[32px] border border-slate-200 p-8 hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-900/5 transition-all group cursor-pointer"
+              onClick={() => openMarkingModal(session._id)}
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                  <Clock size={24} />
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Session Date</p>
+                  <p className="text-sm font-black text-slate-900">{new Date(session.date).toLocaleDateString()}</p>
+                </div>
+              </div>
+              
+              <h4 className="text-xl font-black text-slate-900 mb-2 tracking-tight group-hover:text-blue-600 transition-colors">
+                {session.topic || 'Regular Session'}
+              </h4>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-8">
+                {new Date(session.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
+
+              <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Click to mark</span>
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                  <ArrowRight size={18} />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        /* ── Student View: History ─────────────────────────────── */
         <div className="bg-white rounded-[40px] border border-slate-200 overflow-hidden shadow-sm">
-          <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">Attendance History</h3>
-            <div className="flex gap-2">
-               <button aria-label="Filter attendance" title="Filter attendance" className="p-2 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-blue-600 transition-colors"><Filter size={18} /></button>
+          <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">My Attendance History</h3>
+            <div className="flex items-center gap-4">
+               <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Presence Rate</span>
+                  <span className="text-sm font-black text-blue-600">{myRecords.length > 0 ? Math.round((myRecords.filter(r => r.status === 'present').length / myRecords.length) * 100) : 0}%</span>
+               </div>
             </div>
           </div>
           
@@ -141,42 +258,38 @@ export default function AttendancePage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-white border-b border-slate-100">
+                  <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Topic</th>
                   <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Date</th>
                   <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Status</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Session Note</th>
-                  <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
+                  <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Marked At</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {attendance.length === 0 ? (
+                {myRecords.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-8 py-20 text-center">
-                      <p className="text-slate-400 font-bold">No attendance records found yet.</p>
+                      <div className="flex flex-col items-center gap-4">
+                         <AlertCircle size={40} className="text-slate-200" />
+                         <p className="text-slate-400 font-bold">No attendance records found.</p>
+                      </div>
                     </td>
                   </tr>
-                ) : attendance.map((record) => (
+                ) : myRecords.map((record) => (
                   <tr key={record._id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors">
-                          <Calendar size={18} />
-                        </div>
-                        <span className="font-bold text-slate-700">{new Date(record.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                      </div>
+                      <span className="font-extrabold text-slate-900">{record.session?.topic || 'Regular Session'}</span>
+                    </td>
+                    <td className="px-8 py-6 text-sm font-bold text-slate-500">
+                      {new Date(record.session?.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                     </td>
                     <td className="px-8 py-6">
-                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                        record.isPresent ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
-                      }`}>
-                        {record.isPresent ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                        {record.isPresent ? 'Present' : 'Absent'}
+                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(record.status)}`}>
+                        {record.status === 'present' ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                        {record.status}
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      <span className="text-sm font-medium text-slate-500">{record.notes || 'Regular Class Session'}</span>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                       <button aria-label="View record details" title="View record details" className="text-slate-400 hover:text-slate-900 transition-colors"><ChevronRight size={20} /></button>
+                    <td className="px-8 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {new Date(record.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
                   </tr>
                 ))}
@@ -184,68 +297,108 @@ export default function AttendancePage() {
             </table>
           </div>
         </div>
-      ) : (
-        /* Teacher View: Sessions List */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sessions.length === 0 ? (
-            <div className="col-span-full bg-white rounded-[40px] border border-slate-200 p-20 text-center shadow-sm">
-               <div className="w-24 h-24 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-8">
-                  <UserCheck size={48} className="text-slate-200" />
-               </div>
-               <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">No sessions logged.</h3>
-               <p className="text-slate-500 font-medium max-w-xs mx-auto mb-10 leading-relaxed">
-                 You haven&apos;t marked attendance for any sessions in this course yet.
-               </p>
-               <button className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 uppercase tracking-widest text-sm">
-                 Create First Session
-               </button>
-            </div>
-          ) : sessions.map((session, i) => (
-            <motion.div 
-              key={session.date}
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="bg-white rounded-[32px] border border-slate-200 p-8 hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-900/5 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
-                  <Calendar size={24} />
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{session.date}</span>
-              </div>
-              
-              <h4 className="text-xl font-black text-slate-900 mb-8 tracking-tight">
-                {new Date(session.date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-              </h4>
+      )}
 
-              <div className="space-y-4 mb-8">
-                <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-slate-500 uppercase tracking-widest">Attendance Rate</span>
-                  <span className="text-slate-900">{Math.round((session.presentCount / session.totalCount) * 100)}%</span>
+      {/* ── New Session Modal ───────────────────────────────────── */}
+      <AnimatePresence>
+        {showSessionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowSessionModal(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl">
+              <h3 className="text-2xl font-black text-slate-900 mb-6">Create Session</h3>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Topic / Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Week 4 Lab"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 h-12 text-slate-900 font-bold focus:bg-white focus:border-blue-500 transition-all outline-none"
+                    value={newSessionTopic}
+                    onChange={(e) => setNewSessionTopic(e.target.value)}
+                  />
                 </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(session.presentCount / session.totalCount) * 100}%` }} transition={{ duration: 1 }} className="h-full bg-blue-600" />
+                <div className="flex justify-end gap-3">
+                  <button onClick={() => setShowSessionModal(false)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
+                  <button onClick={handleCreateSession} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all">Create Session</button>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-6 border-t border-slate-50">
-                <div className="flex gap-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Present</span>
-                    <span className="text-lg font-black text-slate-900">{session.presentCount}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest leading-none mb-1">Absent</span>
-                    <span className="text-lg font-black text-slate-900">{session.absentCount}</span>
-                  </div>
-                </div>
-                <button aria-label="View session details" title="View session details" className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center group/btn">
-                  <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
               </div>
             </motion.div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Marking Attendance Modal ────────────────────────────── */}
+      <AnimatePresence>
+        {showMarkModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowMarkModal(false)} />
+            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="relative w-full max-w-4xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900">Mark Attendance</h3>
+                  <p className="text-slate-500 font-medium text-sm">Select status for each student in this session.</p>
+                </div>
+                <button onClick={() => setShowMarkModal(false)} className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"><X size={20} /></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8">
+                <div className="grid grid-cols-1 gap-3">
+                  {students.map(student => (
+                    <div key={student._id} className="flex items-center justify-between p-4 rounded-[24px] border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-blue-200 transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700 font-black text-xs">
+                          {student.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-slate-900">{student.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{student.email}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {['present', 'absent', 'late', 'excused'].map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => setMarkingData(prev => ({ ...prev, [student._id]: status as any }))}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                              markingData[student._id] === status 
+                                ? getStatusColor(status) + ' ring-2 ring-offset-2 ring-current ring-opacity-20'
+                                : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300'
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                 <div className="flex gap-4">
+                    <div className="flex items-center gap-2">
+                       <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Object.values(markingData).filter(v => v === 'present').length} Present</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <div className="w-2 h-2 rounded-full bg-rose-500" />
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Object.values(markingData).filter(v => v === 'absent').length} Absent</span>
+                    </div>
+                 </div>
+                 <button 
+                  onClick={handleSaveAttendance} 
+                  disabled={submitting}
+                  className="flex items-center gap-3 px-8 h-14 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 shadow-xl shadow-blue-600/20 disabled:opacity-50 transition-all uppercase tracking-[0.2em] text-xs"
+                 >
+                   {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                   {submitting ? 'Saving...' : 'Save Attendance'}
+                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

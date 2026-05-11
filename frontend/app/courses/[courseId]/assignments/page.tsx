@@ -72,9 +72,21 @@ export default function AssignmentsPage() {
           courseApi.getOne(courseId),
           courseApi.getAssignments(courseId),
         ]);
+        
+        let subMap: Record<string, Submission> = {};
+        if (user?.role === 'student') {
+          try {
+            const s = await courseApi.getMySubmissions(courseId);
+            s.data.data.forEach((sub: any) => {
+              subMap[sub.assignment] = sub;
+            });
+          } catch {}
+        }
+
         if (!ignore) {
           setCourse(c.data.data);
           setAssignments(a.data.data || []);
+          setSubmissions(subMap);
         }
       } catch (err) {
         if (!ignore) alert('Failed to load data');

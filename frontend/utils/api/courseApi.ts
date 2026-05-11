@@ -26,7 +26,10 @@ export const courseApi = {
   getGradeWeights:(id: string) => api.get(`/api/courses/${id}/grade-weights`),
   setGradeWeights:(id: string, data: Record<string, number>) => api.post(`/api/courses/${id}/grade-weights`, data),
   getAttendance:(id: string)   => api.get(`/api/courses/${id}/attendance`),
-  createAttendance:(id: string, data: Record<string, any>)=> api.post(`/api/courses/${id}/attendance`, data),
+  createAttendanceSession:(id: string, data: Record<string, any>)=> api.post(`/api/courses/${id}/attendance`, data),
+  markAttendance: (sessionId: string, records: { studentId: string, status: string }[]) => api.post(`/api/attendance/${sessionId}/mark`, { records }),
+  getSessionRecords: (sessionId: string) => api.get(`/api/attendance/${sessionId}`),
+  getStudentAttendance: (courseId: string) => api.get(`/api/students/me/attendance/${courseId}`),
   getAnnouncements:(id: string)=> api.get(`/api/courses/${id}/announcements`),
   createAnnouncement:(id: string, data: { title: string; body: string })=>api.post(`/api/courses/${id}/announcements`,data),
   getDiscussions:(id: string)  => api.get(`/api/courses/${id}/discussions`),
@@ -49,4 +52,5 @@ export const courseApi = {
   startLiveSession: (id: string) => api.patch(`/api/live-sessions/${id}/start`),
   endLiveSession: (id: string) => api.patch(`/api/live-sessions/${id}/end`),
   joinLiveSession: (id: string) => api.get(`/api/live-sessions/${id}/join`),
+  getMySubmissions: (courseId: string) => api.get(`/api/courses/${courseId}/my-submissions`),
 };

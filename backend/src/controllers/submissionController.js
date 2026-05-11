@@ -120,3 +120,21 @@ exports.gradeSubmission = asyncHandler(async (req, res, next) => {
     data: submission,
   });
 });
+
+// @desc    Get all my submissions for a course
+// @route   GET /api/courses/:courseId/my-submissions
+// @access  Private (Student)
+exports.getMyCourseSubmissions = asyncHandler(async (req, res, next) => {
+  const assignments = await Assignment.find({ course: req.params.courseId });
+  const assignmentIds = assignments.map(a => a._id);
+
+  const submissions = await Submission.find({
+    student: req.user.id,
+    assignment: { $in: assignmentIds }
+  });
+
+  res.status(200).json({
+    success: true,
+    data: submissions
+  });
+});
