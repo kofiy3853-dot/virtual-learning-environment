@@ -34,7 +34,7 @@ export default function TeacherDashboard() {
   const [stats, setStats] = useState({ students: 0, attendance: 0, engagementData: [0,0,0,0,0,0,0], upcomingClasses: [] as any[] });
 
   useEffect(() => {
-    import('@/utils/axiosInstance')
+    import('@/utils/api/axiosInstance')
       .then(m => m.default.get('/api/teachers/me/stats'))
       .then(res => setStats(res.data.data || { students: 0, attendance: 0, engagementData: [0,0,0,0,0,0,0], upcomingClasses: [] }))
       .catch(console.error);

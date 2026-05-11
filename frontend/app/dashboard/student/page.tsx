@@ -31,7 +31,7 @@ export default function StudentDashboard() {
     Promise.all([
       courseApi.getMyCourses(),
       courseApi.getGlobalMilestones(),
-      import('@/utils/axiosInstance').then(m => m.default.get('/api/students/me/stats'))
+      import('@/utils/api/axiosInstance').then(m => m.default.get('/api/students/me/stats'))
     ])
       .then(([coursesRes, milestonesRes, statsRes]) => {
         setCourses(coursesRes.data.data || []);
