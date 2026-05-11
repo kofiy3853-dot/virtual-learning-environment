@@ -184,12 +184,21 @@ const PORT = process.env.PORT || 5000;
 const httpServer = require('http').createServer(app);
 const io = require('socket.io')(httpServer, {
   cors: {
-    origin: [
-      process.env.CLIENT_URL || 'http://localhost:3000',
-      'https://virtual-learning-environment.vercel.app',
-      'https://virtual-learning-environment-nicvgjzhp-kofiy3853-dots-projects.vercel.app'
-    ],
+    origin: function (origin, callback) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.onrender.com') ||
+        origin === 'http://localhost:3000' ||
+        origin === 'http://localhost:3001'
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
