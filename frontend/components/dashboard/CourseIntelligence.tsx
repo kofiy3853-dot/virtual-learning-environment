@@ -45,8 +45,16 @@ export default function CourseIntelligence() {
   const [loading, setLoading] = useState(true);
   const [studentCount, setStudentCount] = useState(0);
 
+  const { user } = useAuth();
+
   useEffect(() => {
     const fetchData = async () => {
+      // Students are not authorized to view class-wide analytics
+      if (user?.role === 'student') {
+        setLoading(false);
+        return;
+      }
+
       try {
         const [analyticsRes, atRiskRes, studentsRes] = await Promise.all([
           courseApi.getAnalytics(courseId),
@@ -64,10 +72,10 @@ export default function CourseIntelligence() {
       }
     };
 
-    if (courseId) {
+    if (courseId && user) {
       fetchData();
     }
-  }, [courseId]);
+  }, [courseId, user]);
 
   // Transform distribution for Recharts
   const gradeData = analytics?.distribution ? [
@@ -97,7 +105,66 @@ export default function CourseIntelligence() {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[40px] border border-slate-100 shadow-sm">
         <Loader2 size={40} className="text-blue-600 animate-spin mb-4" />
-        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Calibrating Analytics...</p>
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Calibrating Intelligence...</p>
+      </div>
+    );
+  }
+
+  if (user?.role === 'student') {
+    return (
+      <div className="space-y-8 pb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <StatCard 
+             icon={<Target size={20} />} 
+             label="My Current Grade" 
+             value="88%" 
+             trend="High" 
+             trendUp={true} 
+             color="emerald"
+           />
+           <StatCard 
+             icon={<BookOpen size={20} />} 
+             label="Modules Completed" 
+             value="4/12" 
+             trend="On Track" 
+             trendUp={true} 
+             color="blue"
+           />
+           <StatCard 
+             icon={<Activity size={20} />} 
+             label="Attendance" 
+             value="96%" 
+             trend="Excellent" 
+             trendUp={true} 
+             color="indigo"
+           />
+        </div>
+
+        <section className="bg-white rounded-[40px] border border-slate-100 p-10 shadow-sm relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+           <div className="relative z-10">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Continue your journey.</h3>
+              <p className="text-slate-500 font-medium mb-8">You're making great progress in this course. Keep up the momentum!</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <Link href={`/courses/${courseId}/modules`} className="group p-6 rounded-3xl bg-slate-50 border border-slate-50 hover:bg-white hover:border-primary-100 hover:shadow-xl hover:shadow-primary-900/5 transition-all">
+                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-primary-500 mb-4 group-hover:scale-110 transition-transform">
+                       <Zap size={20} />
+                    </div>
+                    <h4 className="text-lg font-black text-slate-900 mb-1">Resume Next Lesson</h4>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Module 4: Advanced Architectures</p>
+                 </Link>
+
+                 <Link href={`/courses/${courseId}/assignments`} className="group p-6 rounded-3xl bg-slate-50 border border-slate-50 hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-900/5 transition-all">
+                    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-500 mb-4 group-hover:scale-110 transition-transform">
+                       <Target size={20} />
+                    </div>
+                    <h4 className="text-lg font-black text-slate-900 mb-1">Upcoming Milestone</h4>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Due in 2 days: Project Proposal</p>
+                 </Link>
+              </div>
+           </div>
+        </section>
       </div>
     );
   }
