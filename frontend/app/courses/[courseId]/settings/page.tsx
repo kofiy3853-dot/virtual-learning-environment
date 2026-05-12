@@ -96,6 +96,8 @@ export default function CourseSettingsPage() {
         </div>
         <div className="text-center space-y-2">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary-500">Accessing Root Access</p>
+          <p className="text-slate-400 font-medium text-sm">Initializing course parameters...</p>
+        </div>
       </div>
     </>
   );

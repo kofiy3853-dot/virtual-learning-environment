@@ -12,6 +12,7 @@ import {
   CheckSquare, MessageSquare, Bell, Video, ChevronRight, 
   Loader2, Sparkles, GraduationCap, Settings as SettingsIcon 
 } from 'lucide-react';
+import DashboardLayout from '@/layouts/DashboardLayout';
 
 export default function CourseLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
