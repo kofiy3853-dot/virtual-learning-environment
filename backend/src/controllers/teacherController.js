@@ -1,6 +1,7 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const AttendanceSession = require('../models/AttendanceSession');
+const AttendanceRecord = require('../models/AttendanceRecord');
 const Assignment = require('../models/Assignment');
 const LiveSession = require('../models/LiveSession');
 const asyncHandler = require('express-async-handler');
@@ -23,15 +24,14 @@ exports.getMyStats = asyncHandler(async (req, res, next) => {
   const studentsCount = await Enrollment.countDocuments({ course: { $in: courseIds } });
 
   // Avg Attendance:
-  const sessions = await AttendanceSession.find({ course: { $in: courseIds } }).lean();
-  let totalRecords = 0;
-  let presentRecords = 0;
-  sessions.forEach(s => {
-    s.records.forEach(r => {
-      totalRecords++;
-      if (r.status === 'present' || r.status === 'late') presentRecords++;
-    });
-  });
+  const sessions = await AttendanceSession.find({ course: { $in: courseIds } }).select('_id');
+  const sessionIds = sessions.map(s => s._id);
+
+  const [totalRecords, presentRecords] = await Promise.all([
+    AttendanceRecord.countDocuments({ session: { $in: sessionIds } }),
+    AttendanceRecord.countDocuments({ session: { $in: sessionIds }, status: { $in: ['present', 'late'] } })
+  ]);
+
   const avgAttendance = totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : 0;
 
   // Mock engagement data for now (to avoid complex timeseries queries for Phase 1)
