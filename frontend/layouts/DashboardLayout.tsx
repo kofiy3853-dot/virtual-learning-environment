@@ -55,15 +55,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <input 
                 type="text" 
                 placeholder="Search your course..." 
+                aria-label="Search courses"
                 className="w-full h-11 pl-12 pr-4 bg-white border-none rounded-full text-sm font-medium shadow-soft focus:outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:text-gray-400"
               />
            </div>
 
            <div className="flex items-center gap-6">
-              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-soft text-gray-500 hover:text-gray-900 transition-colors">
+              <button 
+                title="Messages"
+                aria-label="View Messages"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-soft text-gray-500 hover:text-gray-900 transition-colors"
+              >
                 <Mail size={18} />
               </button>
-              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-soft text-gray-500 hover:text-gray-900 transition-colors">
+              <button 
+                title="Notifications"
+                aria-label="View Notifications"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-soft text-gray-500 hover:text-gray-900 transition-colors"
+              >
                 <Bell size={18} />
               </button>
               <div className="h-10 w-[1px] bg-gray-200 mx-2" />
@@ -93,6 +102,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title={isSidebarOpen ? "Close Menu" : "Open Menu"}
+            aria-label={isSidebarOpen ? "Close Navigation Menu" : "Open Navigation Menu"}
             className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-900 shadow-sm transition-all"
           >
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}

@@ -77,7 +77,11 @@ export default function StudentDashboard() {
                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider leading-none mb-1.5">{item.value}</p>
                      <h3 className="text-[15px] font-bold text-gray-900 leading-none">{item.label}</h3>
                   </div>
-                  <button className="text-gray-300 hover:text-gray-900 transition-colors">
+                  <button 
+                    title="More Options"
+                    aria-label="More Options"
+                    className="text-gray-300 hover:text-gray-900 transition-colors"
+                  >
                      <MoreVertical size={18} />
                   </button>
                </div>
@@ -89,8 +93,20 @@ export default function StudentDashboard() {
              <div className="flex items-center justify-between">
                 <h2 className="text-xl font-display font-bold text-gray-900">Continue Watching</h2>
                 <div className="flex gap-2">
-                   <button className="w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-gray-400 hover:text-gray-900"><ChevronRight size={16} className="rotate-180" /></button>
-                   <button className="w-8 h-8 rounded-full bg-indigo-600 shadow-soft flex items-center justify-center text-white"><ChevronRight size={16} /></button>
+                   <button 
+                     title="Previous"
+                     aria-label="Previous Section"
+                     className="w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-gray-400 hover:text-gray-900"
+                   >
+                     <ChevronRight size={16} className="rotate-180" />
+                   </button>
+                   <button 
+                     title="Next"
+                     aria-label="Next Section"
+                     className="w-8 h-8 rounded-full bg-indigo-600 shadow-soft flex items-center justify-center text-white"
+                   >
+                     <ChevronRight size={16} />
+                   </button>
                 </div>
              </div>
 
@@ -109,7 +125,11 @@ export default function StudentDashboard() {
                            alt="" 
                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                          />
-                         <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white">
+                         <button 
+                           title="Add to Favorites"
+                           aria-label="Add to Favorites"
+                           className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white"
+                         >
                             <Heart size={18} />
                          </button>
                       </div>
@@ -167,7 +187,13 @@ export default function StudentDashboard() {
                                <p className="text-[13px] font-medium text-gray-500">Understand Of UI/UX Design</p>
                             </td>
                             <td className="px-6 py-4 text-center">
-                               <button className="text-gray-300 hover:text-indigo-600 transition-colors"><ChevronRight size={18} /></button>
+                               <button 
+                                 title="View Details"
+                                 aria-label="View Lesson Details"
+                                 className="text-gray-300 hover:text-indigo-600 transition-colors"
+                               >
+                                 <ChevronRight size={18} />
+                               </button>
                             </td>
                          </tr>
                       ))}
@@ -182,7 +208,13 @@ export default function StudentDashboard() {
            <section className="card-premium space-y-8 py-8">
               <div className="flex items-center justify-between">
                  <h2 className="text-lg font-display font-bold text-gray-900">Statistic</h2>
-                 <button className="text-gray-300 hover:text-gray-900"><MoreVertical size={18} /></button>
+                 <button 
+                   title="Statistic Options"
+                   aria-label="Statistic Options"
+                   className="text-gray-300 hover:text-gray-900"
+                 >
+                   <MoreVertical size={18} />
+                 </button>
               </div>
 
               {/* Progress Circle */}
@@ -230,7 +262,13 @@ export default function StudentDashboard() {
            <section className="card-premium space-y-6 py-8">
               <div className="flex items-center justify-between">
                  <h2 className="text-lg font-display font-bold text-gray-900">Your mentor</h2>
-                 <button className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-indigo-600"><Plus size={14} /></button>
+                 <button 
+                   title="Add Mentor"
+                   aria-label="Add New Mentor"
+                   className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-indigo-600"
+                 >
+                   <Plus size={14} />
+                 </button>
               </div>
               <div className="space-y-5">
                  {[
