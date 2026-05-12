@@ -252,7 +252,7 @@ export default function CourseIntelligence() {
                </div>
             </div>
             
-            <div className="h-72 w-full">
+            <div className="h-72 min-h-[288px] w-full">
                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={pulseData}>
                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
@@ -304,7 +304,7 @@ export default function CourseIntelligence() {
 
             <div className="bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm">
                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Grade Distribution</h3>
-               <div className="h-48">
+               <div className="h-48 min-h-[192px]">
                   <ResponsiveContainer width="100%" height="100%">
                      <BarChart data={gradeData}>
                         <Bar dataKey="count" radius={[6, 6, 0, 0]}>

@@ -1,4 +1,10 @@
 const errorHandler = (err, req, res, next) => {
+  // Log for dev/ops
+  console.error(`[ERROR] ${err.name}: ${err.message}`);
+  if (process.env.NODE_ENV === 'development' || err.statusCode === 500) {
+    console.error(err.stack);
+  }
+
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
 
