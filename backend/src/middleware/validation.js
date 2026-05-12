@@ -39,7 +39,8 @@ const createCourseSchema = Joi.object({
     .messages({ 'string.empty': 'Course title is required' }),
   code: Joi.string().min(2).max(20).required()
     .messages({ 'string.empty': 'Course code is required' }),
-  description: Joi.string().max(1000).optional().allow(''),
+  description: Joi.string().min(10).max(1000).required()
+    .messages({ 'string.empty': 'Course description is required', 'string.min': 'Description must be at least 10 characters' }),
   semester: Joi.string().valid('Semester 1', 'Semester 2').required(),
   academicYear: Joi.string()
     .pattern(/^\d{4}\/\d{4}$/)

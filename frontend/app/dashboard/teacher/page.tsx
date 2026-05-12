@@ -58,7 +58,7 @@ export default function TeacherDashboard() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.code) { toast.error('Title and code are required.'); return; }
+    if (!form.title || !form.code || !form.description) { toast.error('Title, code, and description are required.'); return; }
     setCreating(true);
     try {
       const res = await courseApi.create(form);
@@ -313,7 +313,7 @@ export default function TeacherDashboard() {
                   </div>
                   <div className="col-span-1 md:col-span-2">
                     <label htmlFor="course-desc" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
-                    <textarea id="course-desc" rows={3} title="Description" placeholder="What will students learn in this workspace?" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none resize-none font-medium text-sm" value={form.description} onChange={e => setForm(p=>({...p,description:e.target.value}))} />
+                    <textarea id="course-desc" required rows={3} title="Description" placeholder="What will students learn in this workspace?" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none resize-none font-medium text-sm" value={form.description} onChange={e => setForm(p=>({...p,description:e.target.value}))} />
                   </div>
                   <div className="relative">
                     <label htmlFor="course-sem" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Semester</label>
