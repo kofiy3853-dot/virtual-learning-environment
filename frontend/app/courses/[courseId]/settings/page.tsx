@@ -13,7 +13,6 @@ import {
   Eye, Archive, Zap, Shield
 } from 'lucide-react';
 import { AxiosError } from 'axios';
-import DashboardLayout from '@/layouts/DashboardLayout';
 import toast from 'react-hot-toast';
 
 export default function CourseSettingsPage() {
@@ -87,7 +86,7 @@ export default function CourseSettingsPage() {
   };
 
   if (loading) return (
-    <DashboardLayout>
+    <>
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
         <div className="relative">
           <div className="w-20 h-20 border-4 border-slate-100 border-t-primary-500 rounded-full animate-spin shadow-xl shadow-primary-500/5" />
@@ -97,14 +96,12 @@ export default function CourseSettingsPage() {
         </div>
         <div className="text-center space-y-2">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary-500">Accessing Root Access</p>
-          <p className="text-slate-400 font-medium text-sm">Initializing course parameters...</p>
-        </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 
   return (
-    <DashboardLayout>
+    <>
       <div className="max-w-6xl mx-auto space-y-12 pb-20">
         
         {/* Immersive Header */}
@@ -315,6 +312,6 @@ export default function CourseSettingsPage() {
           </aside>
         </form>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

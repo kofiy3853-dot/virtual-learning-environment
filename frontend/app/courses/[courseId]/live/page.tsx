@@ -13,7 +13,6 @@ import {
   Globe, Server, Lock, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import DashboardLayout from '@/layouts/DashboardLayout';
 
 interface LiveSession {
   _id: string;
@@ -129,7 +128,6 @@ export default function LivePage() {
   const endedSessions     = sessions.filter(s => s.status === 'ended');
 
   return (
-    <DashboardLayout>
       <div className="space-y-12 pb-20">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-4">
@@ -478,6 +476,5 @@ export default function LivePage() {
           )}
         </AnimatePresence>
       </div>
-    </DashboardLayout>
   );
 }

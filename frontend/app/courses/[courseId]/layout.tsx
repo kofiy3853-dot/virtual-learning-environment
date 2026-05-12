@@ -97,102 +97,82 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
   const activeTab = tabs.find(t => pathname === t.href || (t.href !== `/courses/${courseId}` && pathname.startsWith(t.href)));
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-      
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: -20, x: '-50%' }}
-            className={`fixed top-8 left-1/2 z-50 px-6 py-3 rounded-full font-bold shadow-xl border flex items-center gap-2 ${
-              toast.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            }`}
-          >
-            {toast.type === 'error' ? <Bell size={16} /> : <CheckSquare size={16} />}
-            {toast.msg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <Sidebar />
-
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
-        
-        {/* Top Header */}
-        <div className="bg-white border-b border-slate-200 px-8 lg:px-12 pt-8 pb-0 shrink-0 shadow-sm relative z-20">
-          
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">
-            <Link href="/courses" className="hover:text-blue-600 transition-colors">Courses</Link>
-            <ChevronRight size={12} className="text-slate-300" />
-            <Link href={`/courses/${courseId}`} className="hover:text-blue-600 transition-colors truncate max-w-[200px]">{course.title}</Link>
-            <ChevronRight size={12} className="text-slate-300" />
-            <span className="text-slate-900">{activeTab?.label || 'Overview'}</span>
-          </div>
-
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-4 flex-wrap">
-                <span className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-black uppercase tracking-widest shadow-sm">
-                  {course.code}
-                </span>
-                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm ${
-                  course.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                }`}>
-                  {course.status}
-                </span>
-                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  <Sparkles size={12} className="text-amber-400" />
-                  {course.semester} · {course.academicYear}
+    <DashboardLayout>
+      <div className="space-y-8">
+        {/* Course Header Bar */}
+        <div className="bg-white rounded-[32px] border border-slate-100 p-8 lg:p-10 shadow-sm relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+           
+           <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+             <div className="space-y-4">
+                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                  <Link href="/courses" className="hover:text-primary-500 transition-colors">Courses</Link>
+                  <ChevronRight size={12} className="text-slate-300" />
+                  <span className="text-slate-900 truncate max-w-[200px]">{course.title}</span>
                 </div>
-              </div>
-              
-              <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter mb-2 truncate">
-                {course.title}
-              </h1>
-            </div>
 
-            {/* Actions */}
-            <div className="shrink-0 flex items-center gap-3">
-              {isOwner && (
-                <Link href={`/courses/${courseId}/settings`} className="flex items-center justify-center gap-3 h-12 px-8 rounded-xl bg-slate-900 text-white font-black text-xs hover:bg-slate-800 shadow-xl shadow-slate-900/10 transition-all hover:-translate-y-0.5 active:scale-95 uppercase tracking-widest">
-                  <SettingsIcon size={16} /> Manage Workspace
-                </Link>
-              )}
-            </div>
-          </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="px-3 py-1 rounded-lg bg-primary-50 text-primary-700 border border-primary-100 text-[10px] font-black uppercase tracking-widest">
+                    {course.code}
+                  </span>
+                  <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                    course.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-200'
+                  }`}>
+                    {course.status}
+                  </span>
+                  <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <Sparkles size={12} className="text-amber-400" />
+                    {course.semester} · {course.academicYear}
+                  </div>
+                </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-0 overflow-x-auto no-scrollbar pb-0 border-b-0 border-slate-200">
-            {tabs.map(tab => {
-              const isActive = pathname === tab.href || (tab.href !== `/courses/${courseId}` && pathname.startsWith(tab.href));
-              return (
-                <Link key={tab.href} href={tab.href} className={`flex items-center gap-2.5 px-6 py-4 border-b-[3px] font-black text-[11px] uppercase tracking-[0.1em] whitespace-nowrap transition-all duration-300 ${
-                  isActive 
-                    ? 'border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-xl' 
-                    : 'border-transparent text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-t-xl'
-                }`}>
-                  <tab.icon size={16} strokeWidth={isActive ? 3 : 2} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </div>
+                <h1 className="text-3xl lg:text-4xl font-display font-extrabold text-slate-900 tracking-tight leading-tight">
+                  {course.title}
+                </h1>
+             </div>
+
+             <div className="flex items-center gap-3">
+               {isOwner && (
+                 <Link href={`/courses/${courseId}/settings`} className="btn btn-primary h-12 px-6 gap-2 shadow-lg shadow-primary-500/20">
+                   <SettingsIcon size={18} /> Manage Course
+                 </Link>
+               )}
+             </div>
+           </div>
+
+           {/* Tabs Navigation */}
+           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mt-10 -mb-2">
+             {tabs.map(tab => {
+               const isActive = pathname === tab.href || (tab.href !== `/courses/${courseId}` && pathname.startsWith(tab.href));
+               return (
+                 <Link 
+                   key={tab.href} 
+                   href={tab.href} 
+                   className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all whitespace-nowrap ${
+                     isActive 
+                       ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20' 
+                       : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'
+                   }`}
+                 >
+                   <tab.icon size={14} strokeWidth={2.5} />
+                   {tab.label}
+                 </Link>
+               );
+             })}
+           </div>
         </div>
 
-        {/* Dynamic Content Area */}
-        <div className="flex-1 overflow-y-auto p-8 lg:p-12 scroll-smooth bg-slate-50/30">
-          <motion.div 
-            key={pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-[1400px] mx-auto"
-          >
-            {children}
-          </motion.div>
-        </div>
-
-      </main>
-    </div>
+        {/* Workspace Content */}
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="min-h-[500px]"
+        >
+          {children}
+        </motion.div>
+      </div>
+    </DashboardLayout>
   );
 }

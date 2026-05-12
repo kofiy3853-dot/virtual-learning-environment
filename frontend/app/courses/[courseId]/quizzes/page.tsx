@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { AxiosError } from 'axios';
-import DashboardLayout from '@/layouts/DashboardLayout';
 import toast from 'react-hot-toast';
 
 interface Quiz {
@@ -138,7 +137,6 @@ export default function QuizzesPage() {
   );
 
   return (
-    <DashboardLayout>
       <div className="space-y-12 pb-20">
         
         {/* Immersive Header */}
@@ -359,6 +357,5 @@ export default function QuizzesPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }
