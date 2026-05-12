@@ -35,6 +35,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     // Initialize Socket Connection
     const socketInstance = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
+      transports: ['websocket'],
       auth: {
         token: localStorage.getItem('token'),
       },
