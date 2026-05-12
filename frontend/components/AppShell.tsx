@@ -80,7 +80,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="p-4 border-t border-surface-200 bg-surface-50/50">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700 font-bold border border-primary-200 overflow-hidden shadow-sm">
-            {user?.avatar && user.avatar !== 'no-photo.jpg' ? (
+            {user?.avatar && !user.avatar.includes('no-photo.jpg') ? (
               <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
             ) : user?.name?.charAt(0)}
           </div>

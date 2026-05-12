@@ -169,7 +169,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3 mb-4 group hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300"
         >
           <div className="w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-200 flex items-center justify-center text-primary-500 font-bold text-sm overflow-hidden">
-             {user?.avatar ? (
+             {user?.avatar && !user.avatar.includes('no-photo.jpg') ? (
                 <img src={user.avatar} alt={user?.name || 'Profile'} className="w-full h-full object-cover" />
              ) : (
                 user?.name?.charAt(0) || '?'
