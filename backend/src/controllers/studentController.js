@@ -3,6 +3,8 @@ const Quiz = require('../models/Quiz');
 const LiveSession = require('../models/LiveSession');
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
+const Submission = require('../models/Submission');
+const GradeItem = require('../models/GradeItem');
 const asyncHandler = require('express-async-handler');
 
 // @desc    Get all upcoming milestones for the student
@@ -81,9 +83,6 @@ exports.getMyStats = asyncHandler(async (req, res, next) => {
       data: { overallCompletion: 0, assignmentsSubmitted: 0 }
     });
   }
-
-  const { Submission } = require('../models/Submission');
-  const GradeItem = require('../models/GradeItem');
 
   const assignmentsSubmitted = await Submission.countDocuments({ student: req.user.id });
   const grades = await GradeItem.find({ student: req.user.id });
