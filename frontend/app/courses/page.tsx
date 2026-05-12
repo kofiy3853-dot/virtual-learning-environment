@@ -9,7 +9,7 @@ import { AxiosError } from 'axios';
 import { 
   Search, Filter, Plus, BookOpen, User, 
   ChevronRight, Sparkles, AlertCircle, CheckCircle2,
-  SlidersHorizontal, LayoutGrid, List
+  SlidersHorizontal, LayoutGrid, List, Trash2
 } from 'lucide-react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 
@@ -84,6 +84,20 @@ export default function CoursesPage() {
       showToast(msg, 'error');
     } finally {
       setEnrolling(null);
+    }
+  };
+
+  const handleDelete = async (courseId: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) return;
+    
+    try {
+      await courseApi.delete(courseId);
+      showToast('Course deleted successfully');
+      fetchCourses();
+    } catch (err: unknown) {
+      let msg = 'Failed to delete course';
+      if (err instanceof AxiosError) msg = err.response?.data?.message || msg;
+      showToast(msg, 'error');
     }
   };
 
@@ -246,12 +260,22 @@ export default function CoursesPage() {
                             </button>
                           )
                         ) : (
-                          <Link 
-                            href={`/courses/${course._id}`}
-                            className="btn btn-secondary w-full h-12 hover:border-primary-500 hover:text-primary-500 transition-all font-black"
-                          >
-                            Enter Hub <ChevronRight size={16} />
-                          </Link>
+                          <div className="flex gap-2">
+                            <Link 
+                              href={`/courses/${course._id}`}
+                              className="btn btn-secondary flex-1 h-12 hover:border-primary-500 hover:text-primary-500 transition-all font-black"
+                            >
+                              Enter Hub <ChevronRight size={16} />
+                            </Link>
+                            <button 
+                              onClick={() => handleDelete(course._id, course.title)}
+                              className="w-12 h-12 rounded-[0.75rem] border border-red-100 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center shrink-0"
+                              title="Delete Course"
+                              aria-label={`Delete course ${course.title}`}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
