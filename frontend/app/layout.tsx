@@ -25,6 +25,10 @@ export const metadata: Metadata = {
 };
 
 import { SocketProvider } from "@/context/SocketContext";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { SentinelProvider } from "@/context/SentinelContext";
+import CommandPalette from "@/components/shared/CommandPalette";
+import SentinelWrapper from "@/components/shared/SentinelWrapper";
 
 export default function RootLayout({
   children,
@@ -36,22 +40,28 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <AuthProvider>
           <SocketProvider>
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                className: 'react-hot-toast',
-                style: {
-                  borderRadius: '12px',
-                  background: '#fff',
-                  color: '#0f172a',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  border: '1px solid #e2e8f0',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                },
-              }}
-            />
-            {children}
+            <ThemeProvider>
+              <SentinelProvider>
+                <CommandPalette />
+                <SentinelWrapper />
+                <Toaster 
+                  position="top-right"
+                  toastOptions={{
+                    className: 'react-hot-toast',
+                    style: {
+                      borderRadius: '12px',
+                      background: '#fff',
+                      color: '#0f172a',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    },
+                  }}
+                />
+                {children}
+              </SentinelProvider>
+            </ThemeProvider>
           </SocketProvider>
         </AuthProvider>
       </body>

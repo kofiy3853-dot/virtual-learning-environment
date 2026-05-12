@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, BookOpen, MessageSquare, Bell, User as UserIcon, 
   LogOut, GraduationCap, Users, BarChart3, Activity, Radar, 
-  Settings, HelpCircle, ChevronRight, Search, X, LucideIcon
+  Settings, HelpCircle, ChevronRight, Search, X, LucideIcon,
+  Zap, Moon, Sun
 } from 'lucide-react';
 import useNotificationSentinel from '@/hooks/useNotificationSentinel';
 
@@ -67,8 +68,11 @@ const adminLinks = [
 
 const linksByRole: Record<string, NavSection[]> = { student: studentLinks, teacher: teacherLinks, admin: adminLinks };
 
+import { useTheme } from '@/context/ThemeContext';
+
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { unreadCount } = useNotificationSentinel();
   const pathname = usePathname();
   const sections = (user?.role && linksByRole[user.role as keyof typeof linksByRole]) || studentLinks;
@@ -86,31 +90,53 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Intelligence OS</span>
           </div>
         </Link>
-        {onClose && (
-          <button 
-            onClick={onClose} 
-            aria-label="Close Sidebar"
-            title="Close Sidebar"
-            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors border border-slate-100"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('toggle-sentinel'))}
+            className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-primary-500 transition-all border border-slate-100 group"
+            aria-label="Toggle Sentinel"
+            title="The Sentinel Activity Feed"
           >
-            <X size={20} />
+            <Zap size={18} className="group-hover:fill-primary-500/10 transition-all" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-lg animate-pulse">
+                {unreadCount}
+              </span>
+            )}
           </button>
-        )}
+          <button
+            onClick={toggleTheme}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-primary-500 transition-all border border-slate-100"
+            aria-label="Toggle Theme"
+            title="Toggle Theme"
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+          {onClose && (
+            <button 
+              onClick={onClose} 
+              aria-label="Close Sidebar"
+              title="Close Sidebar"
+              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors border border-slate-100"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search / Quick Action */}
       <div className="px-4 mb-6">
-        <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-primary-500 transition-colors" size={16} />
-          <input 
-            type="text" 
-            placeholder="Search workspace..." 
-            className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500/20 transition-all placeholder:text-slate-400"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-[9px] font-bold text-slate-400 shadow-sm">
+        <button 
+          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+          className="w-full h-10 px-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-3 group hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all text-left"
+        >
+          <Search className="text-slate-400 group-hover:text-primary-500 transition-colors" size={16} />
+          <span className="text-xs font-medium text-slate-400 flex-1">Search workspace...</span>
+          <div className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-[9px] font-bold text-slate-400 shadow-sm">
             ⌘K
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Navigation */}

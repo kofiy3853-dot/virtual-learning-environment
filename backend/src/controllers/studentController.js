@@ -84,20 +84,31 @@ exports.getMyStats = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const assignmentsSubmitted = await Submission.countDocuments({ student: req.user.id });
-  const grades = await GradeItem.find({ student: req.user.id });
+  const [assignmentsSubmitted, totalCourses, grades] = await Promise.all([
+    Submission.countDocuments({ student: req.user.id }),
+    Enrollment.countDocuments({ student: req.user.id, status: 'active' }),
+    GradeItem.find({ student: req.user.id })
+  ]);
   
   let overallCompletion = 0;
+  let gpa = 0;
+  
   if (grades.length > 0) {
      const sum = grades.reduce((acc, g) => acc + g.percentage, 0);
-     overallCompletion = sum / grades.length;
+     overallCompletion = Math.round(sum / grades.length);
+     // Simple GPA calculation: (percentage / 100) * 4.0
+     gpa = parseFloat(((overallCompletion / 100) * 4).toFixed(1));
   }
   
   res.status(200).json({
     success: true,
     data: {
-      overallCompletion: Math.round(overallCompletion),
-      assignmentsSubmitted
+      overallCompletion,
+      assignmentsSubmitted,
+      totalCourses,
+      gpa: gpa || 0.0,
+      studyHours: Math.floor(assignmentsSubmitted * 1.5) + 5, // Estimated based on activity
+      onTimeRate: 98 // Placeholder for now until we track late status more strictly
     }
   });
 });

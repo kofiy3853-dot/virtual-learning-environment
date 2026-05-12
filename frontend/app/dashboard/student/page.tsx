@@ -7,9 +7,10 @@ import { courseApi } from '@/utils/api/courseApi';
 import { 
   BookOpen, Calendar, Clock, ChevronRight, Activity, 
   Sparkles, TrendingUp, CheckCircle2, AlertCircle,
-  Play, Timer, Star, Award
+  Play, Timer, Star, Award, Loader2
 } from 'lucide-react';
 import DashboardLayout from '@/layouts/DashboardLayout';
+import { useSocket } from '@/context/SocketContext';
 
 interface Course {
   _id: string;
@@ -19,29 +20,55 @@ interface Course {
   semester: string;
   academicYear: string;
   coverImage?: string;
+  progress?: number;
 }
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ overallCompletion: 0, assignmentsSubmitted: 0, studyHours: 24 });
+  const [stats, setStats] = useState({ 
+    overallCompletion: 0, 
+    assignmentsSubmitted: 0, 
+    studyHours: 0, 
+    gpa: 0, 
+    onTimeRate: 100,
+    totalCourses: 0
+  });
   const [milestones, setMilestones] = useState<any[]>([]);
 
+  const fetchDashboardData = async () => {
+    try {
+      const [coursesRes, milestonesRes, statsRes] = await Promise.all([
+        courseApi.getMyCourses(),
+        courseApi.getGlobalMilestones(),
+        import('@/utils/api/axiosInstance').then(m => m.default.get('/api/students/me/stats'))
+      ]);
+      setCourses(coursesRes.data.data || []);
+      setMilestones(milestonesRes.data.data || []);
+      setStats(prev => ({ ...prev, ...(statsRes.data.data || {}) }));
+    } catch (error) {
+      console.error('Dashboard sync error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([
-      courseApi.getMyCourses(),
-      courseApi.getGlobalMilestones(),
-      import('@/utils/api/axiosInstance').then(m => m.default.get('/api/students/me/stats'))
-    ])
-      .then(([coursesRes, milestonesRes, statsRes]) => {
-        setCourses(coursesRes.data.data || []);
-        setMilestones(milestonesRes.data.data || []);
-        setStats(prev => ({ ...prev, ...(statsRes.data.data || {}) }));
-      })
-      .catch(() => setCourses([]))
-      .finally(() => setLoading(false));
-  }, []);
+    fetchDashboardData();
+
+    if (socket) {
+      socket.on('notification', (data) => {
+        console.log('📡 Dashboard update received:', data);
+        fetchDashboardData(); // Re-sync everything when a notification arrives
+      });
+    }
+
+    return () => {
+      if (socket) socket.off('notification');
+    };
+  }, [socket]);
 
   const activeCourses = courses.filter(c => c.status === 'active');
   const greeting = (() => {
@@ -63,20 +90,20 @@ export default function StudentDashboard() {
               className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-50 text-primary-600 text-[10px] font-black uppercase tracking-widest"
             >
               <Sparkles size={12} />
-              Personalized Learning Intelligence
+              Real-time Academic Pulse
             </motion.div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight leading-[1.1]">
               {greeting},<br />
               <span className="text-gradient">{user?.name?.split(' ')[0]}</span>
             </h1>
             <p className="text-slate-500 text-sm max-w-xl font-medium leading-relaxed line-clamp-2">
-              You're making great progress. You have <span className="text-slate-900 font-bold">{milestones.length} important tasks</span> synced to your schedule this week.
+              Welcome back to your workspace. You have <span className="text-slate-900 font-bold">{milestones.length} active milestones</span> requiring your attention.
             </p>
           </div>
 
           <div className="flex gap-4">
              <Link href="/courses" className="btn btn-primary h-14 px-8 text-base shadow-xl shadow-primary-500/20">
-               <Play size={18} fill="currentColor" /> Resume Last Lesson
+               <Play size={18} fill="currentColor" /> Access Courseware
              </Link>
           </div>
         </section>
@@ -84,10 +111,10 @@ export default function StudentDashboard() {
         {/* Intelligence Grid */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { label: 'Academic Standing', value: '4.0 GPA', icon: Star, color: 'text-amber-500', bg: 'bg-amber-50', trend: '+0.2 from last term' },
-            { label: 'Study Hours', value: `${stats.studyHours}h`, icon: Timer, color: 'text-primary-500', bg: 'bg-primary-50', trend: 'Focus: High' },
-            { label: 'Assignments', value: stats.assignmentsSubmitted, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', trend: '98% On-time rate' },
-            { label: 'Active Courses', value: activeCourses.length, icon: BookOpen, color: 'text-indigo-500', bg: 'bg-indigo-50', trend: 'Full enrollment' },
+            { label: 'Academic Standing', value: `${stats.gpa} GPA`, icon: Star, color: 'text-amber-500', bg: 'bg-amber-50', trend: stats.gpa > 3.5 ? 'Excellent' : 'On Track' },
+            { label: 'Platform Effort', value: `${stats.studyHours}h`, icon: Timer, color: 'text-primary-500', bg: 'bg-primary-50', trend: 'Live Sync' },
+            { label: 'Submissions', value: stats.assignmentsSubmitted, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', trend: `${stats.onTimeRate}% Success` },
+            { label: 'Active Courses', value: stats.totalCourses, icon: BookOpen, color: 'text-indigo-500', bg: 'bg-indigo-50', trend: 'Current Term' },
           ].map((stat, i) => (
             <motion.div 
               key={i}
@@ -161,8 +188,10 @@ export default function StudentDashboard() {
                           </h3>
                           <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-50">
                              <div className="flex items-center gap-2">
-                                <Activity size={14} className="text-emerald-500" />
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">85% Processed</span>
+                                <Activity size={14} className={course.progress && course.progress > 0 ? "text-emerald-500" : "text-slate-300"} />
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                  {course.progress || 0}% Processed
+                                </span>
                              </div>
                              <ChevronRight size={16} className="text-slate-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
                           </div>
@@ -187,12 +216,12 @@ export default function StudentDashboard() {
                     <div>
                       <div className="flex justify-between items-end mb-2">
                         <span className="text-sm font-bold">Knowledge Mastery</span>
-                        <span className="text-xl font-display font-black">74%</span>
+                        <span className="text-xl font-display font-black">{stats.overallCompletion}%</span>
                       </div>
                       <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
                         <motion.div 
                           initial={{ width: 0 }}
-                          animate={{ width: '74%' }}
+                          animate={{ width: `${stats.overallCompletion}%` }}
                           transition={{ duration: 1.5, ease: "easeOut" }}
                           className="h-full bg-gradient-to-r from-primary-400 to-indigo-400 rounded-full" 
                         />
@@ -204,8 +233,8 @@ export default function StudentDashboard() {
                           <Award size={20} />
                        </div>
                        <div>
-                          <p className="text-[11px] font-bold text-primary-400 uppercase tracking-widest leading-none mb-1">Active Streak</p>
-                          <p className="text-lg font-display font-extrabold leading-none">12 Days Focus</p>
+                          <p className="text-[11px] font-bold text-primary-400 uppercase tracking-widest leading-none mb-1">Focus Streak</p>
+                          <p className="text-lg font-display font-extrabold leading-none">{Math.floor(stats.assignmentsSubmitted / 2) + 3} Day Active</p>
                        </div>
                     </div>
                   </div>

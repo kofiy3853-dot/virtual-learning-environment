@@ -12,22 +12,30 @@ export default function useNotificationSentinel() {
   const { socket } = useSocket();
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const router = useRouter();
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await communicationApi.getMyNotifications();
+      const notifs = res.data.data;
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n: any) => !n.isRead).length);
+    } catch (error) {
+      console.error('Failed to fetch notifications', error);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
-
-    // Initial fetch of unread count
-    communicationApi.getMyNotifications().then(res => {
-      const unread = res.data.data.filter((n: { isRead: boolean }) => !n.isRead).length;
-      setUnreadCount(unread);
-    });
+    fetchNotifications();
   }, [user]);
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('new_notification', (notif: { message?: string }) => {
+    socket.on('new_notification', (notif: any) => {
+      setNotifications(prev => [notif, ...prev]);
       setUnreadCount(prev => prev + 1);
       
       // Premium SaaS Toast
@@ -123,5 +131,5 @@ export default function useNotificationSentinel() {
     };
   }, [socket, router]);
 
-  return { unreadCount };
+  return { unreadCount, notifications, refresh: fetchNotifications };
 }

@@ -51,7 +51,12 @@ exports.dropCourse = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Get my enrolled courses
+const Assignment = require('../models/Assignment');
+const Quiz = require('../models/Quiz');
+const Submission = require('../models/Submission');
+const QuizAttempt = require('../models/QuizAttempt');
+
+// @desc    Get my enrolled courses with progress
 // @route   GET /api/students/me/courses
 // @access  Private (Student)
 exports.getMyCourses = asyncHandler(async (req, res, next) => {
@@ -60,9 +65,28 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
     populate: { path: 'teacher', select: 'name email' }
   });
 
+  const courseData = await Promise.all(enrollments.map(async (e) => {
+    const course = e.course.toObject();
+    
+    // Calculate progress
+    const [totalAssignments, totalQuizzes, submissions, quizAttempts] = await Promise.all([
+      Assignment.countDocuments({ course: course._id }),
+      Quiz.countDocuments({ course: course._id, isPublished: true }),
+      Submission.countDocuments({ course: course._id, student: req.user.id }),
+      QuizAttempt.countDocuments({ quiz: { $in: await Quiz.find({ course: course._id }).distinct('_id') }, student: req.user.id })
+    ]);
+
+    const totalItems = totalAssignments + totalQuizzes;
+    const completedItems = submissions + quizAttempts;
+    
+    course.progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+    
+    return course;
+  }));
+
   res.status(200).json({
     success: true,
-    count: enrollments.length,
-    data: enrollments.map(e => e.course),
+    count: courseData.length,
+    data: courseData,
   });
 });

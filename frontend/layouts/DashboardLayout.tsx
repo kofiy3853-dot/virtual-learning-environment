@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import PageTransition from '@/components/shared/PageTransition';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { loading } = useAuth();
@@ -12,20 +13,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-12 h-12 border-4 border-slate-100 rounded-full" />
-            <div className="absolute top-0 w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[#020617]">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-24 h-24">
+            <motion.div 
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 border-t-2 border-primary-500 rounded-full" 
+            />
+            <motion.div 
+              animate={{ rotate: -360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-2 border-b-2 border-indigo-500/30 rounded-full" 
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <GraduationCap size={32} className="text-white opacity-20" />
+            </div>
           </div>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Synchronizing Workspace</p>
+          <div className="text-center">
+            <p className="text-white text-[10px] font-black uppercase tracking-[0.4em] mb-1">Intelligence OS</p>
+            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em]">Synchronizing Workspace...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white mesh-bg relative">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-900 mesh-bg relative transition-colors duration-300">
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -47,20 +62,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Sidebar onClose={() => setIsSidebarOpen(false)} />
       </div>
 
-      <main className="flex-1 overflow-y-auto scrollbar-premium relative flex flex-col h-full">
+      <main className="flex-1 overflow-y-auto scrollbar-premium relative flex flex-col h-full bg-transparent">
         {/* Mobile Header */}
-        <header className="lg:hidden h-20 px-6 flex items-center justify-between bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-[35]">
+        <header className="lg:hidden h-20 px-6 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 sticky top-0 z-[35]">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
               <GraduationCap size={22} className="text-white" />
             </div>
-            <span className="font-display font-bold text-lg tracking-tighter text-slate-900">UniLearn</span>
+            <span className="font-display font-bold text-lg tracking-tighter text-slate-900 dark:text-white">UniLearn</span>
           </Link>
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
             title={isSidebarOpen ? "Close menu" : "Open menu"}
-            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-900 shadow-sm active:scale-95 transition-all"
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white shadow-sm active:scale-95 transition-all"
           >
             {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -68,13 +83,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="max-w-[1600px] mx-auto w-full flex-1 flex flex-col">
           <div className="flex-1 p-6 md:p-10 lg:p-12">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-            >
+            <PageTransition>
               {children}
-            </motion.div>
+            </PageTransition>
           </div>
           
           <footer className="px-6 md:px-12 py-8 border-t border-slate-100/50 flex flex-col sm:flex-row justify-between items-center gap-6">
