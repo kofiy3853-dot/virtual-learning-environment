@@ -4,6 +4,7 @@ const Message = require('../models/Message');
 const Notification = require('../models/Notification');
 const Enrollment = require('../models/Enrollment');
 const asyncHandler = require('express-async-handler');
+const { createNotification } = require('../utils/notificationHelper');
 
 // @desc    Create announcement
 // @route   POST /api/courses/:id/announcements
@@ -14,14 +15,17 @@ exports.createAnnouncement = asyncHandler(async (req, res, next) => {
   const announcement = await Announcement.create(req.body);
 
   // Notify all students in course
-  const enrollments = await Enrollment.find({ course: req.params.id });
-  const notifications = enrollments.map(e => ({
-    user: e.student,
-    type: 'announcement',
-    referenceId: announcement._id,
-    message: `New announcement in course: ${announcement.title}`
-  }));
-  await Notification.insertMany(notifications);
+  const enrollments = await Enrollment.find({ course: req.params.id, status: 'active' });
+  
+  const notifyPromises = enrollments.map(e => 
+    createNotification(
+      e.student,
+      'announcement',
+      announcement._id,
+      `New announcement: ${announcement.title}`
+    )
+  );
+  await Promise.all(notifyPromises);
 
   res.status(201).json({ success: true, data: announcement });
 });

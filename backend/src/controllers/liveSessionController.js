@@ -2,6 +2,8 @@ const LiveSession = require('../models/LiveSession');
 const Course = require('../models/Course');
 const asyncHandler = require('express-async-handler');
 const axios = require('axios');
+const Enrollment = require('../models/Enrollment');
+const { createNotification } = require('../utils/notificationHelper');
 
 // @desc    Create and schedule a live session
 // @route   POST /api/courses/:id/live-sessions
@@ -50,6 +52,18 @@ exports.startSession = asyncHandler(async (req, res, next) => {
 
   session.status = 'live';
   await session.save();
+
+  // Notify all students
+  const enrollments = await Enrollment.find({ course: session.course, status: 'active' });
+  const notifyPromises = enrollments.map(e => 
+    createNotification(
+      e.student,
+      'live_session',
+      session._id,
+      `Class is starting now: ${session.title}`
+    )
+  );
+  await Promise.all(notifyPromises);
 
   res.status(200).json({ success: true, data: session });
 });

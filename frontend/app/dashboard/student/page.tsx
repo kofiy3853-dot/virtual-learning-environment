@@ -220,15 +220,17 @@ export default function StudentDashboard() {
                     <p className="text-sm font-medium text-slate-500">No action required at the moment.</p>
                   ) : (
                     milestones.slice(0, 3).map((item, i) => (
-                      <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                        <div className={`w-2 h-2 rounded-full ${item.priority === 'high' ? 'bg-rose-500' : 'bg-amber-500'} mt-1.5 shrink-0`} />
-                        <div>
-                          <p className="text-sm font-bold text-slate-900 mb-1">{item.title}</p>
-                          <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                            <Clock size={12} /> {new Date(item.deadline).toLocaleDateString()}
-                          </p>
+                      <Link key={i} href={item.type === 'live_session' ? `/courses/${item.course?._id}/live` : item.type === 'assignment' ? `/courses/${item.course?._id}/assignments` : `/courses/${item.course?._id}`} className="block">
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-all group">
+                          <div className={`w-2 h-2 rounded-full ${item.priority === 'high' ? 'bg-rose-500' : 'bg-amber-500'} mt-1.5 shrink-0`} />
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">{item.title}</p>
+                            <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                              <Clock size={12} /> {new Date(item.deadline).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     ))
                   )}
                 </div>

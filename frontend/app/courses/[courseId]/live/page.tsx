@@ -48,10 +48,16 @@ export default function LivePage() {
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
   useEffect(() => {
-    courseApi.getLiveSessions(courseId)
-      .then(res => setSessions(res.data.data || []))
-      .catch(() => setSessions([]))
-      .finally(() => setLoading(false));
+    const fetchSessions = () => {
+      courseApi.getLiveSessions(courseId)
+        .then(res => setSessions(res.data.data || []))
+        .catch(() => setSessions([]))
+        .finally(() => setLoading(false));
+    };
+
+    fetchSessions();
+    const interval = setInterval(fetchSessions, 30000); // Poll every 30s
+    return () => clearInterval(interval);
   }, [courseId]);
 
   const handleCreate = async (e: React.FormEvent) => {

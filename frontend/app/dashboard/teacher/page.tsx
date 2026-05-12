@@ -260,15 +260,17 @@ export default function TeacherDashboard() {
                     <p className="text-sm font-medium text-slate-500">No upcoming schedule.</p>
                   ) : (
                     stats.upcomingClasses.map((item, i) => (
-                      <div key={i} className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                        <div className={`w-2.5 h-2.5 rounded-full ${item.color} mt-1.5`} />
-                        <div>
-                          <p className="text-sm font-extrabold text-slate-900 mb-0.5">{item.title}</p>
-                          <p className="text-xs font-bold text-slate-500">
-                            {new Date(item.time).toLocaleDateString()} {new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} <span className="mx-1">•</span> {item.type}
-                          </p>
+                      <Link key={i} href={item.type === 'Live Session' ? `/courses/${item.courseId}/live` : `/courses/${item.courseId}`} className="block">
+                        <div className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                          <div className={`w-2.5 h-2.5 rounded-full ${item.color} mt-1.5`} />
+                          <div>
+                            <p className="text-sm font-extrabold text-slate-900 mb-0.5">{item.title}</p>
+                            <p className="text-xs font-bold text-slate-500">
+                              {new Date(item.time).toLocaleDateString()} {new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} <span className="mx-1">•</span> {item.type}
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     ))
                   )}
                 </div>

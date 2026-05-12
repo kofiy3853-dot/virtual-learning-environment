@@ -2,6 +2,8 @@ const Assignment = require('../models/Assignment');
 const Course = require('../models/Course');
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
+const Enrollment = require('../models/Enrollment');
+const { createNotification } = require('../utils/notificationHelper');
 
 // @desc    Get assignments for a course
 // @route   GET /api/courses/:id/assignments
@@ -41,6 +43,23 @@ exports.createAssignment = asyncHandler(async (req, res, next) => {
 
   req.body.course = req.params.id;
   const assignment = await Assignment.create(req.body);
+
+  // Notify all enrolled students
+  const enrollments = await Enrollment.find({ 
+    course: req.params.id, 
+    status: 'active' 
+  });
+
+  const notifyPromises = enrollments.map(enrollment => 
+    createNotification(
+      enrollment.student,
+      'announcement',
+      assignment._id,
+      `New assignment posted: ${assignment.title} in ${course.title}`
+    )
+  );
+
+  await Promise.all(notifyPromises);
 
   res.status(201).json({
     success: true,

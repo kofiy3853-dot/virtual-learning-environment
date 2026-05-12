@@ -152,7 +152,7 @@ export default function AcademicRadarPage() {
                             </div>
 
                             <Link 
-                              href={milestone.type === 'assignment' ? `/courses/${milestone.course._id}/assignments/${milestone.id}` : milestone.type === 'quiz' ? `/courses/${milestone.course._id}/quizzes/${milestone.id}` : '#'}
+                              href={milestone.type === 'assignment' ? `/courses/${milestone.course._id}/assignments/${milestone.id}` : milestone.type === 'quiz' ? `/courses/${milestone.course._id}/quizzes/${milestone.id}` : `/courses/${milestone.course._id}/live`}
                               className="block"
                             >
                                <div className="bg-white rounded-[40px] border border-slate-100 p-10 shadow-sm hover:shadow-2xl hover:shadow-slate-900/5 transition-all group relative overflow-hidden">

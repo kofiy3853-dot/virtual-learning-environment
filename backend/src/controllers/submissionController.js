@@ -2,6 +2,7 @@ const Submission = require('../models/Submission');
 const Assignment = require('../models/Assignment');
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
+const { createNotification } = require('../utils/notificationHelper');
 
 // @desc    Submit assignment
 // @route   POST /api/assignments/:id/submit
@@ -114,6 +115,14 @@ exports.gradeSubmission = asyncHandler(async (req, res, next) => {
     new: true,
     runValidators: true
   });
+
+  // Create notification for student
+  await createNotification(
+    submission.student,
+    'grade',
+    submission.assignment._id,
+    `Your submission for "${submission.assignment.title}" has been graded.`
+  );
 
   res.status(200).json({
     success: true,

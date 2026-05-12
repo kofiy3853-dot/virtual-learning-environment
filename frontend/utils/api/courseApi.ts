@@ -53,4 +53,6 @@ export const courseApi = {
   endLiveSession: (id: string) => api.patch(`/api/live-sessions/${id}/end`),
   joinLiveSession: (id: string) => api.get(`/api/live-sessions/${id}/join`),
   getMySubmissions: (courseId: string) => api.get(`/api/courses/${courseId}/my-submissions`),
+  getStudentGrades: (courseId: string) => api.get(`/api/students/me/grades/${courseId}`),
+  getStudentFinalGrade: (courseId: string) => api.get(`/api/students/me/grades/${courseId}/final`),
 };

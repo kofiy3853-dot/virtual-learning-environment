@@ -76,8 +76,8 @@ export default function GradesPage() {
 
       if (isStudent) {
         const [gRes, fRes] = await Promise.all([
-          api.get(`/api/students/me/grades/${courseId}`),
-          api.get(`/api/students/me/grades/${courseId}/final`)
+          courseApi.getStudentGrades(courseId),
+          courseApi.getStudentFinalGrade(courseId)
         ]);
         setMyGrades(gRes.data.data || []);
         setFinalGrade(fRes.data.data);

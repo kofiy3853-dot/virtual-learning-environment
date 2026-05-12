@@ -184,25 +184,8 @@ app.use(errorHandler);
 // ─── START SERVER ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 const httpServer = require('http').createServer(app);
-const io = require('socket.io')(httpServer, {
-  cors: {
-    origin: function (origin, callback) {
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app') ||
-        origin.endsWith('.onrender.com') ||
-        origin === 'http://localhost:3000' ||
-        origin === 'http://localhost:3001'
-      ) {
-        return callback(null, true);
-      }
-      return callback(null, false);
-    },
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
-});
+const socketManager = require('./utils/socketManager');
+const io = socketManager.init(httpServer);
 
 // Socket.io config
 require('./config/socket')(io);
@@ -226,4 +209,4 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-module.exports = { app, server, io };
+module.exports = { app, server, io: socketManager.getIO() };

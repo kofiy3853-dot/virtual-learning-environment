@@ -22,6 +22,7 @@ export default function CourseOverviewPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasLive, setHasLive] = useState(false);
 
   useEffect(() => {
     if (courseId) {
@@ -33,6 +34,11 @@ export default function CourseOverviewPage() {
         const unread = res.data.data.filter((n: { isRead: boolean }) => !n.isRead).length;
         setUnreadCount(unread);
       });
+
+      courseApi.getLiveSessions(courseId).then(res => {
+        const active = (res.data.data || []).some((s: any) => s.status === 'live');
+        setHasLive(active);
+      });
     }
   }, [courseId]);
 
@@ -42,7 +48,8 @@ export default function CourseOverviewPage() {
     { label:'Assessments',   href:`/courses/${courseId}/quizzes`,        icon:FlaskConical,  color:'text-purple-600',  bg:'bg-purple-50' },
     { label:'Academic Hub',  href:`/courses/${courseId}/grades`,         icon:BarChart3,     color:'text-emerald-600', bg:'bg-emerald-50' },
     { label:'Attendance',    href:`/courses/${courseId}/attendance`,     icon:CheckSquare,   color:'text-teal-600',    bg:'bg-teal-50' },
-    { label:'Communications', href:`/courses/${courseId}/announcements`,  icon:Bell,          color:'text-rose-600',    bg:'bg-rose-50' },
+    { label:'Live Classes',  href:`/courses/${courseId}/live`,           icon:Video,         color:'text-rose-600',    bg:'bg-rose-50' },
+    { label:'Communications', href:`/courses/${courseId}/announcements`,  icon:Bell,          color:'text-indigo-600',  bg:'bg-indigo-50' },
   ];
 
   return (
@@ -73,6 +80,12 @@ export default function CourseOverviewPage() {
          </div>
          
          <div className="flex gap-4">
+            {hasLive && (
+              <Link href={`/courses/${courseId}/live`} className="flex items-center gap-3 px-8 h-16 rounded-2xl bg-rose-600 text-white font-black text-xs uppercase tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/30 animate-pulse active:scale-95">
+                 <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+                 Join Live Class
+              </Link>
+            )}
             <Link href={`/courses/${courseId}/modules`} className="flex items-center gap-3 px-8 h-16 rounded-2xl bg-white border-2 border-slate-100 text-slate-600 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
                <Layers size={18} /> Manage Content
             </Link>
