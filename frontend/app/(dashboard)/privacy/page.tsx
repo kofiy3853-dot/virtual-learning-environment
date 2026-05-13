@@ -1,15 +1,11 @@
 'use client';
 import { motion } from 'framer-motion';
-import Sidebar from '@/components/shared/Sidebar';
 import { Shield, Lock, Eye, FileText, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PrivacyPage() {
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8 lg:p-12 relative">
-        <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto space-y-12 pb-20">
           <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 font-bold mb-8 transition-colors group">
             <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
           </Link>
@@ -48,8 +44,6 @@ export default function PrivacyPage() {
               </div>
             </section>
           </motion.div>
-        </div>
-      </main>
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { useAuth } from '@/context/AuthContext';
 import { authApi } from '@/utils/api/authApi';
 import { AxiosError } from 'axios';
 import { User } from '@/types';
-import Sidebar from '@/components/shared/Sidebar';
 import { 
   User as UserIcon, Lock, Bell, Mail, Building2, 
   Globe, ShieldCheck, CheckCircle2, AlertTriangle, Trash2
@@ -38,7 +37,8 @@ function PersonalInfoTab({ user, updateUser, showToast }: PersonalInfoProps) {
       const res = await authApi.updateMe(form);
       updateUser(res.data.data);
       showToast('Profile updated successfully!');
-    } catch (err: any) {
+    } catch (e) {
+      const err = e as AxiosError<{message: string}>;
       showToast(err.response?.data?.message || err.message || 'Failed to update profile', 'error');
     } finally {
       setLoading(false);
@@ -138,7 +138,7 @@ export default function ProfilePage() {
   }[user?.role || 'student'] || { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+    <div className="relative">
       
       {/* Toast Notification */}
       <AnimatePresence>
@@ -155,10 +155,7 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
-      <Sidebar />
-
-      <main className="flex-1 overflow-y-auto p-8 lg:p-12 scroll-smooth">
-        <div className="max-w-5xl mx-auto">
+      <div className="pb-20">
           
           {/* Header Cover */}
           <div className="h-40 rounded-[32px] bg-gradient-to-r from-blue-600 to-indigo-900 relative mb-8 overflow-hidden shadow-lg">
@@ -261,8 +258,7 @@ export default function ProfilePage() {
 
             </div>
           </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

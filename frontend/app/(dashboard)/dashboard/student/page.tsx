@@ -10,7 +10,6 @@ import {
   Sparkles, TrendingUp, CheckCircle2, AlertCircle,
   Play, Timer, Star, Award, Loader2
 } from 'lucide-react';
-import DashboardLayout from '@/layouts/DashboardLayout';
 import { useSocket } from '@/context/SocketContext';
 
 interface Course {
@@ -80,8 +79,7 @@ export default function StudentDashboard() {
   })();
 
   return (
-    <DashboardLayout>
-      <div className="space-y-12 pb-12">
+    <div className="space-y-12 pb-12">
         {/* Welcome Hero */}
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-2">
@@ -297,6 +295,5 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
   );
 }

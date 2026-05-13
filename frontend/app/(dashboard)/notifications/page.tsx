@@ -2,10 +2,9 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import Sidebar from '@/components/shared/Sidebar';
 import { 
   Bell, CheckCircle2, MessageSquare, Megaphone, 
-  Check, CheckCheck, Filter, Loader2, Video, GraduationCap
+  Check, CheckCheck, Filter, Loader2, Video, GraduationCap, LucideIcon
 } from 'lucide-react';
 import { communicationApi } from '@/utils/api/communicationApi';
 import toast from 'react-hot-toast';
@@ -23,7 +22,7 @@ interface Notification {
 
 
 
-const typeConfig: Record<string, { title: string; icon: any; bg: string; color: string; border: string }> = {
+const typeConfig: Record<string, { title: string; icon: LucideIcon; bg: string; color: string; border: string }> = {
   grade: {
     title: 'Grade Update',
     icon: GraduationCap,
@@ -109,11 +108,7 @@ export default function NotificationsPage() {
   });
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-      <Sidebar />
-
-      <main className="flex-1 flex flex-col h-full overflow-y-auto p-8 lg:p-12 scroll-smooth">
-        <div className="max-w-4xl mx-auto w-full pb-20">
+    <div className="pb-20">
           
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
@@ -182,7 +177,7 @@ export default function NotificationsPage() {
                 <Bell size={32} className="text-slate-300" />
               </div>
               <h3 className="text-2xl font-extrabold text-slate-900 mb-3 tracking-tight">All clear!</h3>
-              <p className="text-slate-500 font-medium">No updates in this category. You're fully caught up with the platform.</p>
+              <p className="text-slate-500 font-medium">No updates in this category. You&apos;re fully caught up with the platform.</p>
             </motion.div>
           ) : (
             <div className="space-y-4">
@@ -237,7 +232,5 @@ export default function NotificationsPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
   );
 }

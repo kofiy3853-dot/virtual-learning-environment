@@ -9,7 +9,6 @@ import {
   ArrowRight, BookOpen, GraduationCap, Timer
 } from 'lucide-react';
 import { courseApi } from '@/utils/api/courseApi';
-import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import { format, isToday, isTomorrow, isWithinInterval, addDays } from 'date-fns';
 import Link from 'next/link';
@@ -66,8 +65,7 @@ export default function AcademicRadarPage() {
   };
 
   return (
-    <DashboardLayout>
-       <div className="max-w-6xl mx-auto py-12 px-6 lg:px-8">
+    <div className="pb-20">
           
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
              <div>
@@ -192,6 +190,5 @@ export default function AcademicRadarPage() {
              </div>
           )}
        </div>
-    </DashboardLayout>
   );
 }

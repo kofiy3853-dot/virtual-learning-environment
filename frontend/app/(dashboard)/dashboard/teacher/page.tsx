@@ -6,7 +6,6 @@ import { useAuth } from '@/context/AuthContext';
 import { courseApi } from '@/utils/api/courseApi';
 import { teacherApi } from '@/utils/api/teacherApi';
 import { AxiosError } from 'axios';
-import Sidebar from '@/components/shared/Sidebar';
 import { 
   BookOpen, Plus, Sparkles, TrendingUp, Users, Clock, Calendar, 
   ArrowRight, Wand2, PenTool, CheckCircle2, ChevronRight, Activity, X, Loader2
@@ -81,13 +80,7 @@ export default function TeacherDashboard() {
   })();
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-      
-      <Sidebar />
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative z-10 scroll-smooth p-8 lg:p-12">
-        <div className="max-w-[1400px] mx-auto">
+    <div className="space-y-10">
           
           {/* Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
@@ -280,7 +273,6 @@ export default function TeacherDashboard() {
             </div>
           </div>
         </div>
-      </main>
 
       {/* Creation Modal Overlay */}
       <AnimatePresence>
@@ -345,7 +337,6 @@ export default function TeacherDashboard() {
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

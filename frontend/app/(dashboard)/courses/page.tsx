@@ -11,8 +11,6 @@ import {
   ChevronRight, Sparkles, AlertCircle, CheckCircle2,
   SlidersHorizontal, LayoutGrid, List, Trash2
 } from 'lucide-react';
-import DashboardLayout from '@/layouts/DashboardLayout';
-
 const statusColor: Record<string, { bg: string, text: string, border: string }> = {
   active:   { bg: 'bg-emerald-50',  text: 'text-emerald-700', border: 'border-emerald-100' },
   draft:    { bg: 'bg-amber-50',    text: 'text-amber-700',   border: 'border-amber-100' },
@@ -102,8 +100,7 @@ export default function CoursesPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-10">
+    <div className="space-y-10 pb-20">
         {/* Toast Notification */}
         <AnimatePresence>
           {toast && (
@@ -286,6 +283,5 @@ export default function CoursesPage() {
           )}
         </section>
       </div>
-    </DashboardLayout>
   );
 }

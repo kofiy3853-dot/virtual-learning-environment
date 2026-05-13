@@ -5,11 +5,8 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { adminApi } from '@/utils/api/adminApi';
 import { 
-  LayoutDashboard, Users, BookOpen, BarChart3, Activity, 
-  User as UserIcon, LogOut, GraduationCap, Calendar, Shield, 
   ChevronRight, Search, Plus, Bell
 } from 'lucide-react';
-import Sidebar from '@/components/shared/Sidebar';
 
 interface DashboardStats {
   totalUsers: number;
@@ -58,18 +55,14 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900 relative">
+    <div className="relative">
       {/* Background Ambience */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-100/40 rounded-full blur-[140px]" />
         <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-50/50 rounded-full blur-[120px]" />
       </div>
 
-      <Sidebar />
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative z-10 scroll-smooth">
-        <div className="max-w-[1400px] mx-auto p-8 lg:p-12">
+      <div className="relative z-10">
           
           {/* Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
@@ -175,8 +168,7 @@ export default function AdminDashboard() {
             </Link>
           </motion.div>
 
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

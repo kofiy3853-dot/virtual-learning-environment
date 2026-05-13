@@ -8,7 +8,6 @@ import {
   Shield, Zap, Users, Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
-import DashboardLayout from '@/layouts/DashboardLayout';
 
 export default function HelpPage() {
   const categories = [
@@ -55,8 +54,7 @@ export default function HelpPage() {
   ];
 
   return (
-    <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-12 pb-20">
+    <div className="space-y-12 pb-20">
         
         {/* Header Section */}
         <section className="text-center space-y-4">
@@ -144,6 +142,5 @@ export default function HelpPage() {
         </section>
 
       </div>
-    </DashboardLayout>
   );
 }

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useSocket } from '@/context/SocketContext';
 import { communicationApi } from '@/utils/api/communicationApi';
-import Sidebar from '@/components/shared/Sidebar';
 import { 
   Search, Plus, Phone, Video, MoreVertical, Send, 
   MessageSquare, Users, Star, Info, Loader2, Sparkles
@@ -127,11 +126,7 @@ export default function MessagesPage() {
   );
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden">
-      <Sidebar />
-      
-      <main className="flex-1 flex p-6 lg:p-10 h-full min-w-0">
-        <div className="flex w-full h-full bg-white rounded-[40px] border border-slate-200 shadow-2xl shadow-slate-900/5 overflow-hidden">
+    <div className="flex w-full h-[calc(100vh-140px)] bg-white rounded-[40px] border border-slate-200 shadow-2xl shadow-slate-900/5 overflow-hidden">
           
           {/* Chat List Sidebar */}
           <div className="w-80 border-r border-slate-100 flex flex-col bg-[#FDFDFD] shrink-0">
@@ -377,8 +372,6 @@ export default function MessagesPage() {
               </div>
             )}
           </div>
-        </div>
-      </main>
-    </div>
+      </div>
   );
 }
