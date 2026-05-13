@@ -13,6 +13,7 @@ const roleRoutes: Record<string, string[]> = {
 const protectedPrefixes = [
   '/dashboard', '/courses', '/admin',
   '/messages', '/notifications', '/profile',
+  '/help', '/radar', '/support',
 ];
 
 function decodeJWT(token: string) {
@@ -24,7 +25,7 @@ function decodeJWT(token: string) {
     // Using atob instead of Buffer.from to ensure compatibility with Next.js Edge runtime
     const json = atob(base64);
     return JSON.parse(json);
-  } catch (err) { 
+  } catch { 
     return null; 
   }
 }
@@ -86,5 +87,8 @@ export const config = {
     '/messages/:path*',
     '/notifications/:path*',
     '/profile/:path*',
+    '/help/:path*',
+    '/radar/:path*',
+    '/support/:path*',
   ],
 };
