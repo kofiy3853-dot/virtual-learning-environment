@@ -164,7 +164,7 @@ export default function StudentDashboard() {
               </span>
             </div>
           </Link>
-          <Link href="/assignments" className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group text-left">
+          <Link href="/courses" className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group text-left">
             <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
               <BookOpenCheck size={20} />
             </div>

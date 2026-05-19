@@ -26,15 +26,11 @@ const studentLinks = [
   { group: 'Core', items: [
     { href: '/dashboard/student',    label: 'Dashboard',       icon: LayoutDashboard },
     { href: '/courses',              label: 'My Courses',      icon: BookOpen },
-    { href: '/assignments',          label: 'Assignments',     icon: BarChart3 },
-    { href: '/schedule',             label: 'Schedule',        icon: Activity },
-  ]},
-  { group: 'Communication', items: [
     { href: '/messages',             label: 'Messages',        icon: MessageSquare },
   ]},
   { group: 'Intelligence', items: [
-    { href: '/progress',             label: 'Progress',        icon: Radar },
-    { href: '/ai-tutor',             label: 'AI Tutor',        icon: Sparkles },
+    { href: '/radar',                label: 'Progress',        icon: Radar },
+    { href: '/notifications',        label: 'Notifications',   icon: Sparkles },
   ]},
   { group: 'Settings', items: [
     { href: '/profile',              label: 'Settings',        icon: Settings },
@@ -45,16 +41,11 @@ const teacherLinks = [
   { group: 'Core', items: [
     { href: '/dashboard/teacher',    label: 'Dashboard',       icon: LayoutDashboard },
     { href: '/courses',              label: 'Courses',         icon: BookOpen },
-    { href: '/students',             label: 'Students',        icon: Users },
-    { href: '/assignments',          label: 'Assignments',     icon: BarChart3 },
-    { href: '/schedule',             label: 'Schedule',        icon: Activity },
-  ]},
-  { group: 'Communication', items: [
-    { href: '/messages',             label: 'Messages',       icon: MessageSquare },
+    { href: '/messages',             label: 'Messages',        icon: MessageSquare },
   ]},
   { group: 'Intelligence', items: [
-    { href: '/analytics',            label: 'Analytics',      icon: Radar },
-    { href: '/ai',                   label: 'AI Assistant',   icon: Sparkles },
+    { href: '/radar',                label: 'Analytics',       icon: Radar },
+    { href: '/notifications',        label: 'Notifications',   icon: Sparkles },
   ]},
   { group: 'Settings', items: [
     { href: '/profile',              label: 'Settings',        icon: Settings },
@@ -69,8 +60,7 @@ const adminLinks = [
   ]},
   { group: 'Intelligence', items: [
     { href: '/admin/analytics',      label: 'Analytics',       icon: BarChart3 },
-    { href: '/admin/reports',        label: 'Reports',         icon: Activity },
-    { href: '/admin/ai-insights',    label: 'AI Insights',     icon: Sparkles },
+    { href: '/admin/logs',           label: 'Audit Logs',      icon: Activity },
   ]},
   { group: 'System', items: [
     { href: '/profile',              label: 'System Settings', icon: Settings },
