@@ -46,7 +46,8 @@ const createCourseSchema = Joi.object({
     .pattern(/^\d{4}\/\d{4}$/)
     .required()
     .messages({ 'string.pattern.base': 'Academic year must be in format YYYY/YYYY e.g. 2025/2026' }),
-  status: Joi.string().valid('draft', 'active', 'archived').default('draft')
+  status: Joi.string().valid('draft', 'active', 'archived').default('draft'),
+  teacher: Joi.string().hex().length(24).optional()
 });
 
 const updateCourseSchema = Joi.object({
@@ -55,7 +56,8 @@ const updateCourseSchema = Joi.object({
   description: Joi.string().max(1000).optional().allow(''),
   semester: Joi.string().valid('Semester 1', 'Semester 2').optional(),
   academicYear: Joi.string().pattern(/^\d{4}\/\d{4}$/).optional(),
-  status: Joi.string().valid('draft', 'active', 'archived').optional()
+  status: Joi.string().valid('draft', 'active', 'archived').optional(),
+  teacher: Joi.string().hex().length(24).optional()
 }).min(1).messages({ 'object.min': 'At least one field must be provided to update' });
 
 // ─── MODULE SCHEMAS ────────────────────────────────────────────────────────────
@@ -247,6 +249,10 @@ const changeStatusSchema = Joi.object({
   status: Joi.string().valid('active', 'suspended').required()
 });
 
+const changeCourseStatusSchema = Joi.object({
+  status: Joi.string().valid('draft', 'active', 'archived').required()
+});
+
 const reassignTeacherSchema = Joi.object({
   teacherId: Joi.string().required()
     .messages({ 'string.empty': 'Teacher ID is required' })
@@ -291,6 +297,7 @@ module.exports = {
     // Admin
     changeRole: changeRoleSchema,
     changeStatus: changeStatusSchema,
+    changeCourseStatus: changeCourseStatusSchema,
     reassignTeacher: reassignTeacherSchema,
   }
 };

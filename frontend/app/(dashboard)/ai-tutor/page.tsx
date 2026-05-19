@@ -22,14 +22,24 @@ export default function AiTutorPage() {
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get('prompt') || '';
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      sender: 'ai',
-      text: `Hello ${user?.name?.split(' ')[0] || 'Scholar'}! I am your UniLearn AI intelligence tutor and academic co-pilot. How can I assist you with your studies, research, or course preparation today?`,
-      timestamp: new Date()
+  const [messages, setMessages] = useState<Message[]>([]);
+  
+  // Hydrate welcome message after initial client mount to prevent SSR mismatch
+  useEffect(() => {
+    if (messages.length === 0) {
+      const timer = setTimeout(() => {
+        setMessages([
+          {
+            id: 'welcome',
+            sender: 'ai',
+            text: `Hello ${user?.name?.split(' ')[0] || 'Scholar'}! I am your UniLearn AI intelligence tutor and academic co-pilot. How can I assist you with your studies, research, or course preparation today?`,
+            timestamp: new Date()
+          }
+        ]);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  ]);
+  }, [user?.name, messages.length]);
   
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);

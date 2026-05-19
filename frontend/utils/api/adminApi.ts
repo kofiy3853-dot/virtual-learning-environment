@@ -42,5 +42,5 @@ export const adminApi = {
   approveCourse:  (id: string) => api.patch(`/api/admin/courses/${id}/approve`),
   changeCourseStatus: (id: string, status: Course['status']) => api.patch(`/api/admin/courses/${id}/status`, { status }),
   deleteCourse:   (id: string) => api.delete(`/api/admin/courses/${id}`),
-  reassignTeacher:(id: string, teacherId: string) => api.patch(`/api/admin/courses/${id}/reassign`, { teacherId }),
+  reassignTeacher:(id: string, teacherId: string) => api.patch(`/api/admin/courses/${id}/teacher`, { teacherId }),
 };

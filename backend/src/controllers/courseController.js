@@ -40,8 +40,10 @@ exports.getCourse = asyncHandler(async (req, res, next) => {
 // @route   POST /api/courses
 // @access  Private (Teacher)
 exports.createCourse = asyncHandler(async (req, res, next) => {
-  // Add user to req.body
-  req.body.teacher = req.user.id;
+  // Add user to req.body if not specified by admin
+  if (req.user.role !== 'admin' || !req.body.teacher) {
+    req.body.teacher = req.user.id;
+  }
 
   const course = await Course.create(req.body);
 

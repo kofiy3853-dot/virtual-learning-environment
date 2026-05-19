@@ -10,10 +10,11 @@ const {
 const router = express.Router({ mergeParams: true });
 
 const { protect, authorize } = require('../middleware/auth');
+const { validate, schemas } = require('../middleware/validation');
 
 // Course level
 router.route('/')
-  .post(protect, authorize('teacher', 'admin'), createLiveSession)
+  .post(protect, authorize('teacher', 'admin'), validate(schemas.createLiveSession), createLiveSession)
   .get(protect, getLiveSessions);
 
 // Session level

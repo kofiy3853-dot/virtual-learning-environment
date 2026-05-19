@@ -13,12 +13,13 @@ const {
 const router = express.Router({ mergeParams: true });
 
 const { protect, authorize } = require('../middleware/auth');
+const { validate, schemas } = require('../middleware/validation');
 
 // Course specific grades
 router.route('/weights')
   .get(protect, getGradeWeights)
-  .post(protect, authorize('teacher', 'admin'), setGradeWeights)
-  .patch(protect, authorize('teacher', 'admin'), setGradeWeights);
+  .post(protect, authorize('teacher', 'admin'), validate(schemas.gradeWeight), setGradeWeights)
+  .patch(protect, authorize('teacher', 'admin'), validate(schemas.gradeWeight), setGradeWeights);
 
 router.get('/gradebook', protect, authorize('teacher', 'admin'), getGradeBook);
 router.get('/analytics', protect, authorize('teacher', 'admin'), getCourseAnalytics);

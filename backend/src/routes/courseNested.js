@@ -26,6 +26,7 @@ router.post(
   '/modules',
   protect,
   authorize('teacher', 'admin'),
+  validate(schemas.createModule),
   createModule
 );
 
@@ -53,6 +54,7 @@ router.post(
   '/grade-weights',
   protect,
   authorize('teacher', 'admin'),
+  validate(schemas.gradeWeight),
   setGradeWeights
 );
 
@@ -61,6 +63,7 @@ router.post(
   '/attendance',
   protect,
   authorize('teacher', 'admin'),
+  validate(schemas.createAttendanceSession),
   createSession
 );
 router.get('/attendance', protect, getCourseSessions);
@@ -71,12 +74,13 @@ router.post(
   '/announcements',
   protect,
   authorize('teacher', 'admin'),
+  validate(schemas.createAnnouncement),
   createAnnouncement
 );
 router.get('/announcements', protect, getAnnouncements);
 
 // ─── DISCUSSIONS ────────────────────────────────────────────────────────────
-router.post('/discussions', protect, startDiscussion);
+router.post('/discussions', protect, validate(schemas.createDiscussion), startDiscussion);
 router.get('/discussions', protect, getDiscussions);
 
 // ─── LIVE SESSIONS ──────────────────────────────────────────────────────────
@@ -84,6 +88,7 @@ router.post(
   '/live-sessions',
   protect,
   authorize('teacher', 'admin'),
+  validate(schemas.createLiveSession),
   createLiveSession
 );
 router.get('/live-sessions', protect, getLiveSessions);

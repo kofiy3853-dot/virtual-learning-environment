@@ -16,6 +16,7 @@ const upload = require('../middleware/upload');
 const router = express.Router();
 
 const { protect, authorize } = require('../middleware/auth');
+const { validate, schemas } = require('../middleware/validation');
 
 // Module routes (relative to /api/modules in some cases, but prompt has mixed patterns)
 // Prompt says:
@@ -29,7 +30,7 @@ const { protect, authorize } = require('../middleware/auth');
 // I'll handle /api/modules/:id here
 router
   .route('/:id')
-  .put(protect, authorize('teacher', 'admin'), updateModule)
+  .put(protect, authorize('teacher', 'admin'), validate(schemas.updateModule), updateModule)
   .delete(protect, authorize('teacher', 'admin'), deleteModule);
 
 router
