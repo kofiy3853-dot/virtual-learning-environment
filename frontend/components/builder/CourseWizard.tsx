@@ -69,9 +69,6 @@ export default function CourseWizard() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('Saved just now');
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   
-  // Form validation warnings
-  const [warnings, setWarnings] = useState<string[]>([]);
-  
   // AI assist state
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
@@ -122,8 +119,8 @@ export default function CourseWizard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Real-time validation system based on step
-  useEffect(() => {
+  // Real-time validation system calculated dynamically during render
+  const warnings: string[] = (() => {
     const activeWarnings: string[] = [];
     if (currentStep === 0) {
       if (!form.title) activeWarnings.push('Please enter a course title to continue');
@@ -138,8 +135,8 @@ export default function CourseWizard() {
     } else if (currentStep === 2) {
       if (form.modules.length === 0) activeWarnings.push('Add at least one module to architect your curriculum skeleton');
     }
-    setWarnings(activeWarnings);
-  }, [form, currentStep]);
+    return activeWarnings;
+  })();
 
   const handleNext = () => {
     if (warnings.length > 0) return;
@@ -442,8 +439,10 @@ export default function CourseWizard() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Category *</label>
+                          <label htmlFor="course-category" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Category *</label>
                           <select 
+                            id="course-category"
+                            title="Course Category"
                             value={form.category}
                             onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
@@ -458,11 +457,11 @@ export default function CourseWizard() {
                         <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Level *</label>
                           <div className="flex items-center gap-3 h-12">
-                            {['beginner', 'intermediate', 'advanced'].map(l => (
+                            {(['beginner', 'intermediate', 'advanced'] as const).map(l => (
                               <button
                                 key={l}
                                 type="button"
-                                onClick={() => setForm(p => ({ ...p, level: l as any }))}
+                                onClick={() => setForm(p => ({ ...p, level: l }))}
                                 className={`flex-1 h-full rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                                   form.level === l 
                                     ? 'bg-primary-600 text-white border-primary-600' 
@@ -490,18 +489,22 @@ export default function CourseWizard() {
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Start Date *</label>
+                          <label htmlFor="start-date" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Start Date *</label>
                           <input 
+                            id="start-date"
                             type="date"
+                            title="Start Date"
                             value={form.startDate}
                             onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">End Date *</label>
+                          <label htmlFor="end-date" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">End Date *</label>
                           <input 
+                            id="end-date"
                             type="date"
+                            title="End Date"
                             value={form.endDate}
                             onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
@@ -531,6 +534,7 @@ export default function CourseWizard() {
                             {form.schedule.map((session, idx) => (
                               <div key={session.id} className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
                                 <select 
+                                  title="Schedule Day"
                                   value={session.day} 
                                   onChange={e => updateScheduleSession(session.id, 'day', e.target.value)}
                                   className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none"
@@ -652,11 +656,11 @@ export default function CourseWizard() {
 
                                 {/* Add Lesson Toggles */}
                                 <div className="flex items-center gap-2 pt-2">
-                                  {['video', 'document', 'quiz'].map(type => (
+                                  {(['video', 'document', 'quiz'] as const).map(type => (
                                     <button
                                       key={type}
                                       type="button"
-                                      onClick={() => addLesson(m.id, type as any)}
+                                      onClick={() => addLesson(m.id, type)}
                                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white border border-slate-200 hover:border-primary-300 text-slate-500 hover:text-primary-600 text-[10px] font-bold uppercase tracking-wider transition-all"
                                     >
                                       + {type}
