@@ -4,16 +4,30 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/shared/Sidebar';
 import SentinelFeed from '@/components/shared/SentinelFeed';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSentinelOpen, setIsSentinelOpen] = useState(false);
+  const { loading } = useAuth();
 
   useEffect(() => {
     const handleToggle = () => setIsSentinelOpen(p => !p);
     window.addEventListener('toggle-sentinel', handleToggle);
     return () => window.removeEventListener('toggle-sentinel', handleToggle);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen bg-slate-50 items-center justify-center font-sans">
+        <div className="text-center flex flex-col items-center justify-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary-500" aria-hidden />
+          <p className="text-sm font-medium text-slate-500">Loading workspace…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50 overflow-hidden font-sans">
