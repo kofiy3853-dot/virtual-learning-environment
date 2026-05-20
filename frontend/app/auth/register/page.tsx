@@ -1,3 +1,4 @@
+'use client';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
