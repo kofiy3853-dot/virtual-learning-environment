@@ -14,6 +14,13 @@ import { courseApi } from '@/utils/api/courseApi';
 import { adminApi } from '@/utils/api/adminApi';
 import toast from 'react-hot-toast';
 
+interface StudentOption {
+  _id: string;
+  id?: string;
+  name: string;
+  email: string;
+}
+
 interface Session {
   id: string;
   day: string;
@@ -101,7 +108,7 @@ export default function CourseWizard() {
     visibility: 'draft',
   });
 
-  const [availableStudents, setAvailableStudents] = useState<any[]>([]);
+  const [availableStudents, setAvailableStudents] = useState<StudentOption[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [studentSearch, setStudentSearch] = useState('');
 
@@ -826,7 +833,7 @@ export default function CourseWizard() {
                             availableStudents
                               .filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()))
                               .map(student => {
-                                const studentId = student._id || student.id;
+                                const studentId = (student._id || student.id) as string;
                                 const isChecked = form.students.includes(studentId);
                                 return (
                                   <button
