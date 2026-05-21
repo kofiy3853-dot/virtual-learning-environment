@@ -9,6 +9,7 @@ import {
   FileText, Video, HelpCircle, CheckSquare, Search, Award
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { courseApi } from '@/utils/api/courseApi';
 import { adminApi } from '@/utils/api/adminApi';
 import toast from 'react-hot-toast';
@@ -75,10 +76,15 @@ export default function CourseWizard() {
   // AI assist state
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
+  // URL parameters for Quick Start initialization
+  const searchParams = useSearchParams();
+  const defaultTitle = searchParams.get('title') || '';
+  const defaultCode = searchParams.get('code') || '';
+
   // Form core state
   const [form, setForm] = useState<CourseFormState>({
-    title: '',
-    code: '',
+    title: defaultTitle,
+    code: defaultCode,
     description: '',
     category: '',
     level: 'beginner',

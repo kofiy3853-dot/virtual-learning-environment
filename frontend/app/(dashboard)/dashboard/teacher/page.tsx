@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -36,6 +37,7 @@ interface UpcomingClass {
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -49,19 +51,16 @@ export default function TeacherDashboard() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.code || !form.description) { toast.error('Title, code, and description are required.'); return; }
-    setCreating(true);
-    try {
-      await courseApi.create(form);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.teacher.courses(user!._id) });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
-      setShowForm(false);
-      setForm({ title:'', code:'', description:'', semester:'Semester 1', academicYear:'2025/2026' });
-      toast.success('Course created successfully!');
-    } catch (e) {
-      const err = e as AxiosError<{message: string}>;
-      toast.error(err.response?.data?.message || 'Failed to create course.');
-    } finally { setCreating(false); }
+    if (!form.title || !form.code) { toast.error('Title and code are required.'); return; }
+    
+    // Quick Start Modal redirects to the full-page Course Wizard builder
+    const params = new URLSearchParams({
+      title: form.title,
+      code: form.code
+    });
+    
+    setShowForm(false);
+    router.push(`/admin/courses/new?${params.toString()}`);
   };
 
   const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -403,8 +402,8 @@ export default function TeacherDashboard() {
             >
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h2 className="text-3xl font-extrabold text-slate-900 mb-2">Create Course</h2>
-                  <p className="text-slate-500 font-medium">Configure your new course environment.</p>
+                  <h2 className="text-3xl font-extrabold text-slate-900 mb-2">Create Course Quickly</h2>
+                  <p className="text-slate-500 font-medium">Start your new course environment.</p>
                 </div>
                 <button 
                   type="button"
@@ -427,10 +426,6 @@ export default function TeacherDashboard() {
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Course Code</label>
                     <input required placeholder="e.g. CS101" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 h-12 text-slate-900 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none font-bold text-sm" value={form.code} onChange={e => setForm(p=>({...p,code:e.target.value}))} />
                   </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
-                    <textarea required rows={3} placeholder="What will students learn?" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none resize-none font-medium text-sm" value={form.description} onChange={e => setForm(p=>({...p,description:e.target.value}))} />
-                  </div>
                 </div>
 
                 <div className="pt-6 mt-6 border-t border-slate-100 flex gap-4 justify-end">
@@ -438,8 +433,8 @@ export default function TeacherDashboard() {
                     Cancel
                   </button>
                   <button type="submit" disabled={creating} className="flex items-center justify-center gap-2 px-8 h-12 rounded-xl bg-primary-600 text-white text-sm font-bold shadow-md shadow-primary-600/20 hover:bg-primary-700 disabled:opacity-50 transition-all">
-                    {creating ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                    {creating ? 'Initializing...' : 'Create Course'}
+                    {creating ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
+                    {creating ? 'Redirecting...' : 'Continue Setup'}
                   </button>
                 </div>
               </form>
