@@ -224,6 +224,14 @@ export default function CourseWizard() {
     }, 1500);
   };
 
+  // Auto-start AI generation if requested via URL
+  useEffect(() => {
+    if (searchParams.get('ai') === 'true') {
+      handleAiGenerate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Schedule sub-sessions
   const addScheduleSession = () => {
     const newSession: Session = { id: getUniqueId('s'), day: 'Monday', time: '10:00 AM - 12:00 PM' };

@@ -53,13 +53,14 @@ export default function TeacherDashboard() {
     e.preventDefault();
     if (!form.title || !form.code) { toast.error('Title and code are required.'); return; }
     
+    setCreating(true);
+    
     // Quick Start Modal redirects to the full-page Course Wizard builder
     const params = new URLSearchParams({
       title: form.title,
       code: form.code
     });
     
-    setShowForm(false);
     router.push(`/admin/courses/new?${params.toString()}`);
   };
 
@@ -177,7 +178,7 @@ export default function TeacherDashboard() {
             </div>
             <span className="font-extrabold text-slate-900 text-sm">Add Students</span>
           </button>
-          <button className="flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md hover:-translate-y-1 transition-all group">
+          <button onClick={() => router.push('/admin/courses/new?ai=true')} className="flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md hover:-translate-y-1 transition-all group">
             <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
               <Sparkles size={24} />
             </div>
