@@ -6,6 +6,10 @@ const roleRoutes: Record<string, string[]> = {
   '/dashboard/admin':   ['admin'],
   '/dashboard/teacher': ['teacher'],
   '/dashboard/student': ['student'],
+  '/admin/analytics':   ['admin'],
+  '/admin/logs':        ['admin'],
+  '/admin/users':       ['admin'],
+  '/admin/courses':     ['admin', 'teacher'],
   '/admin':             ['admin'],
   '/radar':             ['student'],
 };
@@ -65,11 +69,15 @@ export function middleware(request: NextRequest) {
   }
 
   // Check role-based access
-  for (const [route, roles] of Object.entries(roleRoutes)) {
-    if (pathname.startsWith(route) && !roles.includes(decoded.role)) {
-      const url = request.nextUrl.clone();
-      url.pathname = `/dashboard/${decoded.role}`;
-      return NextResponse.redirect(url);
+  const sortedRoutes = Object.keys(roleRoutes).sort((a, b) => b.length - a.length);
+  for (const route of sortedRoutes) {
+    if (pathname.startsWith(route)) {
+      if (!roleRoutes[route].includes(decoded.role)) {
+        const url = request.nextUrl.clone();
+        url.pathname = `/dashboard/${decoded.role}`;
+        return NextResponse.redirect(url);
+      }
+      break; // Matched the most specific route, so stop checking others
     }
   }
 
