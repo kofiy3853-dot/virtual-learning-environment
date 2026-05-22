@@ -67,12 +67,22 @@ export default function AssignmentsPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 300);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const mainEl = document.querySelector('main');
+    if (!mainEl) return;
+    
+    const onScroll = () => setShowScrollTop(mainEl.scrollTop > 300);
+    mainEl.addEventListener('scroll', onScroll, { passive: true });
+    return () => mainEl.removeEventListener('scroll', onScroll);
   }, []);
 
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollToTop = () => {
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   // --- Computed stats from real data ---
   const totalSubmissions = Object.keys(submissions).length;

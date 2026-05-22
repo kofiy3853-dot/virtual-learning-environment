@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { 
   Loader2, CheckCircle2, AlertCircle, FileText, Clock, 
   ArrowLeft, X, GraduationCap, Target, Users, ExternalLink,
-  ChevronRight, Calendar, Award, Clipboard, ChevronDown, Check
+  ChevronRight, Calendar, Award, Clipboard, ChevronDown, Check, ChevronUp
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -54,6 +54,26 @@ export default function AssignmentDetailPage() {
 
   const isStudent = user?.role === 'student';
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
+
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const mainEl = document.querySelector('main');
+    if (!mainEl) return;
+    
+    const onScroll = () => setShowScrollTop(mainEl.scrollTop > 300);
+    mainEl.addEventListener('scroll', onScroll, { passive: true });
+    return () => mainEl.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -194,7 +214,7 @@ export default function AssignmentDetailPage() {
   const submissionsRate = allSubmissions.length > 0 ? Math.round((gradedCount / allSubmissions.length) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] -mt-10 py-6">
+    <div className="min-h-screen bg-[#F8FAFC] py-6">
       <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
         
         {/* Navigation Breadcrumb */}
@@ -583,6 +603,17 @@ export default function AssignmentDetailPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Scroll to top FAB */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          aria-label="Scroll to top"
+          className="fixed bottom-8 right-8 z-50 w-14 h-14 rounded-2xl bg-slate-900 text-white shadow-2xl shadow-slate-900/30 flex items-center justify-center hover:bg-primary-600 hover:-translate-y-1 active:scale-95 transition-all duration-300"
+        >
+          <ChevronUp size={22} strokeWidth={2.5} />
+        </button>
+      )}
 
     </div>
   );
