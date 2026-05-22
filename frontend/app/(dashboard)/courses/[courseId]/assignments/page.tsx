@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -10,7 +10,8 @@ import { useCourseAssignments } from '@/hooks/queries/useCourseResources';
 import { 
   FileText, Calendar, Clock, Trophy, 
   Plus, Loader2, CheckCircle2, AlertCircle, LucideIcon,
-  ArrowRight, Inbox, TrendingUp, Activity, Search
+  ArrowRight, Inbox, TrendingUp, Activity, Search,
+  ArrowLeft, ChevronUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -63,6 +64,16 @@ export default function AssignmentsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortKey,    setSortKey]    = useState('dueDate');
 
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
   // --- Computed stats from real data ---
   const totalSubmissions = Object.keys(submissions).length;
   const pendingReviews   = Object.values(submissions).filter(s => s.status === 'submitted').length;
@@ -102,6 +113,15 @@ export default function AssignmentsPage() {
       {/* Header */}
       <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
         <div className="space-y-4 flex-1">
+          {/* Back button */}
+          <button
+            onClick={() => router.push(`/courses/${courseId}`)}
+            aria-label="Back to course overview"
+            className="inline-flex items-center gap-2 text-slate-400 hover:text-primary-600 font-bold text-sm uppercase tracking-widest transition-colors group mb-2"
+          >
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+            Back to Course
+          </button>
           <h1 className="text-4xl lg:text-5xl font-display font-extrabold text-slate-900 tracking-tight leading-none">
             Assignments
           </h1>
@@ -277,6 +297,17 @@ export default function AssignmentsPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Scroll to top FAB */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          aria-label="Scroll to top"
+          className="fixed bottom-8 right-8 z-50 w-14 h-14 rounded-2xl bg-slate-900 text-white shadow-2xl shadow-slate-900/30 flex items-center justify-center hover:bg-primary-600 hover:-translate-y-1 active:scale-95 transition-all duration-300"
+        >
+          <ChevronUp size={22} strokeWidth={2.5} />
+        </button>
       )}
     </div>
   );
