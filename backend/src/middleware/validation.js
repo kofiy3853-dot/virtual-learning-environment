@@ -79,11 +79,8 @@ const createAssignmentSchema = Joi.object({
   title: Joi.string().min(3).max(150).required()
     .messages({ 'string.empty': 'Assignment title is required' }),
   description: Joi.string().max(2000).optional().allow(''),
-  dueDate: Joi.date().iso().greater('now').required()
-    .messages({
-      'date.greater': 'Due date must be in the future',
-      'any.required': 'Due date is required'
-    }),
+  dueDate: Joi.date().iso().required()
+    .messages({ 'any.required': 'Due date is required' }),
   totalMarks: Joi.number().integer().min(1).max(1000).required()
     .messages({
       'number.min': 'Total marks must be at least 1',
@@ -121,9 +118,8 @@ const createQuizSchema = Joi.object({
     }),
   startTime: Joi.date().iso().required()
     .messages({ 'any.required': 'Start time is required' }),
-  endTime: Joi.date().iso().greater(Joi.ref('startTime')).required()
+  endTime: Joi.date().iso().required()
     .messages({
-      'date.greater': 'End time must be after start time',
       'any.required': 'End time is required'
     }),
   totalMarks: Joi.number().integer().min(1).required()
@@ -228,11 +224,8 @@ const sendMessageSchema = Joi.object({
 // ─── LIVE SESSION SCHEMA ───────────────────────────────────────────────────────
 const createLiveSessionSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
-  scheduledAt: Joi.date().iso().greater('now').required()
-    .messages({
-      'date.greater': 'Session must be scheduled in the future',
-      'any.required': 'Scheduled time is required'
-    }),
+  scheduledAt: Joi.date().iso().required()
+    .messages({ 'any.required': 'Scheduled time is required' }),
   duration: Joi.number().integer().min(10).max(480).required()
     .messages({
       'number.min': 'Session duration must be at least 10 minutes',

@@ -129,10 +129,12 @@ export default function QuizBuilder() {
 
     setSaving(true);
     try {
-      // 1. Create Quiz
+      // 1. Create Quiz — convert datetime-local to ISO strings
       const res = await quizApi.createQuiz(courseId, {
         ...quizDetails,
-        ...quizSettings
+        ...quizSettings,
+        startTime: quizSettings.startTime ? new Date(quizSettings.startTime).toISOString() : '',
+        endTime: quizSettings.endTime ? new Date(quizSettings.endTime).toISOString() : '',
       });
       const newQuiz = res.data.data;
       
