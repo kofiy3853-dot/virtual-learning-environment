@@ -57,15 +57,25 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
             <GraduationCap size={20} />
           </div>
           <h2 className="text-base font-semibold text-slate-900 mb-1">Course not found</h2>
-          <p className="text-sm text-slate-500 mb-5 leading-relaxed">
-            This course doesn&apos;t exist or has been archived.
+          <p className="text-sm text-slate-500 mb-2 leading-relaxed">
+            This course doesn&apos;t exist, has been archived, or you may not have access to it.
           </p>
-          <Link
-            href="/courses"
-            className="btn btn-primary"
-          >
-            Back to Courses
-          </Link>
+          {courseId && (
+            <p className="text-xs text-slate-400 font-mono mb-5 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-100">
+              ID: {courseId}
+            </p>
+          )}
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="btn btn-secondary btn-sm"
+            >
+              Retry
+            </button>
+            <Link href="/courses" className="btn btn-primary btn-sm">
+              Back to Courses
+            </Link>
+          </div>
         </div>
       </div>
     );
