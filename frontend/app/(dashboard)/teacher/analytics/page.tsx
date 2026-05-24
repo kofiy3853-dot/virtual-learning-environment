@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+
+export const dynamic = 'force-dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { teacherApi } from '@/utils/api/teacherApi';
 import { useQuery } from '@tanstack/react-query';

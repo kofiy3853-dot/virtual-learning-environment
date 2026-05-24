@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { teacherApi } from '@/utils/api/teacherApi';

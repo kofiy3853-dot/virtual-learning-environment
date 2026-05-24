@@ -2,34 +2,39 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { TeacherNav } from '@/components/teacher/TeacherNav';
+import { Loader2 } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 export default function TeacherLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && user.role !== 'teacher' && user.role !== 'admin') {
+    if (!loading && user && user.role !== 'teacher' && user.role !== 'admin') {
       router.push('/dashboard');
     }
-  }, [user, router]);
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
+      </div>
+    );
+  }
 
   if (!user || (user.role !== 'teacher' && user.role !== 'admin')) {
     return null;
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <TeacherNav />
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {children}
-        </div>
-      </div>
+    <div className="flex-1">
+      {children}
     </div>
   );
 }

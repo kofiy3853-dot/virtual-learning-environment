@@ -8,8 +8,10 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   BookOpen, Users, BarChart3, AlertTriangle, ArrowRight,
-  Search, Filter, Plus, Eye, Settings, Trash2
+  Search, Plus, Eye, Settings
 } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 export default function TeacherCoursesPage() {
   const { user } = useAuth();
