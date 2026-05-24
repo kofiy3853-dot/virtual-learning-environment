@@ -334,6 +334,23 @@ export default function CourseWizard() {
   const handleSubmit = async (visibility: 'draft' | 'published') => {
     const submitToast = toast.loading('Publishing course and persisting structure...');
     try {
+      // 0. Check for duplicate course code
+      if (form.code) {
+        try {
+          const existingCourses = await courseApi.getAll();
+          const duplicate = existingCourses.data?.data?.find(
+            (c: { code: string }) => c.code.toLowerCase() === form.code.toLowerCase()
+          );
+          if (duplicate) {
+            toast.error(`Course code "${form.code}" already exists. Please use a unique code.`, { id: submitToast });
+            return;
+          }
+        } catch (err) {
+          console.warn('Could not check for duplicate courses:', err);
+          // Continue anyway - backend will catch duplicates
+        }
+      }
+
       // 1. Derive semester & academic year from start date
       let academicYear = '2026/2027';
       let semester = 'Semester 1';

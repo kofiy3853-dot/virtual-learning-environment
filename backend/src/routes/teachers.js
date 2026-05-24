@@ -20,17 +20,30 @@ console.log('[TEACHER ROUTES] Registering teacher routes...');
 
 // Test endpoint (no auth)
 router.get('/test', (req, res) => {
+  console.log('[TEACHER ROUTES] Test endpoint hit');
   res.json({ success: true, message: 'Teacher routes are working!' });
 });
 
-// Teacher stats and courses
-router.get('/me/stats', protect, authorize('teacher'), getMyStats);
-router.get('/me/courses', protect, authorize('teacher'), getMyCourses);
-router.get('/me/pending-submissions', protect, authorize('teacher'), getPendingSubmissions);
+// IMPORTANT: Register specific routes BEFORE parameterized routes
+// Teacher stats and courses (no params)
+router.get('/me/stats', protect, authorize('teacher'), (req, res, next) => {
+  console.log('[TEACHER ROUTES] /me/stats hit');
+  next();
+}, getMyStats);
+
+router.get('/me/courses', protect, authorize('teacher'), (req, res, next) => {
+  console.log('[TEACHER ROUTES] /me/courses hit');
+  next();
+}, getMyCourses);
+
+router.get('/me/pending-submissions', protect, authorize('teacher'), (req, res, next) => {
+  console.log('[TEACHER ROUTES] /me/pending-submissions hit');
+  next();
+}, getPendingSubmissions);
 
 console.log('[TEACHER ROUTES] Registered routes: /test, /me/stats, /me/courses, /me/pending-submissions');
 
-// Course-specific endpoints
+// Course-specific endpoints (with params - registered AFTER specific routes)
 router.get('/me/courses/:courseId/gradebook', protect, authorize('teacher'), getCourseGradebook);
 router.get('/me/courses/:courseId/analytics', protect, authorize('teacher'), getCourseAnalytics);
 router.get('/me/courses/:courseId/at-risk', protect, authorize('teacher'), getAtRiskStudents);
