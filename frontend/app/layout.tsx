@@ -75,8 +75,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
       <body className="font-sans antialiased" style={{ fontFamily: 'Inter, sans-serif' }}>
-        <SentryProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <SentryProvider>
             <QueryProvider>
               <SocketProvider>
                 <ThemeProvider>
@@ -104,8 +104,8 @@ export default function RootLayout({
                 </ThemeProvider>
               </SocketProvider>
             </QueryProvider>
-          </AuthProvider>
-        </SentryProvider>
+          </SentryProvider>
+        </AuthProvider>
       </body>
     </html>
   );
