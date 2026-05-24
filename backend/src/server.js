@@ -4,6 +4,8 @@ const dotenv = require('dotenv');
 // Load env vars
 dotenv.config();
 
+// Deployment trigger: Teacher API endpoints v1.0
+
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
