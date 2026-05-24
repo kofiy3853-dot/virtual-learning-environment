@@ -377,11 +377,23 @@ export default function CourseWizard() {
 
   // Submit complete course details
   const handleSubmit = async (visibility: 'draft' | 'published') => {
+    // Block if code is taken or still being checked
+    if (codeStatus === 'taken') {
+      toast.error(`Course code "${form.code}" is already taken. Please use a different code.`);
+      setCurrentStep(0);
+      return;
+    }
+    if (codeStatus === 'checking') {
+      toast.error('Please wait — checking code availability...');
+      return;
+    }
+
     const submitToast = toast.loading('Publishing course and persisting structure...');
     try {
       // 1. Derive semester & academic year from start date
-      let academicYear = '2026/2027';
-      let semester = 'Semester 1';
+      const currentYear = new Date().getFullYear();
+      let academicYear = `${currentYear}/${currentYear + 1}`;
+      let semester: 'Semester 1' | 'Semester 2' = 'Semester 1';
       if (form.startDate) {
         const dateObj = new Date(form.startDate);
         const startYear = dateObj.getFullYear();
@@ -393,7 +405,7 @@ export default function CourseWizard() {
       const coursePayload = {
         title: form.title || 'Untitled Course',
         code: form.code || `CS-${Math.floor(Math.random() * 900 + 100)}`,
-        description: form.description || 'No description provided.',
+        description: form.description || 'No description provided for this course.',
         semester,
         academicYear,
         status: (visibility === 'published' ? 'active' : 'draft') as 'active' | 'draft',
