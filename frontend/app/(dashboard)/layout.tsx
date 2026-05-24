@@ -7,6 +7,7 @@ import CommandPalette from '@/components/shared/CommandPalette';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { SentryUserSync } from '@/components/providers/SentryUserSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex min-h-screen bg-slate-50 overflow-hidden font-sans">
+      <SentryUserSync />
       {/* Permanent Desktop Sidebar */}
       <div className="hidden lg:block">
         <Sidebar />
