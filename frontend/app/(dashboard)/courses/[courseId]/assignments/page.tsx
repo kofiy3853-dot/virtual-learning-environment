@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { useCourse } from '@/hooks/queries/useCourse';
 import { useCourseAssignments } from '@/hooks/queries/useCourseResources';
 import {
-  FileText, Calendar, Clock, Trophy,
-  Plus, Loader2, CheckCircle2, AlertCircle, LucideIcon,
-  ArrowRight, Inbox, TrendingUp, Activity, Search,
-  ArrowLeft, ChevronUp
+  Calendar, Trophy,
+  Plus, CheckCircle2, AlertCircle, LucideIcon,
+  ArrowRight, Inbox, Activity, Search,
+  ChevronUp
 } from 'lucide-react';
 
 interface Assignment {
@@ -47,13 +45,11 @@ function daysLeft(dueDate: string) {
 
 export default function AssignmentsPage() {
   const { courseId } = useParams() as { courseId: string };
-  const router = useRouter();
   const { user } = useAuth();
 
   const isStudent = user?.role === 'student';
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
 
-  const { data: course } = useCourse(courseId);
   const { data: assignmentData, isLoading: loading } = useCourseAssignments(courseId, { isStudent });
 
   const assignments = (assignmentData?.assignments ?? []) as Assignment[];
@@ -210,7 +206,7 @@ export default function AssignmentsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredAssignments.map((a, idx) => {
+          {filteredAssignments.map((a) => {
             const dl = daysLeft(a.dueDate);
             const sub = submissions[a._id];
             const sb = statusBadge[sub?.status || 'pending'];
