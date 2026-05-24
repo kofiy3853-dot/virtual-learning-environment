@@ -16,6 +16,11 @@ const router = express.Router();
 
 const { protect, authorize } = require('../middleware/auth');
 
+// Test endpoint (no auth)
+router.get('/test', (req, res) => {
+  res.json({ success: true, message: 'Teacher routes are working!' });
+});
+
 // Teacher stats and courses
 router.get('/me/stats', protect, authorize('teacher'), getMyStats);
 router.get('/me/courses', protect, authorize('teacher'), getMyCourses);
