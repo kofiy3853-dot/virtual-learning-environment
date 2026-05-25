@@ -34,8 +34,8 @@ function RegisterContent() {
             applySessionToken(token);
             
             toast.success('Welcome!');
-            // Redirect and let the page reload to fetch user
-            window.location.href = '/dashboard';
+            // Redirect to role-specific dashboard
+            window.location.href = `/dashboard/${user.role}`;
           } catch (e) {
             const msg = (e as AxiosError<{ message: string }>).response?.data?.message || 'Google sign‑up failed';
             setError(msg);
@@ -86,15 +86,15 @@ function RegisterContent() {
         role: form.role  // Include the selected role
       });
       
-      // Registration successful - token is in response
-      const { token } = response.data;
+      // Registration successful - token and user data in response
+      const { token, data: user } = response.data;
       
       // Store token
       applySessionToken(token);
       
       toast.success('Account created successfully!');
-      // Use window.location to force a full page reload and fetch user
-      window.location.href = '/dashboard';
+      // Redirect to role-specific dashboard
+      window.location.href = `/dashboard/${user.role}`;
     } catch (e: any) {
       console.error('Registration error:', e);
       const msg = e?.response?.data?.message || 
