@@ -7,7 +7,7 @@ import { useCourse } from '@/hooks/queries/useCourse';
 import {
   Home, BookOpen, FileText, FlaskConical, BarChart3,
   CheckSquare, MessageSquare, Bell, Video, ChevronRight,
-  Loader2, GraduationCap, Settings as SettingsIcon, Sparkles
+  Loader2, GraduationCap, Settings as SettingsIcon, Sparkles, Users
 } from 'lucide-react';
 
 export default function CourseLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +36,7 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
     { label: 'Discussions',   href: `/courses/${courseId}/discussions`,   icon: MessageSquare },
     { label: 'Announcements', href: `/courses/${courseId}/announcements`, icon: Bell },
     { label: 'Live',          href: `/courses/${courseId}/live`,          icon: Video },
+    ...(isOwner ? [{ label: 'Students', href: `/courses/${courseId}/students`, icon: Users }] : []),
   ];
 
   if (isLoading) {
@@ -109,12 +110,20 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
           </div>
 
           {isOwner && (
-            <Link
-              href={`/courses/${courseId}/settings`}
-              className="btn btn-secondary btn-sm gap-1 shrink-0"
-            >
-              <SettingsIcon size={12} /> Manage
-            </Link>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href={`/courses/${courseId}/students`}
+                className="btn btn-secondary btn-sm gap-1 shrink-0"
+              >
+                <Users size={12} /> Students
+              </Link>
+              <Link
+                href={`/courses/${courseId}/settings`}
+                className="btn btn-secondary btn-sm gap-1 shrink-0"
+              >
+                <SettingsIcon size={12} /> Settings
+              </Link>
+            </div>
           )}
         </div>
 

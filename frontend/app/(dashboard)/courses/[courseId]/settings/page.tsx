@@ -2,40 +2,63 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { courseApi } from '@/utils/api/courseApi';
 import type { Course } from '@/types';
 import { useCourse } from '@/hooks/queries/useCourse';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  Settings, Save, Trash2, AlertTriangle, 
-  CheckCircle2, Loader2, ArrowLeft, 
-  ShieldAlert, Info, Globe, Lock, Cpu, Database, 
-  Eye, Archive, Zap, Shield
+import {
+  Settings, Save, Trash2, Loader2, Globe, Lock, Archive,
+  CheckCircle2, AlertTriangle, BookOpen, Tag, Calendar,
+  FileText, BarChart3, Shield
 } from 'lucide-react';
-import { AxiosError } from 'axios';
 import toast from 'react-hot-toast';
+
+const statusOptions = [
+  {
+    value: 'active' as const,
+    label: 'Active',
+    description: 'Visible and accessible to all enrolled students.',
+    icon: Globe,
+    activeRing: 'ring-2 ring-emerald-200 border-emerald-400',
+    iconColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    dot: 'bg-emerald-500',
+  },
+  {
+    value: 'draft' as const,
+    label: 'Draft',
+    description: 'Hidden from students. Only you can see it.',
+    icon: Lock,
+    activeRing: 'ring-2 ring-amber-200 border-amber-400',
+    iconColor: 'bg-amber-50 text-amber-600 border-amber-100',
+    dot: 'bg-amber-500',
+  },
+  {
+    value: 'archived' as const,
+    label: 'Archived',
+    description: 'Read-only. No new submissions or activity.',
+    icon: Archive,
+    activeRing: 'ring-2 ring-slate-200 border-slate-400',
+    iconColor: 'bg-slate-50 text-slate-600 border-slate-100',
+    dot: 'bg-slate-400',
+  },
+];
 
 export default function CourseSettingsPage() {
   const { courseId } = useParams() as { courseId: string };
   const router = useRouter();
   const { user } = useAuth();
-  
-  const [form, setForm] = useState<Partial<Course>>({
-    title: '',
-    code: '',
-    description: '',
-    semester: 'Semester 1',
-    academicYear: '2025/2026',
-    status: 'active'
-  });
-  
   const queryClient = useQueryClient();
-  const { data: course, isLoading: loading } = useCourse(courseId);
+
+  const { data: course, isLoading } = useCourse(courseId);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [form, setForm] = useState<Partial<Course>>({
+    title: '', code: '', description: '',
+    semester: 'Semester 1', academicYear: '2025/2026', status: 'active',
+  });
 
   useEffect(() => {
     if (!course) return;
@@ -54,264 +77,254 @@ export default function CourseSettingsPage() {
     });
   }, [course, courseId, user, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       await courseApi.update(courseId, form);
       await queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(courseId) });
-      toast.success('Configuration synchronized successfully.');
-    } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Failed to update configuration.');
+      toast.success('Course updated successfully');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update course');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you absolutely sure? This will permanently delete the course and all its data.')) return;
+    if (!window.confirm(`Permanently delete "${course?.title}"? This cannot be undone.`)) return;
     setDeleting(true);
     try {
       await courseApi.delete(courseId);
-      toast.success('Course decommissioned successfully.');
+      toast.success('Course deleted');
       router.push('/courses');
-    } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Failed to decommission course.');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to delete course');
       setDeleting(false);
     }
   };
 
-  if (loading) return (
-    <>
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-slate-100 border-t-primary-500 rounded-full animate-spin shadow-xl shadow-primary-500/5" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Cpu size={28} className="text-primary-500 animate-pulse" />
-          </div>
-        </div>
-        <div className="text-center space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary-500">Accessing Root Access</p>
-          <p className="text-slate-400 font-medium text-sm">Initializing course parameters...</p>
-        </div>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <Loader2 size={28} className="animate-spin text-primary-600" />
       </div>
-    </>
-  );
+    );
+  }
+
+  const currentStatus = statusOptions.find(o => o.value === form.status) || statusOptions[0];
 
   return (
-    <>
-      <div className="max-w-6xl mx-auto space-y-12 pb-20">
-        
-        {/* Immersive Header */}
-        <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
-          <div className="space-y-4 flex-1">
-            <div className="flex items-center gap-2 text-primary-500 font-black text-[10px] uppercase tracking-[0.3em]">
-              <Settings size={14} />
-              Configuration Terminal
+    <div className="space-y-8 pb-12 max-w-6xl mx-auto">
+      {/* Header */}
+      <motion.section
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-3xl border border-slate-200 p-6 lg:p-8 shadow-sm relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-primary-600 font-bold text-[10px] uppercase tracking-widest">
+              <Settings size={14} /> Course Settings
             </div>
-            <h1 className="text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight leading-none">
-              Course <span className="text-primary-500">Settings</span>
-            </h1>
-            <p className="text-slate-500 font-medium max-w-2xl text-lg leading-relaxed">
-              Manage core academic parameters, visibility protocols, and decommissioning sequences for this workspace.
-            </p>
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{course?.title}</h2>
+            <p className="text-slate-500 font-medium text-sm">Manage course details, visibility, and access.</p>
           </div>
-        </header>
+          <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border self-start md:self-auto ${
+            form.status === 'active' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+            form.status === 'draft' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+            'bg-slate-50 border-slate-200 text-slate-600'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${currentStatus.dot}`} />
+            {form.status?.charAt(0).toUpperCase()}{form.status?.slice(1)}
+          </span>
+        </div>
+      </motion.section>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          
-          <div className="lg:col-span-8 space-y-12">
-            
-            {/* General Intelligence */}
-            <section className="bg-white rounded-[48px] border border-slate-100 p-10 lg:p-14 relative overflow-hidden group shadow-2xl shadow-slate-200/20">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-primary-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform duration-1000" />
-              
-              <div className="relative z-10 space-y-10">
-                <div className="flex items-center gap-3 text-primary-500 text-[10px] font-black uppercase tracking-[0.3em]">
-                  <Database size={16} /> Core Data Matrix
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <label htmlFor="course-title" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Institutional Title</label>
-                    <input 
-                      id="course-title"
-                      title="Enter the institutional title"
-                      placeholder="e.g. Advanced Data Structures"
-                      required className="input-premium h-16 text-lg" 
-                      value={form.title}
-                      onChange={e => setForm({...form, title: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <label htmlFor="course-code" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Operational Code</label>
-                    <input 
-                      id="course-code"
-                      title="Enter the operational code"
-                      placeholder="e.g. CS-401"
-                      required className="input-premium h-16 text-lg" 
-                      value={form.code}
-                      onChange={e => setForm({...form, code: e.target.value})}
-                    />
-                  </div>
-                  <div className="md:col-span-2 space-y-3">
-                    <label htmlFor="course-description" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Executive Summary</label>
-                    <textarea 
-                      id="course-description"
-                      title="Provide an executive summary of the course"
-                      placeholder="Enter a comprehensive description of the academic objectives..."
-                      rows={4} className="input-premium py-6 resize-none min-h-[160px] text-lg"
-                      value={form.description}
-                      onChange={e => setForm({...form, description: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <label htmlFor="course-semester" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Academic Cycle</label>
-                    <select 
-                      id="course-semester"
-                      title="Select the academic cycle"
-                      className="input-premium h-16 text-lg appearance-none cursor-pointer"
-                      value={form.semester}
-                      onChange={e => setForm({...form, semester: e.target.value})}
-                    >
-                      <option>Semester 1</option>
-                      <option>Semester 2</option>
-                      <option>Summer Session</option>
-                    </select>
-                  </div>
-                  <div className="space-y-3">
-                    <label htmlFor="course-year" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Temporal Window</label>
-                    <input 
-                      id="course-year"
-                      title="Enter the temporal window"
-                      placeholder="e.g. 2025/2026"
-                      className="input-premium h-16 text-lg"
-                      value={form.academicYear}
-                      onChange={e => setForm({...form, academicYear: e.target.value})}
-                    />
-                  </div>
-                </div>
+      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main fields */}
+        <div className="lg:col-span-2 space-y-6">
 
-                <div className="pt-6 flex justify-end">
-                  <button 
-                    type="submit" 
-                    disabled={saving}
-                    className="btn btn-primary h-16 px-12 gap-3 text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-primary-500/20 active:scale-95"
-                  >
-                    {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    Synchronize Configuration
-                  </button>
-                </div>
+          {/* Core Details */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-5"
+          >
+            <p className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <BookOpen size={13} /> Course Details
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Course Title</label>
+                <input
+                  required
+                  placeholder="e.g. Introduction to Data Science"
+                  value={form.title}
+                  onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none text-sm transition-all"
+                />
               </div>
-            </section>
 
-            {/* Visibility Protocols */}
-            <section className="bg-white rounded-[48px] border border-slate-100 p-10 lg:p-14 shadow-2xl shadow-slate-200/20 space-y-10 group">
-              <div className="flex items-center gap-3 text-primary-500 text-[10px] font-black uppercase tracking-[0.3em]">
-                <Eye size={16} /> Visibility Protocol
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  <Tag size={11} className="inline mr-1" />Course Code
+                </label>
+                <input
+                  required
+                  placeholder="e.g. CS101"
+                  value={form.code}
+                  onChange={e => setForm(p => ({ ...p, code: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none text-sm transition-all"
+                />
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {(['active', 'draft', 'archived'] as const).map((s) => (
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  <Calendar size={11} className="inline mr-1" />Semester
+                </label>
+                <select
+                  value={form.semester}
+                  onChange={e => setForm(p => ({ ...p, semester: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none text-sm transition-all bg-white"
+                >
+                  <option>Semester 1</option>
+                  <option>Semester 2</option>
+                  <option>Summer Session</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Academic Year</label>
+                <input
+                  placeholder="e.g. 2025/2026"
+                  value={form.academicYear}
+                  onChange={e => setForm(p => ({ ...p, academicYear: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none text-sm transition-all"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  <FileText size={11} className="inline mr-1" />Description
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Describe what students will learn in this course..."
+                  value={form.description}
+                  onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none text-sm resize-none transition-all"
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Visibility */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-5"
+          >
+            <p className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <BarChart3 size={13} /> Visibility
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {statusOptions.map(opt => {
+                const Icon = opt.icon;
+                const isSelected = form.status === opt.value;
+                return (
                   <button
-                    key={s}
+                    key={opt.value}
                     type="button"
-                    onClick={() => setForm({...form, status: s})}
-                    className={`p-8 rounded-[32px] border-2 transition-all text-left flex flex-col gap-6 relative overflow-hidden group ${
-                      form.status === s 
-                        ? 'border-primary-500 bg-primary-50/30 ring-4 ring-primary-500/5' 
-                        : 'border-slate-100 bg-slate-50 hover:border-slate-200'
+                    onClick={() => setForm(p => ({ ...p, status: opt.value }))}
+                    className={`relative text-left p-4 rounded-2xl border-2 transition-all ${
+                      isSelected ? opt.activeRing + ' bg-white' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
                     }`}
                   >
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${
-                      s === 'active' ? 'bg-emerald-100 text-emerald-600' : 
-                      s === 'draft' ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {s === 'active' ? <Globe size={24} /> : s === 'draft' ? <Lock size={24} /> : <Archive size={24} />}
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 border ${opt.iconColor}`}>
+                      <Icon size={16} />
                     </div>
-                    <div className="space-y-2">
-                      <h4 className="font-black text-slate-900 uppercase tracking-widest text-xs">{s}</h4>
-                      <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                        {s === 'active' ? 'Operational. Full cohort access.' : 
-                         s === 'draft' ? 'Encrypted. Instructor access only.' : 
-                         'Immutable. Historical data integrity.'}
-                      </p>
-                    </div>
-                    {form.status === s && (
-                      <div className="absolute top-4 right-4">
-                        <CheckCircle2 size={20} className="text-primary-500" />
+                    <p className="text-sm font-bold text-slate-900">{opt.label}</p>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">{opt.description}</p>
+                    {isSelected && (
+                      <div className="absolute top-3 right-3">
+                        <CheckCircle2 size={16} className="text-primary-600" />
                       </div>
                     )}
                   </button>
-                ))}
-              </div>
-            </section>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-sm transition-all disabled:opacity-50 shadow-lg shadow-primary-600/20"
+            >
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
+        </div>
 
-          <aside className="lg:col-span-4 space-y-8">
-            {/* Status Radar */}
-            <section className="bg-white rounded-[48px] border border-slate-100 p-10 shadow-2xl shadow-slate-200/10 space-y-8">
-               <div className="flex items-center gap-3 text-[10px] font-black text-primary-500 uppercase tracking-[0.3em]">
-                  <Zap size={16} /> Operational Status
-               </div>
-               <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Uplink Status</span>
-                    <span className="flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Encrypted
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Integrity</span>
-                    <span className="text-slate-900 text-[10px] font-black uppercase tracking-widest">100% Verified</span>
-                  </div>
-               </div>
-            </section>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4"
+          >
+            <p className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <Shield size={13} /> Course Info
+            </p>
+            <div className="space-y-3 text-sm">
+              {[
+                { label: 'Course ID', value: courseId.slice(-8), mono: true },
+                { label: 'Code', value: form.code || '—' },
+                { label: 'Semester', value: form.semester || '—' },
+                { label: 'Year', value: form.academicYear || '—' },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between">
+                  <span className="text-slate-500">{item.label}</span>
+                  <span className={`font-semibold text-slate-900 ${item.mono ? 'font-mono text-xs bg-slate-50 px-2 py-1 rounded-lg border border-slate-100' : ''}`}>
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
 
-            {/* Danger Zone */}
-            <section className="bg-rose-50 rounded-[48px] border border-rose-100 p-10 space-y-8 group">
-              <div className="flex items-center gap-3 text-rose-500 text-[10px] font-black uppercase tracking-[0.3em]">
-                <ShieldAlert size={20} /> Danger Zone
-              </div>
-              
-              <div className="space-y-6">
-                <p className="text-rose-900/60 text-sm font-medium leading-relaxed">
-                  Decommissioning this workspace is terminal. All academic records, transmissions, and intelligence data will be permanently purged.
-                </p>
-                <button 
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="w-full h-16 rounded-[24px] bg-white border border-rose-200 text-rose-600 font-black hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all shadow-xl shadow-rose-900/5 active:scale-95 text-[10px] uppercase tracking-widest"
-                >
-                  {deleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} className="mr-2 inline" />}
-                  Purge Course Data
-                </button>
-              </div>
-            </section>
-
-            {/* AI Advisor */}
-            <section className="bg-slate-900 rounded-[48px] p-10 text-white space-y-8 relative overflow-hidden group">
-                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/20 rounded-full blur-3xl" />
-                 <div className="w-16 h-16 rounded-[24px] bg-primary-500/20 flex items-center justify-center border border-primary-500/20 group-hover:scale-110 transition-transform duration-700">
-                    <Shield className="text-primary-400" size={28} />
-                 </div>
-                 <div className="space-y-4">
-                    <h3 className="text-2xl font-display font-extrabold tracking-tight">Security Advisor</h3>
-                    <p className="text-slate-400 text-sm font-medium leading-relaxed">
-                      Root access granted. Ensure all configuration changes are peer-reviewed before synchronization. Purge actions require level 4 authorization.
-                    </p>
-                 </div>
-                 <button type="button" className="w-full py-5 rounded-[24px] bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95">
-                    View Audit Logs
-                 </button>
-            </section>
-          </aside>
-        </form>
-      </div>
-    </>
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-rose-50 rounded-3xl border border-rose-200 p-6 space-y-4"
+          >
+            <p className="flex items-center gap-2 text-[10px] font-black text-rose-600 uppercase tracking-widest">
+              <AlertTriangle size={13} /> Danger Zone
+            </p>
+            <p className="text-sm text-rose-800/70 leading-relaxed">
+              Deleting this course is permanent. All modules, assignments, submissions, and grades will be lost.
+            </p>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white border border-rose-200 text-rose-600 font-bold text-sm hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all disabled:opacity-50"
+            >
+              {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+              {deleting ? 'Deleting...' : 'Delete Course'}
+            </button>
+          </motion.div>
+        </div>
+      </form>
+    </div>
   );
 }
