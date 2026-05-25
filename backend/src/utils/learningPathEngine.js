@@ -5,9 +5,11 @@
 
 const OpenAI = require('openai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai = null;
+function getClient() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 /**
  * Analyze student performance and identify knowledge gaps
@@ -38,7 +40,7 @@ Provide analysis in JSON format:
   "priorityAreas": ["area1", "area2"]
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -122,7 +124,7 @@ Format response as JSON:
   "checkpoints": ["checkpoint1", "checkpoint2"]
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -179,7 +181,7 @@ Format response as JSON:
  */
 async function getRecommendedResources(topic, learningStyle, difficultyLevel) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -233,7 +235,7 @@ Format response as JSON array:
  */
 async function updateLearningPath(currentPath, progressData) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -290,7 +292,7 @@ Format response as JSON:
  */
 async function generateLearningRecommendations(studentData, performanceAnalysis) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -349,3 +351,4 @@ module.exports = {
   updateLearningPath,
   generateLearningRecommendations,
 };
+

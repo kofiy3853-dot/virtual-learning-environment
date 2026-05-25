@@ -5,9 +5,11 @@
 
 const OpenAI = require('openai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai = null;
+function getClient() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 /**
  * Generate tutoring response for student question
@@ -42,7 +44,7 @@ Format your response as JSON with the following structure:
   "tips": "Study tips or memory aids"
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -90,7 +92,7 @@ Format your response as JSON with the following structure:
  */
 async function generatePracticeProblems(topic, difficulty = 'medium', count = 5) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -141,7 +143,7 @@ Format your response as a JSON array with the following structure:
  */
 async function analyzeStudentAnswer(question, studentAnswer, topic) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -207,7 +209,7 @@ Format your response as JSON:
  */
 async function explainConcept(concept, courseContext, studentLevel = 'intermediate') {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -268,3 +270,4 @@ module.exports = {
   analyzeStudentAnswer,
   explainConcept,
 };
+

@@ -1,6 +1,14 @@
 const OpenAI = require('openai');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy client — instantiated on first use so missing key doesn't crash startup
+let _openai = null;
+function getClient() {
+  if (!_openai) {
+    if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not set in environment');
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 /**
  * Safely parse JSON from AI response — handles markdown code fences
@@ -16,7 +24,7 @@ function parseJSON(content) {
  */
 async function generateCourseOutline(courseTitle, courseDescription, duration) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert course designer. Generate detailed, structured course outlines. Always respond with valid JSON only, no markdown.' },
@@ -38,7 +46,7 @@ async function generateCourseOutline(courseTitle, courseDescription, duration) {
  */
 async function generateQuizQuestions(topic, difficulty = 'medium', count = 5) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert educator. Generate high-quality quiz questions. Always respond with valid JSON only, no markdown.' },
@@ -60,7 +68,7 @@ async function generateQuizQuestions(topic, difficulty = 'medium', count = 5) {
  */
 async function generateAssignmentPrompt(topic, learningOutcomes, difficulty = 'medium') {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert course designer. Create engaging assignment prompts. Always respond with valid JSON only, no markdown.' },
@@ -82,7 +90,7 @@ async function generateAssignmentPrompt(topic, learningOutcomes, difficulty = 'm
  */
 async function generateLectureNotes(topic, subtopics = []) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert educator. Create comprehensive, well-structured lecture notes.' },
@@ -103,7 +111,7 @@ async function generateLectureNotes(topic, subtopics = []) {
  */
 async function generateStudentFeedback(submissionContent, rubricCriteria, score) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert educator providing constructive feedback. Always respond with valid JSON only, no markdown.' },
@@ -125,7 +133,7 @@ async function generateStudentFeedback(submissionContent, rubricCriteria, score)
  */
 async function generateSyllabus(courseInfo) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert course designer. Create comprehensive, professional course syllabi.' },
@@ -149,3 +157,4 @@ module.exports = {
   generateStudentFeedback,
   generateSyllabus
 };
+

@@ -5,9 +5,11 @@
 
 const OpenAI = require('openai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai = null;
+function getClient() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 /**
  * Grade a single submission
@@ -57,7 +59,7 @@ Format your response as JSON:
   "grade": "A/B/C/D/F based on percentage"
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -141,7 +143,7 @@ async function gradeSubmissionsBatch(submissions, rubricCriteria, totalPoints, a
  */
 async function generateRubric(assignmentDescription, totalPoints = 100) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -212,7 +214,7 @@ async function compareGrades(aiGrade, teacherGrade, submissionId) {
     const difference = Math.abs(aiGrade.totalScore - teacherGrade);
     const percentDifference = (difference / aiGrade.totalScore) * 100;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -270,7 +272,7 @@ Provide analysis in JSON format:
  */
 async function generatePersonalizedFeedback(gradingResult, studentName) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -336,3 +338,4 @@ module.exports = {
   compareGrades,
   generatePersonalizedFeedback,
 };
+

@@ -5,9 +5,11 @@
 
 const OpenAI = require('openai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai = null;
+function getClient() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 /**
  * Analyze student data and predict risk level
@@ -38,7 +40,7 @@ Provide analysis in JSON format:
   "recommendations": ["recommendation1", "recommendation2"]
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -119,7 +121,7 @@ Format response as JSON:
   "contingencyPlans": ["plan1", "plan2"]
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -191,7 +193,7 @@ Format response as JSON array:
   }
 ]`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -230,7 +232,7 @@ Format response as JSON array:
  */
 async function trackInterventionProgress(studentId, interventionPlan, progressData) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -294,7 +296,7 @@ Format response as JSON:
  */
 async function generateRiskReport(students, courseData) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -364,3 +366,4 @@ module.exports = {
   trackInterventionProgress,
   generateRiskReport,
 };
+

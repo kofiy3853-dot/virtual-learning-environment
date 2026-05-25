@@ -5,9 +5,11 @@
 
 const OpenAI = require('openai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai = null;
+function getClient() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 /**
  * Check submission for plagiarism
@@ -47,7 +49,7 @@ Provide a detailed plagiarism report in JSON format:
   "flaggedForReview": boolean
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -104,7 +106,7 @@ async function compareWithPreviousSubmissions(submissionContent, previousSubmiss
       .map((s, i) => `Submission ${i + 1}:\n${s.content}`)
       .join('\n\n---\n\n');
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -171,7 +173,7 @@ async function analyzeWritingPatterns(submissionContent, previousSubmissions = [
       .map((s, i) => `Previous submission ${i + 1}:\n${s}`)
       .join('\n\n---\n\n');
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -240,7 +242,7 @@ Provide analysis in JSON format:
  */
 async function generatePlagiarismReport(plagiarismResult, writingAnalysis, comparisonResult) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -336,3 +338,4 @@ module.exports = {
   generatePlagiarismReport,
   batchCheckPlagiarism,
 };
+

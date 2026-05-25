@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
-const { auth, authorize } = require('../middleware/auth');
+const { protect: auth, authorize } = require('../middleware/auth');
 
 // AI utility imports
 const { generateCourseOutline, generateQuizQuestions, generateAssignmentPrompt, generateLectureNotes, generateStudentFeedback, generateSyllabus } = require('../utils/aiHelper');

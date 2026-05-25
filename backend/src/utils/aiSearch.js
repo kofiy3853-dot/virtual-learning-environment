@@ -5,9 +5,11 @@
 
 const OpenAI = require('openai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai = null;
+function getClient() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 /**
  * Perform semantic search across course content
@@ -40,7 +42,7 @@ Format response as JSON array:
   }
 ]`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -79,7 +81,7 @@ Format response as JSON array:
  */
 async function generateSearchSuggestions(query, searchHistory = [], courseContent = []) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -128,7 +130,7 @@ Format response as JSON array:
  */
 async function analyzeSearchQuery(query) {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -220,7 +222,7 @@ Format response as JSON array:
       .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
       .join(', ');
 
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -258,7 +260,7 @@ Format response as JSON array:
  */
 async function getTrendingTopics(searchHistory = [], timeRange = 'week') {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -308,3 +310,4 @@ module.exports = {
   advancedSearch,
   getTrendingTopics,
 };
+
