@@ -173,7 +173,10 @@ exports.getMessages = asyncHandler(async (req, res, next) => {
 // @route   GET /api/communication/notifications/me
 // @access  Private
 exports.getMyNotifications = asyncHandler(async (req, res, next) => {
-  const notifications = await Notification.find({ user: req.user.id }).sort('-createdAt');
+  const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+  const notifications = await Notification.find({ user: req.user.id })
+    .sort('-createdAt')
+    .limit(limit);
   res.status(200).json({ success: true, data: notifications });
 });
 

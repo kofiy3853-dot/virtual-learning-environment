@@ -11,11 +11,11 @@ export const communicationApi = {
 
   // Announcements (course-scoped)
   getAnnouncements: (courseId: string) => api.get(`/api/courses/${courseId}/announcements`),
-  createAnnouncement: (courseId: string, data: { title: string; content: string }) => api.post(`/api/courses/${courseId}/announcements`, data),
+  createAnnouncement: (courseId: string, data: { title: string; body: string }) => api.post(`/api/courses/${courseId}/announcements`, data),
 
   // Discussions (course-scoped)
   getDiscussions: (courseId: string) => api.get(`/api/courses/${courseId}/discussions`),
-  startDiscussion: (courseId: string, data: { title: string; content: string }) => api.post(`/api/courses/${courseId}/discussions`, data),
+  startDiscussion: (courseId: string, data: { title: string; body: string }) => api.post(`/api/courses/${courseId}/discussions`, data),
   getDiscussion: (discussionId: string) => api.get(`/api/communication/discussions/${discussionId}`),
   replyDiscussion: (discussionId: string, data: { content: string }) => api.post(`/api/communication/discussions/${discussionId}/reply`, data),
 };

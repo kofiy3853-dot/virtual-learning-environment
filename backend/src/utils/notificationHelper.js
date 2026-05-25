@@ -17,14 +17,19 @@ exports.createNotification = async (userId, type, referenceId, message) => {
       message,
     });
 
-    const io = socketManager.getIO();
-    io.to(userId.toString()).emit('notification', {
-      _id: notification._id,
-      type: notification.type,
-      message: notification.message,
-      isRead: notification.isRead,
-      createdAt: notification.createdAt,
-    });
+    // Emit via socket if available — don't crash if socket isn't ready
+    try {
+      const io = socketManager.getIO();
+      io.to(userId.toString()).emit('notification', {
+        _id: notification._id,
+        type: notification.type,
+        message: notification.message,
+        isRead: notification.isRead,
+        createdAt: notification.createdAt,
+      });
+    } catch {
+      // Socket not initialized yet — notification is still saved to DB
+    }
 
     return notification;
   } catch (err) {

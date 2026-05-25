@@ -15,6 +15,9 @@ const LiveSessionSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  description: {
+    type: String,
+  },
   providerRoomId: {
     type: String,
   },
@@ -33,6 +36,12 @@ const LiveSessionSchema = new mongoose.Schema({
     type: String,
     enum: ['scheduled', 'live', 'ended'],
     default: 'scheduled',
+  },
+  startedAt: {
+    type: Date,
+  },
+  endedAt: {
+    type: Date,
   },
   createdAt: {
     type: Date,

@@ -19,7 +19,7 @@ import { format } from 'date-fns';
 interface Discussion {
   _id: string;
   title: string;
-  content: string;
+  body: string;
   author: { _id: string; name: string; role: string };
   replies: unknown[];
   likes: string[];
@@ -38,11 +38,11 @@ export default function DiscussionsPage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [posting, setPosting] = useState(false);
-  const [form, setForm] = useState({ title: '', content: '' });
+  const [form, setForm] = useState({ title: '', body: '' });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.content.trim()) {
+    if (!form.title.trim() || !form.body.trim()) {
       toast.error('Title and content are required.');
       return;
     }
@@ -51,7 +51,7 @@ export default function DiscussionsPage() {
       await communicationApi.startDiscussion(courseId, form);
       await queryClient.invalidateQueries({ queryKey: queryKeys.courses.discussions(courseId) });
       setShowForm(false);
-      setForm({ title: '', content: '' });
+      setForm({ title: '', body: '' });
       toast.success('Discussion posted.');
     } catch {
       toast.error('Failed to post discussion.');
@@ -62,7 +62,7 @@ export default function DiscussionsPage() {
 
   const filtered = discussions.filter(d =>
     d.title.toLowerCase().includes(search.toLowerCase()) ||
-    d.content.toLowerCase().includes(search.toLowerCase())
+    d.body.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -151,7 +151,7 @@ export default function DiscussionsPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5 mb-2 line-clamp-2">{disc.content}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 mb-2 line-clamp-2">{disc.body}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-[10px] text-slate-400">
                       <span>{disc.author.name}</span>
@@ -211,8 +211,8 @@ export default function DiscussionsPage() {
                     id="disc-content" required rows={5}
                     placeholder="Share your question or thoughts..."
                     className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm resize-none"
-                    value={form.content}
-                    onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
+                    value={form.body}
+                    onChange={e => setForm(p => ({ ...p, body: e.target.value }))}
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
