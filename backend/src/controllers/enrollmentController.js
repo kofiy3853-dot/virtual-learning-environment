@@ -60,7 +60,10 @@ const QuizAttempt = require('../models/QuizAttempt');
 // @route   GET /api/students/me/courses
 // @access  Private (Student)
 exports.getMyCourses = asyncHandler(async (req, res, next) => {
-  const enrollments = await Enrollment.find({ student: req.user.id }).populate({
+  const enrollments = await Enrollment.find({ 
+    student: req.user.id,
+    status: { $in: ['active', 'completed'] }
+  }).populate({
     path: 'course',
     populate: { path: 'teacher', select: 'name email' }
   });
@@ -69,33 +72,39 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
   const validEnrollments = enrollments.filter(e => e.course != null);
 
   const courseData = await Promise.all(validEnrollments.map(async (e) => {
-    // Double-check course exists before calling toObject()
-    if (!e.course) {
+    try {
+      const course = e.course.toObject();
+      const courseId = course._id;
+
+      // Fetch assignment IDs and quiz IDs in parallel
+      const [assignmentIds, quizIds] = await Promise.all([
+        Assignment.find({ course: courseId }).distinct('_id'),
+        Quiz.find({ course: courseId }).distinct('_id'),
+      ]);
+
+      // Count totals and completions in parallel
+      const [totalAssignments, totalQuizzes, submissions, quizAttempts] = await Promise.all([
+        Promise.resolve(assignmentIds.length),
+        Quiz.countDocuments({ course: courseId, isPublished: true }),
+        assignmentIds.length > 0
+          ? Submission.countDocuments({ assignment: { $in: assignmentIds }, student: req.user.id })
+          : Promise.resolve(0),
+        quizIds.length > 0
+          ? QuizAttempt.countDocuments({ quiz: { $in: quizIds }, student: req.user.id })
+          : Promise.resolve(0),
+      ]);
+
+      const totalItems = totalAssignments + totalQuizzes;
+      const completedItems = submissions + quizAttempts;
+      course.progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+      return course;
+    } catch {
+      // If anything fails for a single course, skip it rather than crashing the whole request
       return null;
     }
-
-    const course = e.course.toObject();
-
-    // Get quiz IDs for this course first
-    const quizIds = await Quiz.find({ course: course._id }).distinct('_id');
-
-    // Calculate progress
-    const [totalAssignments, totalQuizzes, submissions, quizAttempts] = await Promise.all([
-      Assignment.countDocuments({ course: course._id }),
-      Quiz.countDocuments({ course: course._id, isPublished: true }),
-      Submission.countDocuments({ assignment: { $in: await Assignment.find({ course: course._id }).distinct('_id') }, student: req.user.id }),
-      QuizAttempt.countDocuments({ quiz: { $in: quizIds }, student: req.user.id })
-    ]);
-
-    const totalItems = totalAssignments + totalQuizzes;
-    const completedItems = submissions + quizAttempts;
-
-    course.progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-
-    return course;
   }));
 
-  // Filter out any null results from deleted courses
   const filteredCourseData = courseData.filter(course => course != null);
 
   res.status(200).json({
