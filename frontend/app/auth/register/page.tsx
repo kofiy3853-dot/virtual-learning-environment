@@ -11,7 +11,7 @@ import { AxiosError } from 'axios';
 import { motion } from 'framer-motion';
 
 function RegisterContent() {
-  const { login, loginWithGoogle } = useAuth();
+  const { updateUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'student' as const });
@@ -26,9 +26,18 @@ function RegisterContent() {
         callback: async (response: any) => {
           setLoading(true);
           try {
-            const user = await loginWithGoogle(response.credential, form.role);
+            const { authApi } = await import('@/utils/api/authApi');
+            const { setAuthToken } = await import('@/utils/api/axiosInstance');
+            const { applySessionToken } = await import('@/utils/auth/session');
+            
+            const res = await authApi.googleLogin({ token: response.credential, role: form.role });
+            const { data: user, token } = res.data;
+            
+            applySessionToken(token);
+            updateUser(user);
+            
             toast.success('Welcome!');
-            router.push(`/dashboard/${user.role}`);
+            router.push(`/dashboard`);
           } catch (e) {
             const msg = (e as AxiosError<{ message: string }>).response?.data?.message || 'Google sign‑up failed';
             setError(msg);
@@ -43,27 +52,56 @@ function RegisterContent() {
         { theme: 'outline', size: 'large', shape: 'rectangular', text: 'signup_with', width: 200 }
       );
     }
-  }, [loginWithGoogle, form.role]);
+  }, [form.role, router, updateUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Client-side validation
     if (!form.name || !form.email || !form.password) {
       setError('All fields are required');
       return;
     }
+    
+    if (form.name.length < 2) {
+      setError('Name must be at least 2 characters');
+      return;
+    }
+    
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    
     setLoading(true);
     try {
-      await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      // Use the proper auth API with axios instance
+      const { authApi } = await import('@/utils/api/authApi');
+      const { setAuthToken } = await import('@/utils/api/axiosInstance');
+      const { applySessionToken } = await import('@/utils/auth/session');
+      
+      const response = await authApi.register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        department: undefined
       });
-      const loggedInUser = await login(form.email, form.password);
-      toast.success('Account created!');
-      router.push(`/dashboard/${loggedInUser.role}`);
-    } catch (e) {
-      const msg = (e as AxiosError<{ message: string }>).response?.data?.message || 'Registration failed';
+      
+      // Registration successful - token is in response
+      const { token, data: user } = response.data;
+      
+      // Store token and update user context
+      applySessionToken(token);
+      updateUser(user);
+      
+      toast.success('Account created successfully!');
+      router.push(`/dashboard`);
+    } catch (e: any) {
+      console.error('Registration error:', e);
+      const msg = e?.response?.data?.message || 
+                  e?.response?.data?.details?.join(', ') ||
+                  'Registration failed. Please try again.';
       setError(msg);
       toast.error(msg);
     } finally {
@@ -151,6 +189,7 @@ function RegisterContent() {
                   placeholder="••••••••"
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -161,6 +200,7 @@ function RegisterContent() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <p className="text-xs text-slate-400 mt-1">Minimum 6 characters</p>
             </div>
 
             <div>
