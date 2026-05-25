@@ -86,17 +86,29 @@ exports.endSession = asyncHandler(async (req, res, next) => {
 
 // @desc    Get join URL (time-gated)
 // @route   GET /api/live-sessions/:id/join
-// @access  Private (Student)
+// @access  Private
 exports.joinSession = asyncHandler(async (req, res, next) => {
   const session = await LiveSession.findById(req.params.id);
   if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
 
+  // Allow join if session is live OR within 5 minutes of scheduled start
   const now = new Date();
   const earlyAccessTime = new Date(session.scheduledAt.getTime() - 5 * 60 * 1000);
+  const canJoin = session.status === 'live' || now >= earlyAccessTime;
 
-  if (session.status === 'live' || now >= earlyAccessTime) {
-    res.status(200).json({ success: true, data: { joinUrl: session.joinUrl, roomId: session.providerRoomId } });
-  } else {
-    res.status(403).json({ success: false, message: 'Session has not started yet' });
+  if (!canJoin) {
+    return res.status(403).json({ success: false, message: 'Session has not started yet' });
   }
+
+  // If providerRoomId is missing (old sessions), generate one from the joinUrl
+  const roomId = session.providerRoomId || session.joinUrl?.split('/').pop() || null;
+
+  res.status(200).json({
+    success: true,
+    data: {
+      joinUrl: session.joinUrl,
+      roomId,
+      status: session.status,
+    }
+  });
 });

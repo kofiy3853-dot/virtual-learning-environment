@@ -75,11 +75,16 @@ export default function LivePage() {
   const handleStart = async (session: LiveSession) => {
     setActingId(session._id);
     try {
-      await courseApi.startLiveSession(session._id);
+      const res = await courseApi.startLiveSession(session._id);
       await invalidateSessions();
-      // Teacher joins immediately after starting
-      if (session.providerRoomId) {
-        setActiveRoom({ roomId: session.providerRoomId, sessionId: session._id, title: session.title });
+      // Use providerRoomId from the API response (most reliable source)
+      const started = res.data.data;
+      const room = started.providerRoomId
+        || session.providerRoomId
+        || started.joinUrl?.split('/').pop()
+        || null;
+      if (room) {
+        setActiveRoom({ roomId: room, sessionId: session._id, title: session.title });
       }
       toast.success('Session started.');
     } catch {
@@ -107,9 +112,20 @@ export default function LivePage() {
     setActingId(session._id);
     try {
       const res = await courseApi.joinLiveSession(session._id);
-      const roomId = res.data.data.roomId ?? session.providerRoomId;
-      if (!roomId) { toast.error('Room not available.'); return; }
-      setActiveRoom({ roomId, sessionId: session._id, title: session.title });
+      const { roomId, joinUrl } = res.data.data;
+
+      // Use roomId from API first, then fall back to extracting from joinUrl
+      const room = roomId
+        || session.providerRoomId
+        || joinUrl?.split('/').pop()
+        || null;
+
+      if (!room) {
+        toast.error('Room ID not available. Try the link below.');
+        if (joinUrl) window.open(joinUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      setActiveRoom({ roomId: room, sessionId: session._id, title: session.title });
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
       toast.error(err?.response?.data?.message || 'Unable to join session.');
