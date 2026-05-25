@@ -82,7 +82,8 @@ function RegisterContent() {
         name: form.name,
         email: form.email,
         password: form.password,
-        department: undefined
+        department: undefined,
+        role: form.role  // Include the selected role
       });
       
       // Registration successful - token is in response

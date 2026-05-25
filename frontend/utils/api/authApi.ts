@@ -3,7 +3,7 @@ import { User } from '@/types';
 
 // ─── Request Payload Types ──────────────────────────────────────────────────
 export interface LoginPayload    { email: string; password: string; }
-export interface RegisterPayload { name: string; email: string; password: string; department?: string; }
+export interface RegisterPayload { name: string; email: string; password: string; role?: string; department?: string; }
 export interface UpdateMePayload { name?: string; email?: string; department?: string; }
 export interface GoogleLoginPayload { token: string; role?: string; department?: string; }
 
