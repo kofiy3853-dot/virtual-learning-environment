@@ -68,7 +68,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "https://www.pinterest.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.jit.si", "https://www.pinterest.com"],
       // keep other defaults (script-src, style-src, etc.)
     },
   },
