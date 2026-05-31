@@ -8,6 +8,9 @@ export const communicationApi = {
   // Notifications
   getMyNotifications: () => api.get('/api/v1/communication/notifications/me'),
   markNotificationRead: (id: string) => api.patch(`/api/v1/communication/notifications/${id}/read`),
+  markAllNotificationsRead: () => api.patch('/api/v1/communication/notifications/mark-all-read'),
+  deleteNotification: (id: string) => api.delete(`/api/v1/communication/notifications/${id}`),
+  deleteAllNotifications: (onlyRead = false) => api.delete(`/api/v1/communication/notifications${onlyRead ? '?onlyRead=true' : ''}`),
 
   // Announcements (course-scoped)
   getAnnouncements: (courseId: string) => api.get(`/api/v1/courses/${courseId}/announcements`),

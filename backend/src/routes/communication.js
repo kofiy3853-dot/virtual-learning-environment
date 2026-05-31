@@ -9,6 +9,9 @@ const {
   getConversations,
   getMyNotifications,
   markRead,
+  markAllRead,
+  deleteNotification,
+  deleteAllNotifications,
   getCourseMessages,
 } = require('../controllers/communicationController');
 
@@ -40,5 +43,8 @@ router.get('/courses/:courseId/messages', protect, getCourseMessages);
 // Notifications (Global)
 router.get('/notifications/me', protect, getMyNotifications);
 router.patch('/notifications/:id/read', protect, markRead);
+router.patch('/notifications/mark-all-read', protect, markAllRead);
+router.delete('/notifications/:id', protect, deleteNotification);
+router.delete('/notifications', protect, deleteAllNotifications);
 
 module.exports = router;

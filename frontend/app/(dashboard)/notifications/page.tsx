@@ -8,7 +8,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import {
   Bell, CheckCircle2, MessageSquare, Megaphone,
   Check, CheckCheck, Loader2, Video, GraduationCap,
-  FileText, LucideIcon, Inbox
+  FileText, LucideIcon, Inbox, Trash2, X
 } from 'lucide-react';
 import { communicationApi } from '@/utils/api/communicationApi';
 import toast from 'react-hot-toast';
@@ -69,15 +69,16 @@ export default function NotificationsPage() {
   const notifications = notificationsData as Notification[];
   const [filter, setFilter] = useState<FilterType>('all');
   const [markingAll, setMarkingAll] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [clearingAll, setClearingAll] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const markAllRead = async () => {
-    const unread = notifications.filter(n => !n.isRead);
-    if (!unread.length) return;
+    if (!unreadCount) return;
     setMarkingAll(true);
     try {
-      await Promise.all(unread.map(n => communicationApi.markNotificationRead(n._id)));
+      await communicationApi.markAllNotificationsRead();
       await queryClient.invalidateQueries({ queryKey: queryKeys.communication.notifications });
       toast.success('All marked as read');
     } catch {
@@ -90,15 +91,43 @@ export default function NotificationsPage() {
   const markRead = async (id: string) => {
     const notif = notifications.find(n => n._id === id);
     if (!notif || notif.isRead) return;
-    // Optimistic update
     queryClient.setQueryData(queryKeys.communication.notifications, (old: Notification[] = []) =>
       old.map(n => n._id === id ? { ...n, isRead: true } : n)
     );
     try {
       await communicationApi.markNotificationRead(id);
     } catch {
-      // Revert on failure
       await queryClient.invalidateQueries({ queryKey: queryKeys.communication.notifications });
+    }
+  };
+
+  const deleteOne = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setDeletingId(id);
+    // Optimistic remove
+    queryClient.setQueryData(queryKeys.communication.notifications, (old: Notification[] = []) =>
+      old.filter(n => n._id !== id)
+    );
+    try {
+      await communicationApi.deleteNotification(id);
+    } catch {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.communication.notifications });
+      toast.error('Failed to delete notification');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const clearAll = async (onlyRead = false) => {
+    setClearingAll(true);
+    try {
+      await communicationApi.deleteAllNotifications(onlyRead);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.communication.notifications });
+      toast.success(onlyRead ? 'Read notifications cleared' : 'All notifications cleared');
+    } catch {
+      toast.error('Failed to clear notifications');
+    } finally {
+      setClearingAll(false);
     }
   };
 
@@ -129,16 +158,28 @@ export default function NotificationsPage() {
             </p>
           </div>
 
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              disabled={markingAll}
-              className="btn btn-secondary h-12 px-6 gap-2 text-xs font-bold shadow-sm transition-all rounded-xl self-start md:self-auto"
-            >
-              {markingAll ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={16} />}
-              Mark all as read
-            </button>
-          )}
+          <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllRead}
+                disabled={markingAll}
+                className="btn btn-secondary h-12 px-5 gap-2 text-xs font-bold shadow-sm transition-all rounded-xl"
+              >
+                {markingAll ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={16} />}
+                Mark all read
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <button
+                onClick={() => clearAll(true)}
+                disabled={clearingAll}
+                className="h-12 px-5 gap-2 text-xs font-bold rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-600 hover:bg-rose-50 transition-all flex items-center"
+              >
+                {clearingAll ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                Clear read
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
@@ -235,11 +276,19 @@ export default function NotificationsPage() {
                     </p>
                   </div>
 
-                  <div className="shrink-0 flex items-center self-center pl-2">
+                  <div className="shrink-0 flex items-center self-center pl-2 gap-1">
                     {!n.isRead
                       ? <div className="w-2.5 h-2.5 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
                       : <Check size={16} className="text-slate-300" />
                     }
+                    <button
+                      onClick={(e) => deleteOne(e, n._id)}
+                      disabled={deletingId === n._id}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1.5 rounded-lg hover:bg-rose-50 hover:text-rose-500 text-slate-300"
+                      title="Delete notification"
+                    >
+                      {deletingId === n._id ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+                    </button>
                   </div>
                 </motion.div>
               );

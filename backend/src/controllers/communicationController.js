@@ -198,3 +198,35 @@ exports.getCourseMessages = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ success: true, data: messages });
 });
+
+// @desc    Mark ALL notifications as read
+// @route   PATCH /api/communication/notifications/mark-all-read
+// @access  Private
+exports.markAllRead = asyncHandler(async (req, res, next) => {
+  await Notification.updateMany({ user: req.user.id, isRead: false }, { isRead: true });
+  res.status(200).json({ success: true, message: 'All notifications marked as read' });
+});
+
+// @desc    Delete a single notification
+// @route   DELETE /api/communication/notifications/:id
+// @access  Private
+exports.deleteNotification = asyncHandler(async (req, res, next) => {
+  const notification = await Notification.findOne({ _id: req.params.id, user: req.user.id });
+  if (!notification) {
+    return res.status(404).json({ success: false, message: 'Notification not found' });
+  }
+  await notification.deleteOne();
+  res.status(200).json({ success: true, message: 'Notification deleted' });
+});
+
+// @desc    Delete ALL notifications for current user
+// @route   DELETE /api/communication/notifications
+// @access  Private
+exports.deleteAllNotifications = asyncHandler(async (req, res, next) => {
+  const { onlyRead } = req.query; // ?onlyRead=true clears only read ones
+  const filter = { user: req.user.id };
+  if (onlyRead === 'true') filter.isRead = true;
+
+  const result = await Notification.deleteMany(filter);
+  res.status(200).json({ success: true, message: `${result.deletedCount} notification(s) deleted` });
+});
