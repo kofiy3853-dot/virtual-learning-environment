@@ -55,12 +55,23 @@ exports.createCourse = async (req, res, next) => {
     req.body.teacher = req.user.id;
   }
 
-  const course = await Course.create(req.body);
-
-  res.status(201).json({
-    success: true,
-    data: course,
-  });
+  try {
+    const course = await Course.create(req.body);
+    return res.status(201).json({ success: true, data: course });
+  } catch (error) {
+    // Duplicate code error
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.code) {
+      return res.status(400).json({ success: false, message: 'A course with this code already exists.' });
+    }
+    // Validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: 'Validation error', details: messages });
+    }
+    // Unexpected errors
+    logger.error('[COURSE] Create error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
 };
 
 // @desc    Update course
