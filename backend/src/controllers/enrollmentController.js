@@ -1,12 +1,11 @@
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 
 // @desc    Enroll in a course
 // @route   POST /api/courses/:id/enroll
 // @access  Private (Student)
-exports.enrollCourse = asyncHandler(async (req, res, next) => {
+exports.enrollCourse = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -26,12 +25,12 @@ exports.enrollCourse = asyncHandler(async (req, res, next) => {
     success: true,
     data: enrollment,
   });
-});
+};
 
 // @desc    Drop a course
 // @route   DELETE /api/courses/:id/enroll
 // @access  Private (Student)
-exports.dropCourse = asyncHandler(async (req, res, next) => {
+exports.dropCourse = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -49,7 +48,7 @@ exports.dropCourse = asyncHandler(async (req, res, next) => {
     success: true,
     data: {},
   });
-});
+};
 
 const Assignment = require('../models/Assignment');
 const Quiz = require('../models/Quiz');
@@ -59,7 +58,7 @@ const QuizAttempt = require('../models/QuizAttempt');
 // @desc    Get my enrolled courses with progress
 // @route   GET /api/students/me/courses
 // @access  Private (Student)
-exports.getMyCourses = asyncHandler(async (req, res, next) => {
+exports.getMyCourses = async (req, res, next) => {
   const enrollments = await Enrollment.find({ 
     student: req.user.id,
     status: { $in: ['active', 'completed'] }
@@ -100,7 +99,6 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
 
       return course;
     } catch {
-      // If anything fails for a single course, skip it rather than crashing the whole request
       return null;
     }
   }));
@@ -112,4 +110,4 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
     count: filteredCourseData.length,
     data: filteredCourseData,
   });
-});
+};

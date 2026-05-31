@@ -18,7 +18,6 @@ const Discussion = require('../models/Discussion');
 const LiveSession = require('../models/LiveSession');
 const Message = require('../models/Message');
 const Notification = require('../models/Notification');
-const asyncHandler = require('express-async-handler');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const logAdminAction = require('../utils/logAdminAction');
@@ -64,7 +63,7 @@ const cascadeDeleteCourse = async (courseId) => {
 // @desc    List all users with filters and pagination
 // @route   GET /api/admin/users
 // @access  Private (Admin)
-exports.getUsers = asyncHandler(async (req, res, next) => {
+exports.getUsers = async (req, res, next) => {
   const { role, status, search, page = 1, limit = 20 } = req.query;
   const query = {};
 
@@ -88,24 +87,24 @@ exports.getUsers = asyncHandler(async (req, res, next) => {
     totalPages: Math.ceil(count / limit),
     data: users
   });
-});
+};
 
 // @desc    Get full user profile
 // @route   GET /api/admin/users/:id
 // @access  Private (Admin)
-exports.getUser = asyncHandler(async (req, res, next) => {
+exports.getUser = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid user ID' });
   }
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ success: false, message: 'User not found' });
   res.status(200).json({ success: true, data: user });
-});
+};
 
 // @desc    Update user (role, status, or other fields)
 // @route   PUT /api/admin/users/:id
 // @access  Private (Admin)
-exports.updateUser = asyncHandler(async (req, res, next) => {
+exports.updateUser = async (req, res, next) => {
   if (req.user.isImpersonation) {
     return res.status(403).json({ success: false, message: 'Action restricted during impersonation' });
   }
@@ -147,12 +146,12 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
   await logAdminAction(req.user.id, 'UPDATE_USER', 'User', user._id, { updates }, req);
 
   res.status(200).json({ success: true, data: user });
-});
+};
 
 // @desc    Change user role
 // @route   PATCH /api/admin/users/:id/role
 // @access  Private (Admin)
-exports.changeUserRole = asyncHandler(async (req, res, next) => {
+exports.changeUserRole = async (req, res, next) => {
   if (req.user.isImpersonation) {
     return res.status(403).json({ success: false, message: 'Action restricted during impersonation' });
   }
@@ -180,12 +179,12 @@ exports.changeUserRole = asyncHandler(async (req, res, next) => {
   await logAdminAction(req.user.id, 'CHANGE_ROLE', 'User', user._id, { previousRole, newRole: user.role }, req);
 
   res.status(200).json({ success: true, data: user });
-});
+};
 
 // @desc    Suspend or activate account
 // @route   PATCH /api/admin/users/:id/status
 // @access  Private (Admin)
-exports.changeUserStatus = asyncHandler(async (req, res, next) => {
+exports.changeUserStatus = async (req, res, next) => {
   if (req.user.isImpersonation) {
     return res.status(403).json({ success: false, message: 'Action restricted during impersonation' });
   }
@@ -218,12 +217,12 @@ exports.changeUserStatus = asyncHandler(async (req, res, next) => {
   await logAdminAction(req.user.id, action, 'User', user._id, { previousStatus }, req);
 
   res.status(200).json({ success: true, data: user });
-});
+};
 
 // @desc    Permanently delete user with full cascade cleanup
 // @route   DELETE /api/admin/users/:id
 // @access  Private (Admin)
-exports.deleteUser = asyncHandler(async (req, res, next) => {
+exports.deleteUser = async (req, res, next) => {
   if (req.user.isImpersonation) {
     return res.status(403).json({ success: false, message: 'Action restricted during impersonation' });
   }
@@ -274,12 +273,12 @@ exports.deleteUser = asyncHandler(async (req, res, next) => {
   );
 
   res.status(200).json({ success: true, message: 'User and all related data deleted successfully' });
-});
+};
 
 // @desc    Generate impersonation token
 // @route   POST /api/admin/users/:id/impersonate
 // @access  Private (Admin)
-exports.impersonateUser = asyncHandler(async (req, res, next) => {
+exports.impersonateUser = async (req, res, next) => {
   if (req.user.isImpersonation) {
     return res.status(403).json({ success: false, message: 'Cannot chain impersonation' });
   }
@@ -312,12 +311,12 @@ exports.impersonateUser = asyncHandler(async (req, res, next) => {
   );
 
   res.status(200).json({ success: true, impersonationToken });
-});
+};
 
 // @desc    Exit impersonation session
 // @route   POST /api/admin/impersonate/exit
 // @access  Private
-exports.exitImpersonation = asyncHandler(async (req, res, next) => {
+exports.exitImpersonation = async (req, res, next) => {
   if (!req.user.isImpersonation) {
     return res.status(400).json({ success: false, message: 'Not in an impersonation session' });
   }
@@ -336,4 +335,4 @@ exports.exitImpersonation = asyncHandler(async (req, res, next) => {
   await logAdminAction(admin._id, 'IMPERSONATE_EXIT', 'User', req.user.id, {}, req);
 
   res.status(200).json({ success: true, token: adminToken });
-});
+};

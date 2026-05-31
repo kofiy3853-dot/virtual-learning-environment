@@ -4,7 +4,6 @@ const QuizAttempt = require('../models/QuizAttempt');
 const GradeItem = require('../models/GradeItem');
 const GradeBook = require('../models/GradeBook');
 const Course = require('../models/Course');
-const asyncHandler = require('express-async-handler');
 
 // Helper to sync quiz score to GradeItem
 const syncToGradeBook = async (quiz, attempt) => {
@@ -34,7 +33,7 @@ const syncToGradeBook = async (quiz, attempt) => {
 // @desc    Start quiz attempt
 // @route   POST /api/quizzes/:id/start
 // @access  Private (Student)
-exports.startAttempt = asyncHandler(async (req, res, next) => {
+exports.startAttempt = async (req, res, next) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
 
@@ -60,12 +59,12 @@ exports.startAttempt = asyncHandler(async (req, res, next) => {
   const questions = await Question.find({ quiz: req.params.id }).sort('order');
 
   res.status(200).json({ success: true, data: { attempt, questions } });
-});
+};
 
 // @desc    Submit quiz answers
 // @route   POST /api/quizzes/:id/submit
 // @access  Private (Student)
-exports.submitAttempt = asyncHandler(async (req, res, next) => {
+exports.submitAttempt = async (req, res, next) => {
   const attempt = await QuizAttempt.findOne({ quiz: req.params.id, student: req.user.id });
   if (!attempt || attempt.status !== 'in_progress') {
     return res.status(400).json({ success: false, message: 'No active attempt found' });
@@ -102,29 +101,29 @@ exports.submitAttempt = asyncHandler(async (req, res, next) => {
   }
 
   res.status(200).json({ success: true, data: attempt });
-});
+};
 
 // @desc    Get current user's attempt for a quiz
 // @route   GET /api/quizzes/:id/my-attempt
 // @access  Private (Student)
-exports.getMyAttempt = asyncHandler(async (req, res, next) => {
+exports.getMyAttempt = async (req, res, next) => {
   const attempt = await QuizAttempt.findOne({ quiz: req.params.id, student: req.user.id });
   if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
   res.status(200).json({ success: true, data: attempt });
-});
+};
 
 // @desc    Get all attempts for a quiz
 // @route   GET /api/quizzes/:id/attempts
 // @access  Private (Teacher)
-exports.getAllAttempts = asyncHandler(async (req, res, next) => {
+exports.getAllAttempts = async (req, res, next) => {
   const attempts = await QuizAttempt.find({ quiz: req.params.id }).populate('student', 'name email');
   res.status(200).json({ success: true, count: attempts.length, data: attempts });
-});
+};
 
 // @desc    Manually grade short answers
 // @route   PATCH /api/attempts/:id/grade
 // @access  Private (Teacher)
-exports.gradeAttempt = asyncHandler(async (req, res, next) => {
+exports.gradeAttempt = async (req, res, next) => {
   const attempt = await QuizAttempt.findById(req.params.id).populate('quiz');
   if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
 
@@ -146,4 +145,4 @@ exports.gradeAttempt = asyncHandler(async (req, res, next) => {
   await syncToGradeBook(attempt.quiz, attempt);
 
   res.status(200).json({ success: true, data: attempt });
-});
+};

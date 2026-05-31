@@ -6,12 +6,11 @@ const QuizAttempt = require('../models/QuizAttempt');
 const GradeItem = require('../models/GradeItem');
 const AttendanceRecord = require('../models/AttendanceRecord');
 const AdminLog = require('../models/AdminLog');
-const asyncHandler = require('express-async-handler');
 
 // @desc    High-level platform snapshot
 // @route   GET /api/admin/analytics/overview
 // @access  Private (Admin)
-exports.getOverview = asyncHandler(async (req, res, next) => {
+exports.getOverview = async (req, res, next) => {
   const [
     totalUsers,
     totalStudents,
@@ -48,12 +47,12 @@ exports.getOverview = asyncHandler(async (req, res, next) => {
       totalQuizAttempts
     }
   });
-});
+};
 
 // @desc    User registration growth
 // @route   GET /api/admin/analytics/users
 // @access  Private (Admin)
-exports.getUserAnalytics = asyncHandler(async (req, res, next) => {
+exports.getUserAnalytics = async (req, res, next) => {
   const users = await User.aggregate([
     {
       $group: {
@@ -70,12 +69,12 @@ exports.getUserAnalytics = asyncHandler(async (req, res, next) => {
   ]);
 
   res.status(200).json({ success: true, data: users });
-});
+};
 
 // @desc    Platform-wide grade distribution
 // @route   GET /api/admin/analytics/grades
 // @access  Private (Admin)
-exports.getGradeAnalytics = asyncHandler(async (req, res, next) => {
+exports.getGradeAnalytics = async (req, res, next) => {
   const stats = await GradeItem.aggregate([
     {
       $group: {
@@ -122,12 +121,12 @@ exports.getGradeAnalytics = asyncHandler(async (req, res, next) => {
       failRate: parseFloat((100 - passRate).toFixed(1))
     }
   });
-});
+};
 
 // @desc    Attendance rates across all courses
 // @route   GET /api/admin/analytics/attendance
 // @access  Private (Admin)
-exports.getAttendanceAnalytics = asyncHandler(async (req, res, next) => {
+exports.getAttendanceAnalytics = async (req, res, next) => {
   const breakdown = await AttendanceRecord.aggregate([
     {
       $lookup: {
@@ -174,21 +173,21 @@ exports.getAttendanceAnalytics = asyncHandler(async (req, res, next) => {
       courseBreakdown: breakdown
     }
   });
-});
+};
 
 // @desc    Recent platform actions for admin monitoring
 // @route   GET /api/admin/analytics/activity-logs
 // @access  Private (Admin)
-exports.getActivityLogs = asyncHandler(async (req, res, next) => {
+exports.getActivityLogs = async (req, res, next) => {
   const limit = Math.min(Number(req.query.limit) || 50, 100);
   const logs = await AdminLog.find().sort('-createdAt').limit(limit).populate('adminId', 'name email');
   res.status(200).json({ success: true, data: logs });
-});
+};
 
 // @desc    Enrollment count grouped by semester and academic year
 // @route   GET /api/admin/analytics/enrollment-trends
 // @access  Private (Admin)
-exports.getEnrollmentTrends = asyncHandler(async (req, res, next) => {
+exports.getEnrollmentTrends = async (req, res, next) => {
   const trends = await Enrollment.aggregate([
     {
       $lookup: {
@@ -212,12 +211,12 @@ exports.getEnrollmentTrends = asyncHandler(async (req, res, next) => {
   ]);
 
   res.status(200).json({ success: true, data: trends });
-});
+};
 
 // @desc    Course analytics — status breakdown and enrollment stats
 // @route   GET /api/admin/analytics/courses
 // @access  Private (Admin)
-exports.getCourseAnalytics = asyncHandler(async (req, res, next) => {
+exports.getCourseAnalytics = async (req, res, next) => {
   const [totalCourses, activeCourses, archivedCourses, draftCourses] = await Promise.all([
     Course.countDocuments(),
     Course.countDocuments({ status: 'active' }),
@@ -279,4 +278,4 @@ exports.getCourseAnalytics = asyncHandler(async (req, res, next) => {
       topCourses
     }
   });
-});
+};

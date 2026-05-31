@@ -5,12 +5,11 @@ const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
 const Submission = require('../models/Submission');
 const GradeItem = require('../models/GradeItem');
-const asyncHandler = require('express-async-handler');
 
 // @desc    Get all upcoming milestones for the student
 // @route   GET /api/students/me/milestones
 // @access  Private/Student
-exports.getMyMilestones = asyncHandler(async (req, res, next) => {
+exports.getMyMilestones = async (req, res, next) => {
   let courseIds = [];
   if (req.user.role === 'student') {
     const enrollments = await Enrollment.find({ student: req.user.id }).select('course');
@@ -76,12 +75,12 @@ exports.getMyMilestones = asyncHandler(async (req, res, next) => {
     count: milestones.length,
     data: milestones
   });
-});
+};
 
 // @desc    Get student overall stats
 // @route   GET /api/students/me/stats
 // @access  Private/Student
-exports.getMyStats = asyncHandler(async (req, res, next) => {
+exports.getMyStats = async (req, res, next) => {
   let courseIds = [];
   if (req.user.role === 'student') {
     const enrollments = await Enrollment.find({ student: req.user.id }).select('course');
@@ -128,4 +127,4 @@ exports.getMyStats = asyncHandler(async (req, res, next) => {
       onTimeRate: 98 // Placeholder for now until we track late status more strictly
     }
   });
-});
+};

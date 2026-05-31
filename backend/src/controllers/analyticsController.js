@@ -2,13 +2,12 @@ const GradeItem = require('../models/GradeItem');
 const GradeBook = require('../models/GradeBook');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 
 // @desc    Get course analytics
 // @route   GET /api/courses/:id/analytics
 // @access  Private (Teacher)
-exports.getCourseAnalytics = asyncHandler(async (req, res, next) => {
+exports.getCourseAnalytics = async (req, res, next) => {
   const course = await Course.findById(req.params.id);
   if (!course) {
     return res.status(404).json({ success: false, message: 'Course not found' });
@@ -78,12 +77,12 @@ exports.getCourseAnalytics = asyncHandler(async (req, res, next) => {
       completionRate: totalEnrolled > 0 ? parseFloat(((totalGraded.length / totalEnrolled) * 100).toFixed(2)) : 0
     }
   });
-});
+};
 
 // @desc    Get at-risk students
 // @route   GET /api/courses/:id/analytics/at-risk
 // @access  Private (Teacher)
-exports.getAtRiskStudents = asyncHandler(async (req, res, next) => {
+exports.getAtRiskStudents = async (req, res, next) => {
   const gradeBook = await GradeBook.findOne({ course: req.params.id });
   if (!gradeBook) {
     return res.status(200).json({ success: true, data: [] });
@@ -98,12 +97,12 @@ exports.getAtRiskStudents = asyncHandler(async (req, res, next) => {
     success: true,
     data: atRisk,
   });
-});
+};
 
 // @desc    Platform wide analytics (Admin)
 // @route   GET /api/admin/analytics/overview
 // @access  Private (Admin)
-exports.getPlatformOverview = asyncHandler(async (req, res, next) => {
+exports.getPlatformOverview = async (req, res, next) => {
   const stats = await GradeItem.aggregate([
     {
       $group: {
@@ -123,4 +122,4 @@ exports.getPlatformOverview = asyncHandler(async (req, res, next) => {
       averageScore: stats[0] ? parseFloat(stats[0].avgScore.toFixed(2)) : 0
     }
   });
-});
+};

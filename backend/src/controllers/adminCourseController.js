@@ -16,14 +16,13 @@ const AttendanceRecord = require('../models/AttendanceRecord');
 const Announcement = require('../models/Announcement');
 const Discussion = require('../models/Discussion');
 const LiveSession = require('../models/LiveSession');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const logAdminAction = require('../utils/logAdminAction');
 
 // @desc    List all courses with filters and enrollment counts
 // @route   GET /api/admin/courses
 // @access  Private (Admin)
-exports.getCourses = asyncHandler(async (req, res, next) => {
+exports.getCourses = async (req, res, next) => {
   const { status, teacher, search, page = 1, limit = 20 } = req.query;
   const skip = (page - 1) * limit;
 
@@ -87,12 +86,12 @@ exports.getCourses = asyncHandler(async (req, res, next) => {
     totalPages: Math.ceil(count / limit),
     data: courses
   });
-});
+};
 
 // @desc    Get course detail with enrollment count
 // @route   GET /api/admin/courses/:id
 // @access  Private (Admin)
-exports.getCourse = asyncHandler(async (req, res, next) => {
+exports.getCourse = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid course ID' });
   }
@@ -109,12 +108,12 @@ exports.getCourse = asyncHandler(async (req, res, next) => {
       enrollmentCount
     }
   });
-});
+};
 
 // @desc    Reassign teacher to course
 // @route   PATCH /api/admin/courses/:id/teacher
 // @access  Private (Admin)
-exports.reassignTeacher = asyncHandler(async (req, res, next) => {
+exports.reassignTeacher = async (req, res, next) => {
   const { teacherId } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -138,12 +137,12 @@ exports.reassignTeacher = asyncHandler(async (req, res, next) => {
   await logAdminAction(req.user.id, 'REASSIGN_TEACHER', 'Course', course._id, { previousTeacherId, newTeacherId: teacherId }, req);
 
   res.status(200).json({ success: true, data: course });
-});
+};
 
 // @desc    Archive or reactivate course
 // @route   PATCH /api/admin/courses/:id/status
 // @access  Private (Admin)
-exports.changeCourseStatus = asyncHandler(async (req, res, next) => {
+exports.changeCourseStatus = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid course ID' });
   }
@@ -172,20 +171,20 @@ exports.changeCourseStatus = asyncHandler(async (req, res, next) => {
   );
 
   res.status(200).json({ success: true, data: course });
-});
+};
 
 // @desc    Approve a course (set status to active)
 // @route   PATCH /api/admin/courses/:id/approve
 // @access  Private (Admin)
-exports.approveCourse = asyncHandler(async (req, res, next) => {
+exports.approveCourse = async (req, res, next) => {
   req.body.status = 'active';
   return exports.changeCourseStatus(req, res, next);
-});
+};
 
 // @desc    Delete course with deep cascade across all 17 related collections
 // @route   DELETE /api/admin/courses/:id
 // @access  Private (Admin)
-exports.deleteCourse = asyncHandler(async (req, res, next) => {
+exports.deleteCourse = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid course ID' });
   }
@@ -239,4 +238,4 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
   );
 
   res.status(200).json({ success: true, message: 'Course and all related data deleted successfully' });
-});
+};

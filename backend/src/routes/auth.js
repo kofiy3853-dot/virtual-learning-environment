@@ -24,7 +24,7 @@ const loginLimiter = rateLimit({
   max: RATE_LIMITS.LOGIN.MAX,
   skip: (req, res) => !!process.env.JEST_WORKER_ID,
   message: 'Too many login attempts from this IP, please try again after 15 minutes',
-});
+};
 
 const { validate, schemas } = require('../middleware/validation');
 

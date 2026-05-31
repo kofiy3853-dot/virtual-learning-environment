@@ -1,12 +1,11 @@
 const Module = require('../models/Module');
 const Course = require('../models/Course');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 
 // @desc    Get all modules for a course
 // @route   GET /api/courses/:id/modules
 // @access  Private
-exports.getModules = asyncHandler(async (req, res, next) => {
+exports.getModules = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -18,12 +17,12 @@ exports.getModules = asyncHandler(async (req, res, next) => {
     count: modules.length,
     data: modules,
   });
-});
+};
 
 // @desc    Create a module
 // @route   POST /api/courses/:id/modules
 // @access  Private (Teacher)
-exports.createModule = asyncHandler(async (req, res, next) => {
+exports.createModule = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -46,12 +45,12 @@ exports.createModule = asyncHandler(async (req, res, next) => {
     success: true,
     data: module,
   });
-});
+};
 
 // @desc    Update a module
 // @route   PUT /api/modules/:id
 // @access  Private (Teacher)
-exports.updateModule = asyncHandler(async (req, res, next) => {
+exports.updateModule = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -76,12 +75,12 @@ exports.updateModule = asyncHandler(async (req, res, next) => {
     success: true,
     data: module,
   });
-});
+};
 
 // @desc    Delete a module
 // @route   DELETE /api/modules/:id
 // @access  Private (Teacher)
-exports.deleteModule = asyncHandler(async (req, res, next) => {
+exports.deleteModule = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -103,4 +102,4 @@ exports.deleteModule = asyncHandler(async (req, res, next) => {
     success: true,
     data: {},
   });
-});
+};

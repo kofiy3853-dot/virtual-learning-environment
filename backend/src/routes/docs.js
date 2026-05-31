@@ -111,7 +111,7 @@ const apiDocs = {
 // JSON API docs endpoint
 router.get('/', (req, res) => {
   res.json(apiDocs);
-});
+};
 
 // HTML API documentation UI
 router.get('/html', (req, res) => {
@@ -247,6 +247,6 @@ router.get('/html', (req, res) => {
     </html>
   `;
   res.send(html);
-});
+};
 
 module.exports = router;

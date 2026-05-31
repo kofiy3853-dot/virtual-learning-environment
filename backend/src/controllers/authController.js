@@ -1,5 +1,4 @@
 const User = require('../models/User');
-const asyncHandler = require('express-async-handler');
 const axios = require('axios');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
@@ -10,7 +9,7 @@ const qrcode = require('qrcode');
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
-exports.register = asyncHandler(async (req, res, next) => {
+exports.register = async (req, res, next) => {
   let { name, email, password, department, role } = req.body;
 
   // Security: Prevent registration as admin
@@ -62,12 +61,12 @@ exports.register = asyncHandler(async (req, res, next) => {
     
     throw error;
   }
-});
+};
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
-exports.login = asyncHandler(async (req, res, next) => {
+exports.login = async (req, res, next) => {
   const { email, password, mfaToken } = req.body;
 
   // Validate email & password
@@ -140,12 +139,12 @@ exports.login = asyncHandler(async (req, res, next) => {
   await user.save({ validateBeforeSave: false });
 
   sendTokenResponse(user, 200, res);
-});
+};
 
 // @desc    Generate 2FA Secret
 // @route   POST /api/auth/2fa/generate
 // @access  Private
-exports.generate2FA = asyncHandler(async (req, res, next) => {
+exports.generate2FA = async (req, res, next) => {
   const user = await User.findById(req.user.id);
   
   const secret = speakeasy.generateSecret({
@@ -165,12 +164,12 @@ exports.generate2FA = asyncHandler(async (req, res, next) => {
       secret: secret.base32,
     });
   });
-});
+};
 
 // @desc    Verify and Enable 2FA
 // @route   POST /api/auth/2fa/verify
 // @access  Private
-exports.verify2FA = asyncHandler(async (req, res, next) => {
+exports.verify2FA = async (req, res, next) => {
   const { mfaToken } = req.body;
   
   const user = await User.findById(req.user.id).select('+twoFactorSecret');
@@ -188,12 +187,12 @@ exports.verify2FA = asyncHandler(async (req, res, next) => {
   } else {
     res.status(400).json({ success: false, message: 'Invalid token' });
   }
-});
+};
 
 // @desc    Forgot password
 // @route   POST /api/auth/forgotpassword
 // @access  Public
-exports.forgotPassword = asyncHandler(async (req, res, next) => {
+exports.forgotPassword = async (req, res, next) => {
   const user = await User.findOne({ email: req.body.email });
 
   if (!user) {
@@ -246,12 +245,12 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
     // dev only token exposure for testing
     ...(process.env.NODE_ENV === 'development' && { resetToken, resetUrl })
   });
-});
+};
 
 // @desc    Reset password
 // @route   PUT /api/auth/resetpassword/:resettoken
 // @access  Public
-exports.resetPassword = asyncHandler(async (req, res, next) => {
+exports.resetPassword = async (req, res, next) => {
   // Get hashed token
   const resetPasswordToken = crypto
     .createHash('sha256')
@@ -274,24 +273,24 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
   await user.save();
 
   sendTokenResponse(user, 200, res);
-});
+};
 
 // @desc    Get current logged in user
 // @route   GET /api/auth/me
 // @access  Private
-exports.getMe = asyncHandler(async (req, res, next) => {
+exports.getMe = async (req, res, next) => {
   const user = await User.findById(req.user.id);
 
   res.status(200).json({
     success: true,
     data: user,
   });
-});
+};
 
 // @desc    Update user details
 // @route   PUT /api/auth/me
 // @access  Private
-exports.updateMe = asyncHandler(async (req, res, next) => {
+exports.updateMe = async (req, res, next) => {
   // Strip email — changing email requires re-verification (security)
   const fieldsToUpdate = {};
   if (req.body.name)       fieldsToUpdate.name       = req.body.name;
@@ -307,12 +306,12 @@ exports.updateMe = asyncHandler(async (req, res, next) => {
     success: true,
     data: user,
   });
-});
+};
 
 // @desc    Change password (requires current password)
 // @route   PATCH /api/auth/password
 // @access  Private
-exports.changePassword = asyncHandler(async (req, res, next) => {
+exports.changePassword = async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
@@ -334,12 +333,12 @@ exports.changePassword = asyncHandler(async (req, res, next) => {
   await user.save(); // triggers pre-save hash
 
   sendTokenResponse(user, 200, res);
-});
+};
 
 // @desc    Logout user — clears the HttpOnly token cookie
 // @route   POST /api/auth/logout
 // @access  Private
-exports.logout = asyncHandler(async (req, res) => {
+exports.logout = async (req, res) => {
   res.cookie('token', 'none', {
     httpOnly: true,
     secure: true,
@@ -347,7 +346,7 @@ exports.logout = asyncHandler(async (req, res) => {
     maxAge: 0, // Immediately expire
   });
   res.status(200).json({ success: true, message: 'Logged out successfully' });
-});
+};
 
 // Get token from model, set HttpOnly cookie, and send response
 const sendTokenResponse = (user, statusCode, res) => {
@@ -376,7 +375,7 @@ const sendTokenResponse = (user, statusCode, res) => {
 // @desc    Login or Register user with Google
 // @route   POST /api/auth/google
 // @access  Public
-exports.googleLogin = asyncHandler(async (req, res, next) => {
+exports.googleLogin = async (req, res, next) => {
   const { token, role, department } = req.body;
 
   if (!token) {
@@ -440,4 +439,4 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
       message: 'Invalid Google token or OAuth error',
     });
   }
-});
+};

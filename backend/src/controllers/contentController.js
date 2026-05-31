@@ -1,12 +1,11 @@
 const ContentItem = require('../models/ContentItem');
 const Module = require('../models/Module');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 
 // @desc    Add content to module
 // @route   POST /api/modules/:id/content
 // @access  Private (Teacher)
-exports.addContent = asyncHandler(async (req, res, next) => {
+exports.addContent = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -38,12 +37,12 @@ exports.addContent = asyncHandler(async (req, res, next) => {
     success: true,
     data: content,
   });
-});
+};
 
 // @desc    Get content for module
 // @route   GET /api/modules/:id/content
 // @access  Private
-exports.getModuleContent = asyncHandler(async (req, res, next) => {
+exports.getModuleContent = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -55,12 +54,12 @@ exports.getModuleContent = asyncHandler(async (req, res, next) => {
     count: content.length,
     data: content,
   });
-});
+};
 
 // @desc    Delete content
 // @route   DELETE /api/content/:id
 // @access  Private (Teacher)
-exports.deleteContent = asyncHandler(async (req, res, next) => {
+exports.deleteContent = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -85,12 +84,12 @@ exports.deleteContent = asyncHandler(async (req, res, next) => {
     success: true,
     data: {},
   });
-});
+};
 
 // @desc    Toggle completion status of content item for current student
 // @route   POST /api/content/:id/complete
 // @access  Private (Student)
-exports.toggleContentComplete = asyncHandler(async (req, res, next) => {
+exports.toggleContentComplete = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -120,4 +119,4 @@ exports.toggleContentComplete = asyncHandler(async (req, res, next) => {
     data: content,
     isCompleted: !isCompleted
   });
-});
+};

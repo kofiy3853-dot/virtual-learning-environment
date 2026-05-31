@@ -1,6 +1,5 @@
 const Assignment = require('../models/Assignment');
 const Course = require('../models/Course');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const Enrollment = require('../models/Enrollment');
 const { createNotification } = require('../utils/notificationHelper');
@@ -8,7 +7,7 @@ const { createNotification } = require('../utils/notificationHelper');
 // @desc    Get assignments for a course
 // @route   GET /api/courses/:id/assignments
 // @access  Private
-exports.getAssignments = asyncHandler(async (req, res, next) => {
+exports.getAssignments = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -32,12 +31,12 @@ exports.getAssignments = asyncHandler(async (req, res, next) => {
     },
     data: assignments,
   });
-});
+};
 
 // @desc    Create an assignment
 // @route   POST /api/courses/:id/assignments
 // @access  Private (Teacher)
-exports.createAssignment = asyncHandler(async (req, res, next) => {
+exports.createAssignment = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -77,12 +76,12 @@ exports.createAssignment = asyncHandler(async (req, res, next) => {
     success: true,
     data: assignment,
   });
-});
+};
 
 // @desc    Get single assignment
 // @route   GET /api/assignments/:id
 // @access  Private
-exports.getAssignment = asyncHandler(async (req, res, next) => {
+exports.getAssignment = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -97,12 +96,12 @@ exports.getAssignment = asyncHandler(async (req, res, next) => {
     success: true,
     data: assignment,
   });
-});
+};
 
 // @desc    Update an assignment
 // @route   PUT /api/assignments/:id
 // @access  Private (Teacher)
-exports.updateAssignment = asyncHandler(async (req, res, next) => {
+exports.updateAssignment = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -127,12 +126,12 @@ exports.updateAssignment = asyncHandler(async (req, res, next) => {
     success: true,
     data: assignment,
   });
-});
+};
 
 // @desc    Delete an assignment
 // @route   DELETE /api/assignments/:id
 // @access  Private (Teacher)
-exports.deleteAssignment = asyncHandler(async (req, res, next) => {
+exports.deleteAssignment = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -154,4 +153,4 @@ exports.deleteAssignment = asyncHandler(async (req, res, next) => {
     success: true,
     data: {},
   });
-});
+};

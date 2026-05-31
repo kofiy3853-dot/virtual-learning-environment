@@ -3,13 +3,12 @@ const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const Module = require('../models/Module');
 const ContentItem = require('../models/ContentItem');
-const asyncHandler = require('express-async-handler');
 const crypto = require('crypto');
 
 // @desc    Generate a course completion certificate
 // @route   POST /api/certificates/generate/:courseId
 // @access  Private (Student)
-exports.generateCertificate = asyncHandler(async (req, res, next) => {
+exports.generateCertificate = async (req, res, next) => {
   const courseId = req.params.courseId;
   const studentId = req.user.id;
 
@@ -62,12 +61,12 @@ exports.generateCertificate = asyncHandler(async (req, res, next) => {
     data: certificate,
     message: 'Congratulations! Your certificate has been issued successfully!'
   });
-});
+};
 
 // @desc    Get a certificate by verification unique ID
 // @route   GET /api/certificates/:id
 // @access  Public
-exports.getCertificate = asyncHandler(async (req, res, next) => {
+exports.getCertificate = async (req, res, next) => {
   const certificate = await Certificate.findOne({ certificateId: req.params.id })
     .populate('student', 'name email department')
     .populate('course', 'title code description');
@@ -80,12 +79,12 @@ exports.getCertificate = asyncHandler(async (req, res, next) => {
     success: true,
     data: certificate
   });
-});
+};
 
 // @desc    Get current user's certificates
 // @route   GET /api/certificates/me
 // @access  Private (Student)
-exports.getMyCertificates = asyncHandler(async (req, res, next) => {
+exports.getMyCertificates = async (req, res, next) => {
   const certificates = await Certificate.find({ student: req.user.id })
     .populate('course', 'title code thumbnail');
 
@@ -93,4 +92,4 @@ exports.getMyCertificates = asyncHandler(async (req, res, next) => {
     success: true,
     data: certificates
   });
-});
+};

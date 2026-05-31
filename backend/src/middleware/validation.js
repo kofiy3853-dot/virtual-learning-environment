@@ -39,12 +39,12 @@ const registerSchema = Joi.object({
   // Allow student or teacher — admin role is blocked in the controller
   role: Joi.string().valid('student', 'teacher').default('student'),
   department: Joi.string().max(100).optional().allow('')
-});
+};
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required()
-});
+};
 
 // ─── COURSE SCHEMAS ────────────────────────────────────────────────────────────
 const createCourseSchema = Joi.object({
@@ -72,7 +72,7 @@ const createCourseSchema = Joi.object({
   assignmentsEnabled: Joi.boolean().optional(),
   certificateEnabled: Joi.boolean().optional(),
   schedule: Joi.array().items(Joi.object({ day: Joi.string(), time: Joi.string() })).optional(),
-});
+};
 
 const updateCourseSchema = Joi.object({
   title: Joi.string().min(3).max(100).optional(),
@@ -90,7 +90,7 @@ const createModuleSchema = Joi.object({
   weekNumber: Joi.number().integer().min(1).max(52).required()
     .messages({ 'number.min': 'Week number must be at least 1' }),
   order: Joi.number().integer().min(1).required()
-});
+};
 
 const updateModuleSchema = Joi.object({
   title: Joi.string().min(2).max(100).optional(),
@@ -110,7 +110,7 @@ const createAssignmentSchema = Joi.object({
       'number.min': 'Total marks must be at least 1',
       'any.required': 'Total marks is required'
     })
-});
+};
 
 const updateAssignmentSchema = Joi.object({
   title: Joi.string().min(3).max(150).optional(),
@@ -122,13 +122,13 @@ const updateAssignmentSchema = Joi.object({
 const createSubmissionSchema = Joi.object({
   textContent: Joi.string().optional(),
   fileUrls: Joi.array().items(Joi.string().uri()).optional()
-});
+};
 
 const gradeSubmissionSchema = Joi.object({
   grade: Joi.number().min(0).required()
     .messages({ 'any.required': 'Grade is required' }),
   feedback: Joi.string().max(1000).optional().allow('')
-});
+};
 
 // ─── QUIZ SCHEMAS ──────────────────────────────────────────────────────────────
 const createQuizSchema = Joi.object({
@@ -183,7 +183,7 @@ const createQuestionSchema = Joi.object({
   marks: Joi.number().integer().min(1).required()
     .messages({ 'any.required': 'Marks are required' }),
   order: Joi.number().integer().min(1).required()
-});
+};
 
 const submitQuizSchema = Joi.object({
   answers: Joi.array().items(
@@ -193,13 +193,13 @@ const submitQuizSchema = Joi.object({
     })
   ).min(1).required()
     .messages({ 'array.min': 'At least one answer is required' })
-});
+};
 
 const gradeAttemptSchema = Joi.object({
   scoreAdjustment: Joi.number().required()
     .messages({ 'any.required': 'Score adjustment is required' }),
   feedback: Joi.string().max(1000).optional().allow('')
-});
+};
 
 // ─── GRADE WEIGHT SCHEMA ───────────────────────────────────────────────────────
 const gradeWeightSchema = Joi.object({
@@ -218,7 +218,7 @@ const createAttendanceSessionSchema = Joi.object({
     .messages({ 'any.required': 'Session date is required' }),
   topic: Joi.string().min(2).max(200).required()
     .messages({ 'string.empty': 'Session topic is required' })
-});
+};
 
 const markAttendanceSchema = Joi.object({
   records: Joi.array().items(
@@ -228,28 +228,28 @@ const markAttendanceSchema = Joi.object({
     })
   ).min(1).required()
     .messages({ 'array.min': 'At least one attendance record is required' })
-});
+};
 
 // ─── COMMUNICATION SCHEMAS ─────────────────────────────────────────────────────
 const createAnnouncementSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
   body: Joi.string().min(5).max(5000).required()
-});
+};
 
 const createDiscussionSchema = Joi.object({
   title: Joi.string().min(3).max(200).required(),
   body: Joi.string().min(5).max(5000).required()
-});
+};
 
 const replyDiscussionSchema = Joi.object({
   body: Joi.string().min(1).max(2000).required()
     .messages({ 'string.empty': 'Reply cannot be empty' })
-});
+};
 
 const sendMessageSchema = Joi.object({
   body: Joi.string().min(1).max(2000).required()
     .messages({ 'string.empty': 'Message cannot be empty' })
-});
+};
 
 // ─── LIVE SESSION SCHEMA ───────────────────────────────────────────────────────
 const createLiveSessionSchema = Joi.object({
@@ -261,25 +261,25 @@ const createLiveSessionSchema = Joi.object({
       'number.min': 'Session duration must be at least 10 minutes',
       'any.required': 'Duration is required'
     })
-});
+};
 
 // ─── ADMIN SCHEMAS ─────────────────────────────────────────────────────────────
 const changeRoleSchema = Joi.object({
   role: Joi.string().valid('student', 'teacher', 'admin').required()
-});
+};
 
 const changeStatusSchema = Joi.object({
   status: Joi.string().valid('active', 'suspended').required()
-});
+};
 
 const changeCourseStatusSchema = Joi.object({
   status: Joi.string().valid('draft', 'active', 'archived').required()
-});
+};
 
 const reassignTeacherSchema = Joi.object({
   teacherId: Joi.string().required()
     .messages({ 'string.empty': 'Teacher ID is required' })
-});
+};
 
 // ─── EXPORTS ───────────────────────────────────────────────────────────────────
 module.exports = {

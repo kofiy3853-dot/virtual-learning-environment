@@ -22,7 +22,7 @@ console.log('[TEACHER ROUTES] Registering teacher routes...');
 router.get('/test', (req, res) => {
   console.log('[TEACHER ROUTES] Test endpoint hit');
   res.json({ success: true, message: 'Teacher routes are working!' });
-});
+};
 
 // IMPORTANT: Register specific routes BEFORE parameterized routes
 // Teacher stats and courses (no params)

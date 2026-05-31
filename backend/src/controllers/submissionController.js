@@ -2,14 +2,13 @@ const Submission = require('../models/Submission');
 const Assignment = require('../models/Assignment');
 const GradeBook = require('../models/GradeBook');
 const GradeItem = require('../models/GradeItem');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const { createNotification } = require('../utils/notificationHelper');
 
 // @desc    Submit assignment
 // @route   POST /api/assignments/:id/submit
 // @access  Private (Student)
-exports.submitAssignment = asyncHandler(async (req, res, next) => {
+exports.submitAssignment = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -34,12 +33,12 @@ exports.submitAssignment = asyncHandler(async (req, res, next) => {
     success: true,
     data: submission,
   });
-});
+};
 
 // @desc    Get all submissions for an assignment
 // @route   GET /api/assignments/:id/submissions
 // @access  Private (Teacher)
-exports.getSubmissions = asyncHandler(async (req, res, next) => {
+exports.getSubmissions = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -74,12 +73,12 @@ exports.getSubmissions = asyncHandler(async (req, res, next) => {
     },
     data: submissions,
   });
-});
+};
 
 // @desc    Get my submission for an assignment
 // @route   GET /api/assignments/:id/my-submission
 // @access  Private (Student)
-exports.getMySubmission = asyncHandler(async (req, res, next) => {
+exports.getMySubmission = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -97,12 +96,12 @@ exports.getMySubmission = asyncHandler(async (req, res, next) => {
     success: true,
     data: submission,
   });
-});
+};
 
 // @desc    Grade submission
 // @route   PATCH /api/submissions/:id/grade
 // @access  Private (Teacher)
-exports.gradeSubmission = asyncHandler(async (req, res, next) => {
+exports.gradeSubmission = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -162,12 +161,12 @@ exports.gradeSubmission = asyncHandler(async (req, res, next) => {
     success: true,
     data: submission,
   });
-});
+};
 
 // @desc    Get all my submissions for a course
 // @route   GET /api/courses/:courseId/my-submissions
 // @access  Private (Student)
-exports.getMyCourseSubmissions = asyncHandler(async (req, res, next) => {
+exports.getMyCourseSubmissions = async (req, res, next) => {
   const assignments = await Assignment.find({ course: req.params.courseId });
   const assignmentIds = assignments.map(a => a._id);
 
@@ -180,4 +179,4 @@ exports.getMyCourseSubmissions = asyncHandler(async (req, res, next) => {
     success: true,
     data: submissions
   });
-});
+};

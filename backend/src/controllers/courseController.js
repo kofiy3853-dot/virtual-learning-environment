@@ -1,12 +1,11 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 
 // @desc    Get all courses
 // @route   GET /api/courses
 // @access  Public
-exports.getCourses = asyncHandler(async (req, res, next) => {
+exports.getCourses = async (req, res, next) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 20;
   const startIndex = (page - 1) * limit;
@@ -25,12 +24,12 @@ exports.getCourses = asyncHandler(async (req, res, next) => {
     },
     data: courses,
   });
-});
+};
 
 // @desc    Get single course
 // @route   GET /api/courses/:id
 // @access  Public
-exports.getCourse = asyncHandler(async (req, res, next) => {
+exports.getCourse = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -45,12 +44,12 @@ exports.getCourse = asyncHandler(async (req, res, next) => {
     success: true,
     data: course,
   });
-});
+};
 
 // @desc    Create new course
 // @route   POST /api/courses
 // @access  Private (Teacher)
-exports.createCourse = asyncHandler(async (req, res, next) => {
+exports.createCourse = async (req, res, next) => {
   // Add user to req.body if not specified by admin
   if (req.user.role !== 'admin' || !req.body.teacher) {
     req.body.teacher = req.user.id;
@@ -62,12 +61,12 @@ exports.createCourse = asyncHandler(async (req, res, next) => {
     success: true,
     data: course,
   });
-});
+};
 
 // @desc    Update course
 // @route   PUT /api/courses/:id
 // @access  Private (Teacher Owner)
-exports.updateCourse = asyncHandler(async (req, res, next) => {
+exports.updateCourse = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -95,12 +94,12 @@ exports.updateCourse = asyncHandler(async (req, res, next) => {
     success: true,
     data: course,
   });
-});
+};
 
 // @desc    Delete course
 // @route   DELETE /api/courses/:id
 // @access  Private (Teacher Owner / Admin)
-exports.deleteCourse = asyncHandler(async (req, res, next) => {
+exports.deleteCourse = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -125,12 +124,12 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
     success: true,
     data: {},
   });
-});
+};
 
 // @desc    Get students enrolled in course
 // @route   GET /api/courses/:id/students
 // @access  Private (Teacher)
-exports.getCourseStudents = asyncHandler(async (req, res, next) => {
+exports.getCourseStudents = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -142,12 +141,12 @@ exports.getCourseStudents = asyncHandler(async (req, res, next) => {
     count: enrollments.length,
     data: enrollments.map(e => e.student),
   });
-});
+};
 
 // @desc    Enroll multiple students in course
 // @route   POST /api/courses/:id/students
 // @access  Private (Teacher/Admin)
-exports.enrollStudents = asyncHandler(async (req, res, next) => {
+exports.enrollStudents = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
@@ -179,5 +178,5 @@ exports.enrollStudents = asyncHandler(async (req, res, next) => {
     count: enrollments.length,
     data: enrollments
   });
-});
+};
 

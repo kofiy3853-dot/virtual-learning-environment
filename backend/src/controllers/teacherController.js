@@ -9,13 +9,12 @@ const Quiz = require('../models/Quiz');
 const QuizAttempt = require('../models/QuizAttempt');
 const GradeBook = require('../models/GradeBook');
 const GradeItem = require('../models/GradeItem');
-const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 
 // @desc    Get teacher stats
 // @route   GET /api/teachers/me/stats
 // @access  Private/Teacher
-exports.getMyStats = asyncHandler(async (req, res, next) => {
+exports.getMyStats = async (req, res, next) => {
   const courses = await Course.find({ teacher: req.user.id }).select('_id');
   const courseIds = courses.map(c => c._id);
 
@@ -63,12 +62,12 @@ exports.getMyStats = asyncHandler(async (req, res, next) => {
       upcomingClasses
     }
   });
-});
+};
 
 // @desc    Get my courses
 // @route   GET /api/teachers/me/courses
 // @access  Private/Teacher
-exports.getMyCourses = asyncHandler(async (req, res, next) => {
+exports.getMyCourses = async (req, res, next) => {
   const courses = await Course.find({ teacher: req.user.id })
     .populate('teacher', 'name email')
     .lean();
@@ -78,12 +77,12 @@ exports.getMyCourses = asyncHandler(async (req, res, next) => {
     count: courses.length,
     data: courses
   });
-});
+};
 
 // @desc    Get pending submissions
 // @route   GET /api/teachers/me/pending-submissions
 // @access  Private/Teacher
-exports.getPendingSubmissions = asyncHandler(async (req, res, next) => {
+exports.getPendingSubmissions = async (req, res, next) => {
   const courses = await Course.find({ teacher: req.user.id }).select('_id');
   const courseIds = courses.map(c => c._id);
 
@@ -103,12 +102,12 @@ exports.getPendingSubmissions = asyncHandler(async (req, res, next) => {
     count: pendingSubmissions.length,
     data: pendingSubmissions
   });
-});
+};
 
 // @desc    Get course gradebook
 // @route   GET /api/teachers/me/courses/:courseId/gradebook
 // @access  Private/Teacher
-exports.getCourseGradebook = asyncHandler(async (req, res, next) => {
+exports.getCourseGradebook = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.courseId)) {
     return res.status(400).json({ success: false, message: 'Invalid course ID' });
   }
@@ -139,12 +138,12 @@ exports.getCourseGradebook = asyncHandler(async (req, res, next) => {
       students: gradeItems
     }
   });
-});
+};
 
 // @desc    Get course analytics
 // @route   GET /api/teachers/me/courses/:courseId/analytics
 // @access  Private/Teacher
-exports.getCourseAnalytics = asyncHandler(async (req, res, next) => {
+exports.getCourseAnalytics = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.courseId)) {
     return res.status(400).json({ success: false, message: 'Invalid course ID' });
   }
@@ -219,12 +218,12 @@ exports.getCourseAnalytics = asyncHandler(async (req, res, next) => {
       completionRate: totalEnrolled > 0 ? parseFloat(((totalGraded.length / totalEnrolled) * 100).toFixed(2)) : 0
     }
   });
-});
+};
 
 // @desc    Get at-risk students in course
 // @route   GET /api/teachers/me/courses/:courseId/at-risk
 // @access  Private/Teacher
-exports.getAtRiskStudents = asyncHandler(async (req, res, next) => {
+exports.getAtRiskStudents = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.courseId)) {
     return res.status(400).json({ success: false, message: 'Invalid course ID' });
   }
@@ -253,12 +252,12 @@ exports.getAtRiskStudents = asyncHandler(async (req, res, next) => {
     success: true,
     data: atRisk
   });
-});
+};
 
 // @desc    Get course assignments
 // @route   GET /api/teachers/me/courses/:courseId/assignments
 // @access  Private/Teacher
-exports.getCourseAssignments = asyncHandler(async (req, res, next) => {
+exports.getCourseAssignments = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.courseId)) {
     return res.status(400).json({ success: false, message: 'Invalid course ID' });
   }
@@ -281,12 +280,12 @@ exports.getCourseAssignments = asyncHandler(async (req, res, next) => {
     count: assignments.length,
     data: assignments
   });
-});
+};
 
 // @desc    Get assignment submissions
 // @route   GET /api/teachers/me/assignments/:assignmentId/submissions
 // @access  Private/Teacher
-exports.getAssignmentSubmissions = asyncHandler(async (req, res, next) => {
+exports.getAssignmentSubmissions = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.assignmentId)) {
     return res.status(400).json({ success: false, message: 'Invalid assignment ID' });
   }
@@ -310,12 +309,12 @@ exports.getAssignmentSubmissions = asyncHandler(async (req, res, next) => {
     count: submissions.length,
     data: submissions
   });
-});
+};
 
 // @desc    Get course quizzes
 // @route   GET /api/teachers/me/courses/:courseId/quizzes
 // @access  Private/Teacher
-exports.getCourseQuizzes = asyncHandler(async (req, res, next) => {
+exports.getCourseQuizzes = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.courseId)) {
     return res.status(400).json({ success: false, message: 'Invalid course ID' });
   }
@@ -338,12 +337,12 @@ exports.getCourseQuizzes = asyncHandler(async (req, res, next) => {
     count: quizzes.length,
     data: quizzes
   });
-});
+};
 
 // @desc    Get quiz attempts
 // @route   GET /api/teachers/me/quizzes/:quizId/attempts
 // @access  Private/Teacher
-exports.getQuizAttempts = asyncHandler(async (req, res, next) => {
+exports.getQuizAttempts = async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.quizId)) {
     return res.status(400).json({ success: false, message: 'Invalid quiz ID' });
   }
@@ -367,4 +366,4 @@ exports.getQuizAttempts = asyncHandler(async (req, res, next) => {
     count: attempts.length,
     data: attempts
   });
-});
+};
