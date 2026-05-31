@@ -34,6 +34,10 @@ const CourseSchema = new mongoose.Schema({
     enum: ['draft', 'active', 'archived'],
     default: 'draft',
   },
+  thumbnail: {
+    type: String,
+    default: 'no-course-thumbnail.jpg',
+  },
   // Extended fields from wizard
   category: { type: String, trim: true },
   level: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
@@ -53,5 +57,9 @@ const CourseSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+// Add indexes for course queries
+CourseSchema.index({ teacher: 1 });
+CourseSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Course', CourseSchema);

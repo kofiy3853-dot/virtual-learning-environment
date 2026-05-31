@@ -27,7 +27,7 @@ const syncToGradeBook = async (quiz, attempt) => {
       maxScore: attempt.totalMarks,
       percentage: attempt.percentage
     },
-    { upsert: true }
+    { upsert: true, runValidators: true, new: true }
   );
 };
 

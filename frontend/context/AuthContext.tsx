@@ -17,7 +17,7 @@ import { User } from '@/types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string, mfaToken?: string) => Promise<{ user?: User; require2FA?: boolean }>;
   loginWithGoogle: (googleToken: string, role?: string, department?: string) => Promise<User>;
   logout: () => void;
   isImpersonating: () => boolean;
@@ -49,14 +49,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await authApi.login({ email, password });
-    const { data, token } = res.data;
+  const login = useCallback(async (email: string, password: string, mfaToken?: string) => {
+    const res = await authApi.login({ email, password, mfaToken });
+    const { data, token, require2FA } = res.data;
+
+    if (require2FA) {
+      return { require2FA: true };
+    }
 
     applySessionToken(token);
     setUser(data);
 
-    return data;
+    return { user: data };
   }, []);
 
   const loginWithGoogle = useCallback(async (googleToken: string, role?: string, department?: string) => {

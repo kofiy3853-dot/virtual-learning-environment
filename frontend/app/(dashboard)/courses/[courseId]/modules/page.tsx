@@ -11,9 +11,10 @@ import {
   FileText, Video, Presentation, FileCode2, Image as ImageIcon, 
   ChevronDown, Plus, Trash2, Paperclip, Loader2, BookOpen,
   Calendar, Layers, Filter, Search, Info, AlertCircle,
-  ArrowRight, Download, CheckCircle2, X
+  ArrowRight, Download, CheckCircle2, X, CircleCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '@/utils/api/axiosInstance';
 
 interface ContentItem {
   _id: string;
@@ -39,6 +40,9 @@ export default function ModulesPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [content, setContent] = useState<Record<string, ContentItem[]>>({});
   const [searchQuery, setSearchQuery] = useState('');
+  // Track which content IDs the student has marked complete (local optimistic state)
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
+  const [toggling, setToggling] = useState<string | null>(null);
   
   const [showModForm, setShowModForm] = useState(false);
   const [modForm, setModForm] = useState({ title: '', weekNumber: '', order: '' });
@@ -46,6 +50,7 @@ export default function ModulesPage() {
   const [uploading, setUploading] = useState<string | null>(null);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
+  const isStudent = user?.role === 'student';
 
   const loadContent = useCallback(async (moduleId: string) => {
     if (content[moduleId]) return;
@@ -131,6 +136,30 @@ export default function ModulesPage() {
       toast.success('Resource deleted.');
     } catch { 
       toast.error('Failed to delete resource.'); 
+    }
+  };
+
+  const handleToggleComplete = async (contentId: string) => {
+    setToggling(contentId);
+    const wasCompleted = completed.has(contentId);
+    // Optimistic update
+    setCompleted(prev => {
+      const next = new Set(prev);
+      if (wasCompleted) next.delete(contentId); else next.add(contentId);
+      return next;
+    });
+    try {
+      await api.post(`/api/content/${contentId}/complete`);
+    } catch {
+      // Revert on failure
+      setCompleted(prev => {
+        const next = new Set(prev);
+        if (wasCompleted) next.add(contentId); else next.delete(contentId);
+        return next;
+      });
+      toast.error('Failed to update progress.');
+    } finally {
+      setToggling(null);
     }
   };
 
@@ -323,10 +352,25 @@ export default function ModulesPage() {
                         <Layers size={12} className="text-slate-400" /> {items.length} Resources
                       </span>
                       <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
-                      <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider">
-                         Published
-                      </span>
+                      {isStudent && items.length > 0 ? (
+                        <span className="text-[9px] font-black text-primary-600 bg-primary-50 border border-primary-100 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider">
+                          {items.filter(it => completed.has(it._id)).length}/{items.length} Done
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider">
+                           Published
+                        </span>
+                      )}
                     </div>
+                    {/* Progress bar — students only */}
+                    {isStudent && items.length > 0 && (
+                      <div className="w-full max-w-[200px] h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
+                        <div
+                          className="h-full bg-primary-500 rounded-full transition-all duration-500"
+                          style={{ width: `${(items.filter(it => completed.has(it._id)).length / items.length) * 100}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 border border-slate-100 ${isOpen ? 'bg-primary-500 text-white rotate-180 border-primary-400' : 'bg-white text-slate-300'}`}>
@@ -373,6 +417,24 @@ export default function ModulesPage() {
                                   </div>
 
                                   <div className="flex items-center gap-2 shrink-0 md:opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 duration-300">
+                                    {/* Student: mark as complete */}
+                                    {isStudent && (
+                                      <button
+                                        onClick={() => handleToggleComplete(item._id)}
+                                        disabled={toggling === item._id}
+                                        title={completed.has(item._id) ? 'Mark incomplete' : 'Mark as done'}
+                                        aria-label={completed.has(item._id) ? 'Mark incomplete' : 'Mark as done'}
+                                        className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all active:scale-90 ${
+                                          completed.has(item._id)
+                                            ? 'bg-emerald-500 text-white border-emerald-500'
+                                            : 'bg-white text-slate-300 border-slate-200 hover:border-emerald-400 hover:text-emerald-500'
+                                        }`}
+                                      >
+                                        {toggling === item._id
+                                          ? <Loader2 size={14} className="animate-spin" />
+                                          : <CircleCheck size={14} />}
+                                      </button>
+                                    )}
                                     <a 
                                       href={item.fileUrl} target="_blank" rel="noopener noreferrer" 
                                       aria-label={`Download ${item.title}`}

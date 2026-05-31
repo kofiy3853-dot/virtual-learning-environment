@@ -13,11 +13,23 @@ exports.getAssignments = asyncHandler(async (req, res, next) => {
     return res.status(400).json({ success: false, message: 'Invalid ID' });
   }
 
-  const assignments = await Assignment.find({ course: req.params.id });
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const startIndex = (page - 1) * limit;
+
+  const query = { course: req.params.id };
+  const total = await Assignment.countDocuments(query);
+  const assignments = await Assignment.find(query).skip(startIndex).limit(limit);
 
   res.status(200).json({
     success: true,
     count: assignments.length,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit)
+    },
     data: assignments,
   });
 });

@@ -3,13 +3,7 @@
  * Predicts at-risk students and generates intervention recommendations
  */
 
-const OpenAI = require('openai');
-
-let _openai = null;
-function getClient() {
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return _openai;
-}
+const { getClient, getModel } = require('./aiHelper');
 
 /**
  * Analyze student data and predict risk level
@@ -41,7 +35,7 @@ Provide analysis in JSON format:
 }`;
 
     const response = await getClient().chat.completions.create({
-      model: process.env.OPENAI_API_KEY ? 'gpt-4o' : 'openai/gpt-4o-mini',
+      model: getModel(),
       messages: [
         {
           role: 'system',
@@ -122,7 +116,7 @@ Format response as JSON:
 }`;
 
     const response = await getClient().chat.completions.create({
-      model: process.env.OPENAI_API_KEY ? 'gpt-4o' : 'openai/gpt-4o-mini',
+      model: getModel(),
       messages: [
         {
           role: 'system',
@@ -194,7 +188,7 @@ Format response as JSON array:
 ]`;
 
     const response = await getClient().chat.completions.create({
-      model: process.env.OPENAI_API_KEY ? 'gpt-4o' : 'openai/gpt-4o-mini',
+      model: getModel(),
       messages: [
         {
           role: 'system',
@@ -233,7 +227,7 @@ Format response as JSON array:
 async function trackInterventionProgress(studentId, interventionPlan, progressData) {
   try {
     const response = await getClient().chat.completions.create({
-      model: process.env.OPENAI_API_KEY ? 'gpt-4o' : 'openai/gpt-4o-mini',
+      model: getModel(),
       messages: [
         {
           role: 'system',
@@ -297,7 +291,7 @@ Format response as JSON:
 async function generateRiskReport(students, courseData) {
   try {
     const response = await getClient().chat.completions.create({
-      model: process.env.OPENAI_API_KEY ? 'gpt-4o' : 'openai/gpt-4o-mini',
+      model: getModel(),
       messages: [
         {
           role: 'system',

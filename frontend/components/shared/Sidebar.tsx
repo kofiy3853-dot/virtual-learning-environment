@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, MessageSquare, Bell, User as UserIcon, 
   LogOut, GraduationCap, Users, BarChart3, Activity, Radar, 
   Settings, HelpCircle, ChevronRight, Search, X, LucideIcon,
-  Zap, Moon, Sun, Sparkles, ChevronDown
+  Zap, Moon, Sun, Sparkles, ChevronDown, Award
 } from 'lucide-react';
 import useNotificationSentinel from '@/hooks/useNotificationSentinel';
 import { useTheme } from '@/context/ThemeContext';
@@ -31,6 +31,7 @@ const studentLinks: NavSection[] = [
   ]},
   { group: 'Tools', items: [
     { href: '/radar',             label: 'Progress',      icon: Radar },
+    { href: '/certificates',      label: 'Certificates',  icon: Award },
     { href: '/ai-tutor',          label: 'AI Tutor',      icon: Sparkles },
     { href: '/notifications',     label: 'Notifications', icon: Bell },
   ]},

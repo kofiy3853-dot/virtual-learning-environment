@@ -10,7 +10,7 @@ const tutoringApi = {
     topic: string,
     studentLevel: 'beginner' | 'intermediate' | 'advanced' = 'intermediate'
   ) => {
-    const response = await axiosInstance.post(`/api/ai/tutoring`, {
+    const response = await axiosInstance.post(`/api/v1/ai/tutoring`, {
       question,
       courseTitle,
       topic,
@@ -27,7 +27,7 @@ const tutoringApi = {
     difficulty: 'easy' | 'medium' | 'hard' = 'medium',
     count: number = 5
   ) => {
-    const response = await axiosInstance.post(`/api/ai/practice-problems`, {
+    const response = await axiosInstance.post(`/api/v1/ai/practice-problems`, {
       topic,
       difficulty,
       count,
@@ -43,7 +43,7 @@ const tutoringApi = {
     studentAnswer: string,
     topic: string
   ) => {
-    const response = await axiosInstance.post(`/api/ai/analyze-answer`, {
+    const response = await axiosInstance.post(`/api/v1/ai/analyze-answer`, {
       question,
       studentAnswer,
       topic,
@@ -59,7 +59,7 @@ const tutoringApi = {
     courseContext: string,
     studentLevel: 'beginner' | 'intermediate' | 'advanced' = 'intermediate'
   ) => {
-    const response = await axiosInstance.post(`/api/ai/explain-concept`, {
+    const response = await axiosInstance.post(`/api/v1/ai/explain-concept`, {
       concept,
       courseContext,
       studentLevel,
@@ -71,7 +71,7 @@ const tutoringApi = {
    * Get tutoring history for a student
    */
   getTutoringHistory: async (studentId: string, limit: number = 50) => {
-    const response = await axiosInstance.get(`/api/ai/tutoring-history/${studentId}`, {
+    const response = await axiosInstance.get(`/api/v1/ai/tutoring-history/${studentId}`, {
       params: { limit },
     });
     return response.data;
@@ -86,7 +86,7 @@ const tutoringApi = {
     response: string,
     topic: string
   ) => {
-    const response_data = await axiosInstance.post(`/api/ai/tutoring-history`, {
+    const response_data = await axiosInstance.post(`/api/v1/ai/tutoring-history`, {
       studentId,
       question,
       response,

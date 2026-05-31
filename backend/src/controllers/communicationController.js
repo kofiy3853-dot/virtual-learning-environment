@@ -187,3 +187,14 @@ exports.markRead = asyncHandler(async (req, res, next) => {
   await Notification.findByIdAndUpdate(req.params.id, { isRead: true });
   res.status(200).json({ success: true });
 });
+
+// @desc    Get course group messages
+// @route   GET /api/communication/courses/:courseId/messages
+// @access  Private
+exports.getCourseMessages = asyncHandler(async (req, res, next) => {
+  const messages = await Message.find({ course: req.params.courseId })
+    .populate('sender', 'name avatar role')
+    .sort('createdAt');
+
+  res.status(200).json({ success: true, data: messages });
+});

@@ -4,7 +4,6 @@ import { Toaster } from "react-hot-toast";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
-export const dynamic = 'force-dynamic';
 
 const inter = Inter({
   subsets: ["latin"],

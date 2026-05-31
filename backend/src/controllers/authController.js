@@ -2,6 +2,10 @@ const User = require('../models/User');
 const asyncHandler = require('express-async-handler');
 const axios = require('axios');
 const crypto = require('crypto');
+const logger = require('../utils/logger');
+const sendEmail = require('../utils/sendEmail');
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -17,7 +21,7 @@ exports.register = asyncHandler(async (req, res, next) => {
   // Check if user already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
-    console.log(`[AUTH] Registration failed: Email already exists: ${email}`);
+    logger.warn(`[AUTH] Registration failed: Email already exists: ${email}`);
     return res.status(400).json({
       success: false,
       message: 'An account with this email already exists. Please log in instead.',
@@ -33,10 +37,10 @@ exports.register = asyncHandler(async (req, res, next) => {
       department,
     });
 
-    console.log(`[AUTH] Registration successful: ${email} (${user.role})`);
+    logger.info(`[AUTH] Registration successful: ${email} (${user.role})`);
     sendTokenResponse(user, 201, res);
   } catch (error) {
-    console.error(`[AUTH] Registration error:`, error);
+    logger.error(`[AUTH] Registration error:`, error);
     
     // Handle duplicate key error (in case of race condition)
     if (error.code === 11000) {
@@ -64,7 +68,7 @@ exports.register = asyncHandler(async (req, res, next) => {
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, mfaToken } = req.body;
 
   // Validate email & password
   if (!email || !password) {
@@ -75,10 +79,10 @@ exports.login = asyncHandler(async (req, res, next) => {
   }
 
   // Check for user
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email }).select('+password +twoFactorSecret +isTwoFactorEnabled');
 
   if (!user) {
-    console.log(`[AUTH] Login failed: User not found for email: ${email}`);
+    logger.warn(`[AUTH] Login failed: User not found for email: ${email}`);
     return res.status(401).json({
       success: false,
       message: 'Invalid credentials',
@@ -87,7 +91,7 @@ exports.login = asyncHandler(async (req, res, next) => {
 
   // Prevent Google users from logging in manually (they don't know their random password)
   if (user.authProvider === 'google') {
-    console.log(`[AUTH] Login failed: Google user attempting password login: ${email}`);
+    logger.warn(`[AUTH] Login failed: Google user attempting password login: ${email}`);
     return res.status(401).json({
       success: false,
       message: 'This account was created using Google Sign-In. Please click the Google button to log in.',
@@ -98,14 +102,177 @@ exports.login = asyncHandler(async (req, res, next) => {
   const isMatch = await user.matchPassword(password);
 
   if (!isMatch) {
-    console.log(`[AUTH] Login failed: Invalid password for email: ${email}`);
+    logger.warn(`[AUTH] Login failed: Invalid password for email: ${email}`);
     return res.status(401).json({
       success: false,
       message: 'Invalid credentials',
     });
   }
 
-  console.log(`[AUTH] Login successful: ${email} (${user.role})`);
+  // Check 2FA
+  if (user.isTwoFactorEnabled) {
+    if (!mfaToken) {
+      return res.status(200).json({
+        success: true,
+        require2FA: true,
+        message: 'Two-factor authentication required',
+      });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: mfaToken,
+    });
+
+    if (!verified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid two-factor authentication code',
+      });
+    }
+  }
+
+  logger.info(`[AUTH] Login successful: ${email} (${user.role})`);
+  
+  // Set lastLogin on success
+  user.lastLogin = Date.now();
+  await user.save({ validateBeforeSave: false });
+
+  sendTokenResponse(user, 200, res);
+});
+
+// @desc    Generate 2FA Secret
+// @route   POST /api/auth/2fa/generate
+// @access  Private
+exports.generate2FA = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  
+  const secret = speakeasy.generateSecret({
+    name: `UniLearn (${user.email})`
+  });
+
+  user.twoFactorSecret = secret.base32;
+  await user.save({ validateBeforeSave: false });
+
+  qrcode.toDataURL(secret.otpauth_url, (err, data_url) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'Failed to generate QR code' });
+    }
+    res.status(200).json({
+      success: true,
+      qrCodeUrl: data_url,
+      secret: secret.base32,
+    });
+  });
+});
+
+// @desc    Verify and Enable 2FA
+// @route   POST /api/auth/2fa/verify
+// @access  Private
+exports.verify2FA = asyncHandler(async (req, res, next) => {
+  const { mfaToken } = req.body;
+  
+  const user = await User.findById(req.user.id).select('+twoFactorSecret');
+
+  const verified = speakeasy.totp.verify({
+    secret: user.twoFactorSecret,
+    encoding: 'base32',
+    token: mfaToken,
+  });
+
+  if (verified) {
+    user.isTwoFactorEnabled = true;
+    await user.save({ validateBeforeSave: false });
+    res.status(200).json({ success: true, message: 'Two-factor authentication enabled' });
+  } else {
+    res.status(400).json({ success: false, message: 'Invalid token' });
+  }
+});
+
+// @desc    Forgot password
+// @route   POST /api/auth/forgotpassword
+// @access  Public
+exports.forgotPassword = asyncHandler(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+
+  if (!user) {
+    // We return success even if not found to prevent email enumeration
+    return res.status(200).json({ success: true, message: 'If an account with that email exists, a password reset link has been sent.' });
+  }
+
+  // Get reset token
+  const resetToken = user.getResetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/auth/reset-password/${resetToken}`;
+  logger.info(`[AUTH] Password reset requested for ${user.email}. URL: ${resetUrl}`);
+
+  // Send real email via SMTP
+  try {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0;">UniLearn</h1>
+        </div>
+        <div style="background: #f8f9fa; padding: 40px 20px; border-radius: 0 0 8px 8px;">
+          <h2 style="color: #333; margin-top: 0;">Password Reset Request</h2>
+          <p style="color: #666; line-height: 1.6;">Hi ${user.name},</p>
+          <p style="color: #666; line-height: 1.6;">We received a request to reset your password. Click the button below to create a new password.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Reset Password</a>
+          </div>
+          <p style="color: #999; font-size: 12px; line-height: 1.6;">Or copy this link: <a href="${resetUrl}" style="color: #667eea;">${resetUrl}</a></p>
+          <p style="color: #999; font-size: 12px; line-height: 1.6;">This link expires in 24 hours.</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+          <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+        </div>
+      </div>
+    `;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Reset Your UniLearn Password',
+      text: `Password Reset Request\n\nHi ${user.name},\n\nClick here to reset your password: ${resetUrl}\n\nThis link expires in 24 hours.`,
+      html,
+    });
+  } catch (err) {
+    logger.error(`[AUTH] Failed to send password reset email to ${user.email}: ${err.message}`);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'If an account with that email exists, a password reset link has been sent.',
+    // dev only token exposure for testing
+    ...(process.env.NODE_ENV === 'development' && { resetToken, resetUrl })
+  });
+});
+
+// @desc    Reset password
+// @route   PUT /api/auth/resetpassword/:resettoken
+// @access  Public
+exports.resetPassword = asyncHandler(async (req, res, next) => {
+  // Get hashed token
+  const resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(req.params.resettoken)
+    .digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+  }
+
+  // Set new password
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+
   sendTokenResponse(user, 200, res);
 });
 
@@ -240,7 +407,7 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
     // 4. Send token response
     sendTokenResponse(user, 200, res);
   } catch (error) {
-    console.error('[Google OAuth Error]', error.message);
+    logger.error('[Google OAuth Error]', error.message);
     return res.status(401).json({
       success: false,
       message: 'Invalid Google token or OAuth error',

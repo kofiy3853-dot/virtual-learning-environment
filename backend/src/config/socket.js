@@ -62,6 +62,36 @@ const socketConfig = (io) => {
       }
     });
 
+    socket.on('send_course_message', async ({ courseId, body }) => {
+      try {
+        const message = await Message.create({
+          sender: socket.user.id,
+          course: courseId,
+          body
+        });
+
+        // Emit to course room
+        io.to(courseId).emit('new_course_message', {
+          _id: message._id,
+          sender: {
+            _id: socket.user.id,
+            name: socket.user.name,
+            avatar: socket.user.avatar,
+            role: socket.user.role
+          },
+          course: courseId,
+          body,
+          createdAt: message.createdAt
+        });
+
+        // Confirm delivery to sender
+        socket.emit('message_sent', { messageId: message._id, createdAt: message.createdAt });
+      } catch (err) {
+        console.error('send_course_message error:', err.message);
+        socket.emit('message_error', { message: 'Failed to send course message. Please try again.' });
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.user.name}`);
     });

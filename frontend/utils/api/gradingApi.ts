@@ -10,7 +10,7 @@ const gradingApi = {
     totalPoints: number,
     assignmentDescription: string
   ) => {
-    const response = await axiosInstance.post(`/api/ai/grade-submission`, {
+    const response = await axiosInstance.post(`/api/v1/ai/grade-submission`, {
       submissionId,
       rubricCriteria,
       totalPoints,
@@ -28,7 +28,7 @@ const gradingApi = {
     totalPoints: number,
     assignmentDescription: string
   ) => {
-    const response = await axiosInstance.post(`/api/ai/grade-batch`, {
+    const response = await axiosInstance.post(`/api/v1/ai/grade-batch`, {
       submissions,
       rubricCriteria,
       totalPoints,
@@ -41,7 +41,7 @@ const gradingApi = {
    * Get grading history for an assignment
    */
   getGradingHistory: async (assignmentId: string, limit: number = 50) => {
-    const response = await axiosInstance.get(`/api/ai/grading-history/${assignmentId}`, {
+    const response = await axiosInstance.get(`/api/v1/ai/grading-history/${assignmentId}`, {
       params: { limit },
     });
     return response.data;
@@ -51,7 +51,7 @@ const gradingApi = {
    * Generate rubric from assignment description
    */
   generateRubric: async (assignmentDescription: string, totalPoints: number = 100) => {
-    const response = await axiosInstance.post(`/api/ai/generate-rubric`, {
+    const response = await axiosInstance.post(`/api/v1/ai/generate-rubric`, {
       assignmentDescription,
       totalPoints,
     });
@@ -66,7 +66,7 @@ const gradingApi = {
     teacherScore: number,
     submissionId: string
   ) => {
-    const response = await axiosInstance.post(`/api/ai/compare-grades`, {
+    const response = await axiosInstance.post(`/api/v1/ai/compare-grades`, {
       aiScore,
       teacherScore,
       submissionId,
@@ -81,7 +81,7 @@ const gradingApi = {
     gradingResult: any,
     studentName: string
   ) => {
-    const response = await axiosInstance.post(`/api/ai/personalized-feedback`, {
+    const response = await axiosInstance.post(`/api/v1/ai/personalized-feedback`, {
       gradingResult,
       studentName,
     });
@@ -96,7 +96,7 @@ const gradingApi = {
     gradingResult: any,
     aiGenerated: boolean = true
   ) => {
-    const response = await axiosInstance.post(`/api/ai/save-grading`, {
+    const response = await axiosInstance.post(`/api/v1/ai/save-grading`, {
       submissionId,
       gradingResult,
       aiGenerated,

@@ -9,6 +9,7 @@ import {
   HelpCircle, Compass, Terminal, FileText, CheckCircle2, RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import tutoringApi from '@/utils/api/tutoringApi';
 
 interface Message {
   id: string;
@@ -63,31 +64,71 @@ export default function AiTutorPage() {
     setInputText('');
     setIsTyping(true);
 
-    // Simulate AI thinking and smart responses tailored to VLE
-    setTimeout(() => {
-      let aiText = '';
-      const query = textToSend.toLowerCase();
+    try {
+      const level = user?.role === 'teacher' ? 'advanced' : 'intermediate';
+      const courseTitle = searchParams.get('course') || 'General Academic Guidance';
+      const topic = searchParams.get('topic') || 'General Study';
 
-      if (query.includes('loop') || query.includes('programming')) {
-        aiText = `### Understanding Programming Loops 🔄\n\nLoops are control structures used to repeat a block of code. Here is a quick summary:\n\n1. **For Loops**: Best when you know *exactly* how many times to repeat. (e.g., iterating through a student list).\n2. **While Loops**: Best when repeating until a specific condition changes (e.g., waiting for server sync).\n\n**Visual Example in JavaScript:**\n\`\`\`javascript\nconst students = ["Kofi", "Ama", "John"];\nfor (let i = 0; i < students.length; i++) {\n  console.log("Enrolling: " + students[i]);\n}\n\`\`\`\nWould you like me to generate a practice quiz on loops for your students?`;
-      } else if (query.includes('quiz') || query.includes('practice')) {
-        aiText = `### Practice Quiz: Control Flow & Structures 📝\n\nHere are three challenging check questions for your study list:\n\n* **Q1:** What is the primary difference between a \`while\` loop and a \`do-while\` loop?\n* **Q2:** How can you prevent an infinite loop in event-driven middleware?\n* **Q3:** Explain the time complexity of looking up a student ID in a Mongo database index.\n\n*Tip: Write down your answers and send them back to me for automated evaluation!*`;
-      } else if (query.includes('solve') || query.includes('assignment')) {
-        aiText = `I would love to help you build intuition to solve your assignment! To maintain **academic integrity policies** in UniLearn, I can't write your final answers directly. \n\nHowever, if you share the assignment prompt, I will explain the underlying concepts step-by-step, provide similar code templates, and point out potential bugs! What is the task about?`;
+      const response = await tutoringApi.getTutoringResponse(
+        textToSend,
+        courseTitle,
+        topic,
+        level
+      );
+
+      let aiText = '';
+      if (response && response.success && response.data) {
+        const data = response.data;
+        if (data.explanation) {
+          aiText += `${data.explanation}\n\n`;
+        }
+        if (data.keyPoints && data.keyPoints.length > 0) {
+          aiText += `### Key Points 🎯\n\n${data.keyPoints.map((point: string) => `• ${point}`).join('\n')}\n\n`;
+        }
+        if (data.examples && data.examples.length > 0) {
+          aiText += `### Practical Examples 💡\n\n${data.examples.map((ex: string) => `• ${ex}`).join('\n')}\n\n`;
+        }
+        if (data.practiceProblems && data.practiceProblems.length > 0) {
+          aiText += `### Practice Problems 📝\n\n${data.practiceProblems.map((prob: string) => `• ${prob}`).join('\n')}\n\n`;
+        }
+        if (data.tips) {
+          aiText += `### Study Tip 💡\n\n_${data.tips}_\n\n`;
+        }
+        if (data.relatedConcepts && data.relatedConcepts.length > 0) {
+          aiText += `### Related Concepts 🔗\n\n${data.relatedConcepts.join(', ')}`;
+        }
+      } else if (response && typeof response.data === 'string') {
+        aiText = response.data;
+      } else if (response && response.explanation) {
+        aiText = response.explanation;
       } else {
-        aiText = `Understood. I've analyzed your academic profile inside **UniLearn**. \n\nBased on your active courses, this relates closely to modern educational systems and advanced algorithms. Let's work together to break this down. Could you clarify if you would like a code snippet, a step-by-step conceptual guide, or an evaluation checklist?`;
+        throw new Error('Invalid response structure');
       }
 
       const aiMsg: Message = {
         id: Math.random().toString(),
         sender: 'ai',
-        text: aiText,
+        text: aiText.trim(),
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, aiMsg]);
+    } catch (err: any) {
+      console.error('Error fetching tutoring response:', err);
+      const errorMsg = err.response?.data?.message || 'AI Tutor is temporarily offline. Please try again later.';
+      toast.error(errorMsg);
+      
+      const aiMsg: Message = {
+        id: Math.random().toString(),
+        sender: 'ai',
+        text: `⚠️ **Connection Error**: ${errorMsg}`,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, aiMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   // Handle incoming prompt from redirect

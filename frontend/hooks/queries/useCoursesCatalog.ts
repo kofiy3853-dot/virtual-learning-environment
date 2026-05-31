@@ -18,7 +18,7 @@ export function useEnrolledCourseIds(enabled = true) {
 }
 
 export function useCoursesCatalog(
-  params: { search?: string; status?: string },
+  params: { search?: string; status?: string; page?: number },
   options: { teacherId?: string; isTeacher?: boolean; enabled?: boolean } = {}
 ) {
   const { teacherId, isTeacher, enabled = true } = options;
@@ -34,7 +34,10 @@ export function useCoursesCatalog(
           return tId === teacherId;
         });
       }
-      return all;
+      return {
+        data: all,
+        pagination: res.data.pagination || null
+      };
     },
     enabled,
   });

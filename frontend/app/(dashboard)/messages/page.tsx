@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useSocket } from '@/context/SocketContext';
 import { communicationApi } from '@/utils/api/communicationApi';
+import { courseApi } from '@/utils/api/courseApi';
+import { Course } from '@/types';
 import { 
   Search, Plus, Phone, Video, MoreVertical, Send, 
-  MessageSquare, Users, Star, Info, Loader2, Sparkles
+  MessageSquare, Users, Star, Info, Loader2, Sparkles, Hash
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -36,6 +38,8 @@ export default function MessagesPage() {
   const { user } = useAuth();
   const { socket, onlineUsers } = useSocket();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [activeTab, setActiveTab] = useState<'direct' | 'courses'>('direct');
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -43,20 +47,26 @@ export default function MessagesPage() {
   const [search, setSearch] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
-  // Fetch conversations on mount
+  // Fetch conversations and courses on mount
   useEffect(() => {
-    communicationApi.getConversations()
-      .then(res => setConversations(res.data.data))
-      .finally(() => setLoading(false));
-  }, []);
+    Promise.all([
+      communicationApi.getConversations().then(res => setConversations(res.data.data)),
+      user?.role === 'student' ? courseApi.getMyCourses().then(res => setCourses(res.data.data)) : courseApi.getAll().then(res => setCourses(res.data.data))
+    ]).finally(() => setLoading(false));
+  }, [user?.role]);
 
   // Fetch messages when activeChat changes
   useEffect(() => {
     if (activeChat) {
-      communicationApi.getMessages(activeChat)
-        .then(res => setMessages(res.data.data));
+      if (activeTab === 'direct') {
+        communicationApi.getMessages(activeChat)
+          .then(res => setMessages(res.data.data));
+      } else {
+        communicationApi.getCourseMessages(activeChat)
+          .then(res => setMessages(res.data.data));
+      }
     }
-  }, [activeChat]);
+  }, [activeChat, activeTab]);
 
   // Socket Listeners
   useEffect(() => {
@@ -70,24 +80,39 @@ export default function MessagesPage() {
 
     socket.on('new_message', (msg: IncomingMessage) => {
       // If message is from the active chat, add it
-      if (activeChat === msg.senderId) {
+      if (activeChat === msg.senderId || (activeTab === 'courses' && activeChat === (msg as any).courseId)) {
         setMessages(prev => [...prev, {
           _id: Date.now().toString(),
-          sender: msg.senderId,
+          sender: msg.senderId || (msg as any).sender?._id,
           receiver: user?._id || '',
           body: msg.body,
           createdAt: msg.createdAt
         }]);
       }
       
-      // Update conversations list (move to top, update last message)
-      communicationApi.getConversations().then(res => setConversations(res.data.data));
+      // Update conversations list
+      if (activeTab === 'direct') {
+        communicationApi.getConversations().then(res => setConversations(res.data.data));
+      }
+    });
+
+    socket.on('new_course_message', (msg: any) => {
+      if (activeTab === 'courses' && activeChat === msg.course) {
+        setMessages(prev => [...prev, {
+          _id: Date.now().toString(),
+          sender: msg.sender, // Backend populates this or we just use it
+          receiver: '',
+          body: msg.body,
+          createdAt: msg.createdAt
+        }]);
+      }
     });
 
     return () => {
       socket.off('new_message');
+      socket.off('new_course_message');
     };
-  }, [socket, activeChat, user?._id]);
+  }, [socket, activeChat, activeTab, user?._id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,38 +122,60 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!messageText.trim() || !activeChat || !socket) return;
 
-    // Send via socket
-    socket.emit('send_message', {
-      receiverId: activeChat,
-      body: messageText.trim()
-    });
+    if (activeTab === 'direct') {
+      socket.emit('send_message', {
+        receiverId: activeChat,
+        body: messageText.trim()
+      });
 
-    // Optimistically add to UI
-    const newMsg: Message = {
-      _id: Date.now().toString(),
-      sender: user?._id || '',
-      receiver: activeChat,
-      body: messageText.trim(),
-      createdAt: new Date().toISOString()
-    };
-    
-    setMessages(prev => [...prev, newMsg]);
+      // Optimistically add to UI
+      const newMsg: Message = {
+        _id: Date.now().toString(),
+        sender: user?._id || '',
+        receiver: activeChat,
+        body: messageText.trim(),
+        createdAt: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, newMsg]);
+
+      // Update conversations last message optimistically
+      setConversations(prev => {
+        const updated = prev.map(c => 
+          c.user._id === activeChat 
+            ? { ...c, lastMessage: messageText.trim(), createdAt: new Date().toISOString() } 
+            : c
+        );
+        return updated.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      });
+    } else {
+      socket.emit('send_course_message', {
+        courseId: activeChat,
+        body: messageText.trim()
+      });
+
+      // Optimistically add to UI
+      const newMsg: Message = {
+        _id: Date.now().toString(),
+        sender: user?._id || '', // we are the sender
+        receiver: '',
+        body: messageText.trim(),
+        createdAt: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, newMsg]);
+    }
+
     setMessageText('');
-
-    // Update conversations last message optimistically
-    setConversations(prev => {
-      const updated = prev.map(c => 
-        c.user._id === activeChat 
-          ? { ...c, lastMessage: messageText.trim(), createdAt: new Date().toISOString() } 
-          : c
-      );
-      return updated.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    });
   };
 
   const activeConv = conversations.find(c => c.user._id === activeChat);
+  const activeCourseConv = courses.find(c => c._id === activeChat);
+  
   const filteredConversations = conversations.filter(c => 
     c.user.name.toLowerCase().includes(search.toLowerCase())
+  );
+  
+  const filteredCourses = courses.filter(c =>
+    c.title.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -151,11 +198,32 @@ export default function MessagesPage() {
                   <Plus size={24} />
                 </button>
               </div>
+              
+              {/* Tabs */}
+              <div className="flex items-center p-1 bg-slate-100 rounded-xl mb-4">
+                <button
+                  onClick={() => { setActiveTab('direct'); setActiveChat(null); }}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                    activeTab === 'direct' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Direct
+                </button>
+                <button
+                  onClick={() => { setActiveTab('courses'); setActiveChat(null); }}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                    activeTab === 'courses' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Channels
+                </button>
+              </div>
+
               <div className="relative group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={18} />
                 <input
                   type="text"
-                  placeholder="Search interactions..."
+                  placeholder={`Search ${activeTab === 'direct' ? 'interactions' : 'channels'}...`}
                   className="w-full bg-slate-50 border-2 border-slate-100 text-slate-900 pl-12 pr-4 h-14 rounded-2xl focus:bg-white focus:border-blue-600 focus:ring-8 focus:ring-blue-600/5 outline-none transition-all font-bold text-sm"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -169,8 +237,9 @@ export default function MessagesPage() {
                 <div className="space-y-4 p-4">
                    {[1,2,3,4].map(i => <div key={i} className="h-20 bg-slate-50 rounded-2xl animate-pulse" />)}
                 </div>
-              ) : filteredConversations.length > 0 ? (
-                filteredConversations.map(conv => {
+              ) : activeTab === 'direct' ? (
+                filteredConversations.length > 0 ? (
+                  filteredConversations.map(conv => {
                   const isOnline = onlineUsers.includes(conv.user._id);
                   const isActive = activeChat === conv.user._id;
                   return (
@@ -233,36 +302,107 @@ export default function MessagesPage() {
                    </div>
                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No Interactions Found</p>
                 </div>
+              )
+              ) : (
+                filteredCourses.length > 0 ? (
+                  filteredCourses.map(course => {
+                    const isActive = activeChat === course._id;
+                    return (
+                      <button
+                        key={course._id}
+                        onClick={() => setActiveChat(course._id)}
+                        className={`w-full text-left p-4 rounded-3xl flex gap-4 items-center transition-all group relative overflow-hidden ${
+                          isActive 
+                            ? 'bg-blue-600 shadow-xl shadow-blue-600/20' 
+                            : 'hover:bg-white border-2 border-transparent hover:border-slate-100 hover:shadow-sm'
+                        }`}
+                      >
+                        <div className="relative shrink-0">
+                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-sm transition-all ${
+                            isActive 
+                              ? 'bg-white/20 text-white' 
+                              : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
+                          }`}>
+                            <Hash size={24} />
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className={`font-black text-sm truncate ${
+                              isActive ? 'text-white' : 'text-slate-900'
+                            }`}>
+                              {course.title}
+                            </span>
+                          </div>
+                          <p className={`text-xs truncate font-medium ${
+                            isActive ? 'text-blue-100' : 'text-slate-500'
+                          }`}>
+                            {course.code} Channel
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="py-20 text-center px-8">
+                     <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-200">
+                        <Hash size={32} />
+                     </div>
+                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No Channels Found</p>
+                  </div>
+                )
               )}
             </div>
           </div>
 
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col min-w-0 bg-white relative">
-            {activeChat && activeConv ? (
+            {activeChat && (activeConv || activeCourseConv) ? (
               <>
                 {/* Chat Header */}
                 <div className="h-24 px-10 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md shrink-0 z-10 relative">
                   <div className="flex items-center gap-5">
-                    <div className="relative">
-                      <div className="w-14 h-14 rounded-[20px] bg-blue-50 text-blue-600 flex items-center justify-center font-black shadow-sm border border-blue-100">
-                        {activeConv.user.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      {onlineUsers.includes(activeConv.user._id) && (
-                        <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-4 border-white shadow-sm" />
-                      )}
-                    </div>
-                    <div>
-                      <h2 className="font-black text-slate-900 text-xl flex items-center gap-3">
-                        {activeConv.user.name}
-                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                          {activeConv.user.role}
-                        </span>
-                      </h2>
-                      <p className={`text-[10px] font-black uppercase tracking-widest ${onlineUsers.includes(activeConv.user._id) ? 'text-emerald-500' : 'text-slate-400'}`}>
-                        {onlineUsers.includes(activeConv.user._id) ? 'Live Intelligence' : 'Offline'}
-                      </p>
-                    </div>
+                    {activeTab === 'direct' && activeConv ? (
+                      <>
+                        <div className="relative">
+                          <div className="w-14 h-14 rounded-[20px] bg-blue-50 text-blue-600 flex items-center justify-center font-black shadow-sm border border-blue-100">
+                            {activeConv.user.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          {onlineUsers.includes(activeConv.user._id) && (
+                            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-4 border-white shadow-sm" />
+                          )}
+                        </div>
+                        <div>
+                          <h2 className="font-black text-slate-900 text-xl flex items-center gap-3">
+                            {activeConv.user.name}
+                            <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                              {activeConv.user.role}
+                            </span>
+                          </h2>
+                          <p className={`text-[10px] font-black uppercase tracking-widest ${onlineUsers.includes(activeConv.user._id) ? 'text-emerald-500' : 'text-slate-400'}`}>
+                            {onlineUsers.includes(activeConv.user._id) ? 'Live Intelligence' : 'Offline'}
+                          </p>
+                        </div>
+                      </>
+                    ) : activeTab === 'courses' && activeCourseConv ? (
+                      <>
+                        <div className="relative">
+                          <div className="w-14 h-14 rounded-[20px] bg-indigo-50 text-indigo-600 flex items-center justify-center font-black shadow-sm border border-indigo-100">
+                            <Hash size={24} />
+                          </div>
+                        </div>
+                        <div>
+                          <h2 className="font-black text-slate-900 text-xl flex items-center gap-3">
+                            {activeCourseConv.title}
+                            <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
+                              {activeCourseConv.code}
+                            </span>
+                          </h2>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Course Group Channel</p>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                   
                   <div className="flex gap-3">
@@ -300,8 +440,17 @@ export default function MessagesPage() {
                   
                   <AnimatePresence initial={false}>
                     {messages.map((msg, idx) => {
-                      const isMe = msg.sender === user?._id;
-                      const showTime = idx === messages.length - 1 || messages[idx+1]?.sender !== msg.sender;
+                      // Depending on activeTab, sender could be a string or an object populated by backend
+                      const senderObj = typeof msg.sender === 'object' ? (msg.sender as any) : null;
+                      const senderId = senderObj ? senderObj._id : msg.sender;
+                      
+                      const isMe = senderId === user?._id;
+                      const showTime = idx === messages.length - 1 || (
+                        typeof messages[idx+1]?.sender === 'object' 
+                          ? (messages[idx+1].sender as any)._id !== senderId 
+                          : messages[idx+1]?.sender !== msg.sender
+                      );
+
                       return (
                         <motion.div 
                           key={msg._id}
@@ -310,6 +459,12 @@ export default function MessagesPage() {
                           className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                         >
                           <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-2`}>
+                            {/* For group messages, show sender name if not me */}
+                            {activeTab === 'courses' && !isMe && senderObj && (
+                               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2">
+                                 {senderObj.name}
+                               </span>
+                            )}
                             <div className={`px-6 py-4 text-sm leading-relaxed shadow-xl shadow-slate-900/5 ${
                               isMe 
                                 ? 'bg-blue-600 text-white rounded-[32px] rounded-br-[8px]' 

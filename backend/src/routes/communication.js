@@ -9,6 +9,7 @@ const {
   getConversations,
   getMyNotifications,
   markRead,
+  getCourseMessages,
 } = require('../controllers/communicationController');
 
 const express = require('express');
@@ -31,9 +32,10 @@ router.route('/discussions')
 router.get('/discussions/:id', protect, getDiscussion);
 router.post('/discussions/:id/reply', protect, validate(schemas.replyDiscussion), replyDiscussion);
 
-// Messages (Global)
+// Messages (Global & Course)
 router.get('/conversations', protect, getConversations);
 router.get('/messages/:userId', protect, getMessages);
+router.get('/courses/:courseId/messages', protect, getCourseMessages);
 
 // Notifications (Global)
 router.get('/notifications/me', protect, getMyNotifications);

@@ -40,6 +40,7 @@ export interface Course {
   students?: string[] | User[];
   modules?: Module[];
   // Extended wizard fields
+  thumbnail?: string;
   category?: string;
   level?: 'beginner' | 'intermediate' | 'advanced';
   startDate?: string;
@@ -97,4 +98,13 @@ export interface LiveSession {
   scheduledAt: string;
   status: 'scheduled' | 'live' | 'ended';
   roomUrl?: string;
+}
+
+export interface Certificate {
+  _id: string;
+  student: string | User;
+  course: Course;
+  certificateId: string;
+  issuedAt: string;
+  grade?: number;
 }

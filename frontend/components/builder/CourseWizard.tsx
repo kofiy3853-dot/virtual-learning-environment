@@ -44,6 +44,7 @@ interface CourseFormState {
   title: string;
   code: string;
   description: string;
+  thumbnail: string;
   category: string;
   level: 'beginner' | 'intermediate' | 'advanced';
   startDate: string;
@@ -105,6 +106,7 @@ export default function CourseWizard() {
       title: defaultTitle,
       code: defaultCode,
       description: '',
+      thumbnail: '',
       category: '',
       level: 'beginner',
       startDate: '',
@@ -406,6 +408,7 @@ export default function CourseWizard() {
         title: form.title || 'Untitled Course',
         code: form.code || `CS-${Math.floor(Math.random() * 900 + 100)}`,
         description: form.description || 'No description provided for this course.',
+        thumbnail: form.thumbnail || undefined,
         semester,
         academicYear,
         status: (visibility === 'published' ? 'active' : 'draft') as 'active' | 'draft',
@@ -709,6 +712,23 @@ export default function CourseWizard() {
                             ))}
                           </div>
                         </div>
+                      </div>
+
+                      {/* Thumbnail URL */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Thumbnail URL <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+                        <input
+                          type="url"
+                          value={form.thumbnail}
+                          onChange={e => setForm(p => ({ ...p, thumbnail: e.target.value }))}
+                          placeholder="https://images.unsplash.com/..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:bg-white focus:border-primary-500 transition-all outline-none"
+                        />
+                        {form.thumbnail && (
+                          <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 h-28">
+                            <img src={form.thumbnail} alt="Thumbnail preview" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

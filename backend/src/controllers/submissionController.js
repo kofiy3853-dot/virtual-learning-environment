@@ -53,11 +53,23 @@ exports.getSubmissions = asyncHandler(async (req, res, next) => {
     return res.status(403).json({ success: false, message: 'Not authorized' });
   }
 
-  const submissions = await Submission.find({ assignment: req.params.id }).populate('student', 'name email');
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const startIndex = (page - 1) * limit;
+
+  const query = { assignment: req.params.id };
+  const total = await Submission.countDocuments(query);
+  const submissions = await Submission.find(query).skip(startIndex).limit(limit).populate('student', 'name email');
 
   res.status(200).json({
     success: true,
     count: submissions.length,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit)
+    },
     data: submissions,
   });
 });

@@ -5,7 +5,7 @@ const plagiarismApi = {
    * Check submission for plagiarism
    */
   checkPlagiarism: async (submissionId: string) => {
-    const response = await axiosInstance.post(`/api/ai/check-plagiarism`, {
+    const response = await axiosInstance.post(`/api/v1/ai/check-plagiarism`, {
       submissionId,
     });
     return response.data;
@@ -15,7 +15,7 @@ const plagiarismApi = {
    * Get plagiarism report for a submission
    */
   getPlagiarismReport: async (submissionId: string) => {
-    const response = await axiosInstance.get(`/api/ai/plagiarism-report/${submissionId}`);
+    const response = await axiosInstance.get(`/api/v1/ai/plagiarism-report/${submissionId}`);
     return response.data;
   },
 
@@ -26,7 +26,7 @@ const plagiarismApi = {
     submissionId: string,
     previousSubmissionIds: string[]
   ) => {
-    const response = await axiosInstance.post(`/api/ai/compare-submissions`, {
+    const response = await axiosInstance.post(`/api/v1/ai/compare-submissions`, {
       submissionId,
       previousSubmissionIds,
     });
@@ -40,7 +40,7 @@ const plagiarismApi = {
     submissionId: string,
     previousSubmissionIds: string[] = []
   ) => {
-    const response = await axiosInstance.post(`/api/ai/analyze-writing-patterns`, {
+    const response = await axiosInstance.post(`/api/v1/ai/analyze-writing-patterns`, {
       submissionId,
       previousSubmissionIds,
     });
@@ -51,7 +51,7 @@ const plagiarismApi = {
    * Batch check multiple submissions for plagiarism
    */
   batchCheckPlagiarism: async (submissionIds: string[]) => {
-    const response = await axiosInstance.post(`/api/ai/batch-check-plagiarism`, {
+    const response = await axiosInstance.post(`/api/v1/ai/batch-check-plagiarism`, {
       submissionIds,
     });
     return response.data;
@@ -61,7 +61,7 @@ const plagiarismApi = {
    * Get plagiarism statistics for an assignment
    */
   getPlagiarismStats: async (assignmentId: string) => {
-    const response = await axiosInstance.get(`/api/ai/plagiarism-stats/${assignmentId}`);
+    const response = await axiosInstance.get(`/api/v1/ai/plagiarism-stats/${assignmentId}`);
     return response.data;
   },
 
@@ -69,7 +69,7 @@ const plagiarismApi = {
    * Flag submission for manual review
    */
   flagForReview: async (submissionId: string, reason: string) => {
-    const response = await axiosInstance.post(`/api/ai/flag-for-review`, {
+    const response = await axiosInstance.post(`/api/v1/ai/flag-for-review`, {
       submissionId,
       reason,
     });
@@ -80,7 +80,7 @@ const plagiarismApi = {
    * Get flagged submissions
    */
   getFlaggedSubmissions: async (assignmentId: string) => {
-    const response = await axiosInstance.get(`/api/ai/flagged-submissions/${assignmentId}`);
+    const response = await axiosInstance.get(`/api/v1/ai/flagged-submissions/${assignmentId}`);
     return response.data;
   },
 };

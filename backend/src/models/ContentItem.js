@@ -28,6 +28,12 @@ const ContentItemSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  completedBy: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  }],
 });
+
+ContentItemSchema.index({ module: 1 });
 
 module.exports = mongoose.model('ContentItem', ContentItemSchema);

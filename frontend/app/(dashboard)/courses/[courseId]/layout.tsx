@@ -85,77 +85,88 @@ export default function CourseLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="space-y-4">
-      {/* Compact Course Header */}
-      <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-        {/* Breadcrumb + meta row */}
-        <div className="flex items-center justify-between gap-4 mb-3">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <div className="flex items-center gap-1 text-[11px] text-slate-400">
-              <Link href="/courses" className="hover:text-primary-600 transition-colors font-medium">Courses</Link>
-              <ChevronRight size={11} />
-            </div>
-            <span className="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-700 text-[11px] font-semibold">
+      {/* Course Header */}
+      <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+        {/* Thumbnail strip */}
+        <div className="h-20 relative">
+          {(course as { thumbnail?: string }).thumbnail && !(course as { thumbnail?: string }).thumbnail?.includes('no-course-thumbnail') ? (
+            <img
+              src={(course as { thumbnail?: string }).thumbnail}
+              alt={course.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-primary-600 via-primary-700 to-indigo-800" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          {/* Course code on the banner */}
+          <div className="absolute bottom-3 left-4 flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-sm border border-white/30 text-white text-[11px] font-bold">
               {course.code}
             </span>
-            <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-semibold ${
-              course.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+            <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold backdrop-blur-sm border ${
+              course.status === 'active'
+                ? 'bg-emerald-500/80 text-white border-emerald-400/50'
+                : 'bg-slate-500/80 text-white border-slate-400/50'
             }`}>
               {course.status}
             </span>
             {course.semester && (
-              <span className="hidden sm:flex items-center gap-1 text-[11px] text-slate-400">
-                <Sparkles size={10} className="text-amber-400" />
+              <span className="hidden sm:flex items-center gap-1 text-[11px] text-white/70 font-medium">
+                <Sparkles size={10} className="text-amber-300" />
                 {course.semester} · {course.academicYear}
               </span>
             )}
           </div>
-
           {isOwner && (
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="absolute bottom-2 right-3 flex items-center gap-1.5">
               <Link
                 href={`/courses/${courseId}/students`}
-                className="btn btn-secondary btn-sm gap-1 shrink-0"
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/20 backdrop-blur-sm text-white text-[11px] font-semibold border border-white/20 hover:bg-white/30 transition-colors"
               >
-                <Users size={12} /> Students
+                <Users size={11} /> Students
               </Link>
               <Link
                 href={`/courses/${courseId}/settings`}
-                className="btn btn-secondary btn-sm gap-1 shrink-0"
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/20 backdrop-blur-sm text-white text-[11px] font-semibold border border-white/20 hover:bg-white/30 transition-colors"
               >
-                <SettingsIcon size={12} /> Settings
+                <SettingsIcon size={11} /> Settings
               </Link>
             </div>
           )}
         </div>
 
-        {/* Title */}
-        <h1 className="text-[17px] font-semibold text-slate-900 tracking-tight leading-snug mb-3">
-          {course.title}
-        </h1>
+        {/* Title + Tab Bar */}
+        <div className="px-4 pt-3 pb-0">
+          <h1 className="text-[17px] font-semibold text-slate-900 tracking-tight leading-snug mb-3">
+            {course.title}
+          </h1>
 
-        {/* Compact Tab Bar */}
-        <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar -mb-4 pb-0 border-t border-slate-100 pt-3">
-          {tabs.map((tab) => {
-            const isActive =
-              pathname === tab.href ||
-              (tab.href !== `/courses/${courseId}` && pathname.startsWith(tab.href));
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={`relative flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium whitespace-nowrap transition-colors rounded-md ${
-                  isActive
-                    ? 'text-primary-600 bg-primary-50'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <tab.icon size={13} />
-                {tab.label}
-              </Link>
-            );
-          })}
+          {/* Compact Tab Bar */}
+          <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar border-t border-slate-100 pt-2">
+            {tabs.map((tab) => {
+              const isActive =
+                pathname === tab.href ||
+                (tab.href !== `/courses/${courseId}` && pathname.startsWith(tab.href));
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`relative flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium whitespace-nowrap transition-colors rounded-md ${
+                    isActive
+                      ? 'text-primary-600 bg-primary-50'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <tab.icon size={13} />
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
+
 
       {/* Page Content */}
       <motion.div

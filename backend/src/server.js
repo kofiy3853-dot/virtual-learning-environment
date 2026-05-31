@@ -12,6 +12,8 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
+const logger = require('./utils/logger');
+const { RATE_LIMITS, TIMEOUTS } = require('./config/constants');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
@@ -37,6 +39,7 @@ const studentRoutes = require('./routes/students');
 const teacherRoutes = require('./routes/teachers');
 const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/aiRoutes');
+const certificateRoutes = require('./routes/certificateRoutes');
 
 // Connect to MongoDB
 connectDB();
@@ -94,15 +97,30 @@ app.use(cors({
 
 
 // Body parsing
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Cookie parsing — required for HttpOnly JWT cookie support
 app.use(cookieParser());
 
-// NoSQL injection protection
-// Temporarily disabled due to Express 5 compatibility issues
-// app.use(mongoSanitize());
+// NoSQL injection protection (Custom sanitizer for Express 5 compatibility)
+const sanitizeObj = (obj) => {
+  if (obj instanceof Object) {
+    for (const key in obj) {
+      if (/^\$/.test(key)) {
+        delete obj[key];
+      } else {
+        sanitizeObj(obj[key]);
+      }
+    }
+  }
+};
+app.use((req, res, next) => {
+  ['body', 'params', 'query'].forEach(k => {
+    if (req[k]) sanitizeObj(req[k]);
+  });
+  next();
+});
 
 // Request logging (logs to ./logs with daily rotation)
 app.use(requestLogger);
@@ -110,14 +128,14 @@ app.use(requestLogger);
 // Security event logging (403, 401 attempts)
 app.use(securityLogger);
 
-// Request timeout — 30 seconds globally
-app.use(timeoutHandler(30000));
+// Request timeout — from constants
+app.use(timeoutHandler(TIMEOUTS.GLOBAL_MS));
 
 // ─── GLOBAL RATE LIMITING ───────────────────────────────────────────────────
 // Protects every endpoint on the API
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutes
-  max: 300,                   // Increase to 300 requests per window
+  windowMs: RATE_LIMITS.GLOBAL.WINDOW_MS,
+  max: RATE_LIMITS.GLOBAL.MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -128,8 +146,8 @@ const globalLimiter = rateLimit({
 
 // Stricter limiter specifically for auth endpoints
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 50,                    // Increase to 50 login/register attempts per window
+  windowMs: RATE_LIMITS.AUTH.WINDOW_MS,
+  max: RATE_LIMITS.AUTH.MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -140,11 +158,9 @@ const authLimiter = rateLimit({
 
 // Rate limiter for unauthorized access attempts (403 responses)
 const unauthorizedLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 minutes
-  max: 10,                     // Only 10 unauthorized attempts per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req, res) => res.statusCode !== 403, // Only count 403 responses
+  windowMs: RATE_LIMITS.UNAUTHORIZED.WINDOW_MS,
+  max: RATE_LIMITS.UNAUTHORIZED.MAX,
+  skipSuccessfulRequests: true, // Counts any 4xx/5xx response
   message: {
     success: false,
     message: 'Too many unauthorized access attempts. Your IP has been temporarily blocked.'
@@ -170,12 +186,13 @@ app.get('/', (req, res) => {
 
 // ─── API ROUTES ──────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
 
 // ─── TEACHER ROUTES (inline to guarantee registration) ───────────────────────
 const { protect, authorize } = require('./middleware/auth');
 const teacherController = require('./controllers/teacherController');
 
-console.log('[SERVER] Registering inline teacher routes...');
+logger.info('[SERVER] Registering inline teacher routes...');
 app.get('/api/teachers/test', (req, res) => res.json({ success: true, message: 'Teacher routes OK', version: '1.1.2' }));
 app.get('/api/teachers/me/stats',               protect, authorize('teacher'), teacherController.getMyStats);
 app.get('/api/teachers/me/courses',             protect, authorize('teacher'), teacherController.getMyCourses);
@@ -187,8 +204,21 @@ app.get('/api/teachers/me/courses/:courseId/assignments', protect, authorize('te
 app.get('/api/teachers/me/courses/:courseId/quizzes',     protect, authorize('teacher'), teacherController.getCourseQuizzes);
 app.get('/api/teachers/me/assignments/:assignmentId/submissions', protect, authorize('teacher'), teacherController.getAssignmentSubmissions);
 app.get('/api/teachers/me/quizzes/:quizId/attempts',      protect, authorize('teacher'), teacherController.getQuizAttempts);
-console.log('[SERVER] Inline teacher routes registered.');
 
+app.get('/api/v1/teachers/test', (req, res) => res.json({ success: true, message: 'Teacher routes OK', version: '1.1.2' }));
+app.get('/api/v1/teachers/me/stats',               protect, authorize('teacher'), teacherController.getMyStats);
+app.get('/api/v1/teachers/me/courses',             protect, authorize('teacher'), teacherController.getMyCourses);
+app.get('/api/v1/teachers/me/pending-submissions', protect, authorize('teacher'), teacherController.getPendingSubmissions);
+app.get('/api/v1/teachers/me/courses/:courseId/gradebook',   protect, authorize('teacher'), teacherController.getCourseGradebook);
+app.get('/api/v1/teachers/me/courses/:courseId/analytics',   protect, authorize('teacher'), teacherController.getCourseAnalytics);
+app.get('/api/v1/teachers/me/courses/:courseId/at-risk',     protect, authorize('teacher'), teacherController.getAtRiskStudents);
+app.get('/api/v1/teachers/me/courses/:courseId/assignments', protect, authorize('teacher'), teacherController.getCourseAssignments);
+app.get('/api/v1/teachers/me/courses/:courseId/quizzes',     protect, authorize('teacher'), teacherController.getCourseQuizzes);
+app.get('/api/v1/teachers/me/assignments/:assignmentId/submissions', protect, authorize('teacher'), teacherController.getAssignmentSubmissions);
+app.get('/api/v1/teachers/me/quizzes/:quizId/attempts',      protect, authorize('teacher'), teacherController.getQuizAttempts);
+logger.info('[SERVER] Inline teacher routes registered.');
+
+// Standard API routes
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/admin', adminRoutes);
@@ -197,14 +227,36 @@ app.use('/api/courses/:id', courseNestedRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/content', contentRoutes);
-app.use('/api', assignmentRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/grades', gradeRoutes);
-app.use('/api', quizRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/communication', communicationRoutes);
 app.use('/api/live-sessions', liveRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/certificates', certificateRoutes);
+
+// Versioned API routes (v1)
+app.use('/api/v1/teachers', teacherRoutes);
+app.use('/api/v1/students', studentRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/courses', courseRoutes);
+app.use('/api/v1/courses/:id', courseNestedRoutes);
+app.use('/api/v1/enrollments', enrollmentRoutes);
+app.use('/api/v1/modules', moduleRoutes);
+app.use('/api/v1/content', contentRoutes);
+app.use('/api/v1/submissions', submissionRoutes);
+app.use('/api/v1/grades', gradeRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
+app.use('/api/v1/communication', communicationRoutes);
+app.use('/api/v1/live-sessions', liveRoutes);
+app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/certificates', certificateRoutes);
+
+// Helper for nested and root routes that don't have standard prefix
+app.use('/api', assignmentRoutes);
+app.use('/api', quizRoutes);
+app.use('/api/v1', assignmentRoutes);
+app.use('/api/v1', quizRoutes);
 
 // API Documentation
 app.use('/api-docs', require('./routes/docs'));

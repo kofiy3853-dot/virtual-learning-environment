@@ -10,8 +10,8 @@ import { queryKeys } from '@/lib/queryKeys';
 import { AxiosError } from 'axios';
 import {
   Search, Plus, BookOpen, User,
-  ChevronRight, AlertCircle, CheckCircle2,
-  SlidersHorizontal, Trash2, ArrowUpRight
+  ChevronRight, ChevronLeft, AlertCircle, CheckCircle2,
+  SlidersHorizontal, Trash2, ArrowUpRight, Award
 } from 'lucide-react';
 
 const statusColor: Record<string, { bg: string; text: string; border: string }> = {
@@ -25,6 +25,7 @@ export default function CoursesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
 
@@ -39,13 +40,16 @@ export default function CoursesPage() {
   const catalogParams = {
     ...(search ? { search } : {}),
     ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+    page,
   };
 
-  const { data: courses = [], isLoading: loading } = useCoursesCatalog(catalogParams, {
+  const { data: catalogResponse, isLoading: loading } = useCoursesCatalog(catalogParams, {
     teacherId: user?._id,
     isTeacher,
     enabled: Boolean(user),
   });
+  const courses = catalogResponse?.data || [];
+  const pagination = catalogResponse?.pagination;
   const { data: enrolled = new Set<string>() } = useEnrolledCourseIds(isStudent);
 
   const handleEnroll = async (courseId: string) => {
@@ -126,7 +130,7 @@ export default function CoursesPage() {
                 placeholder="Search courses..."
                 className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm w-56"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
 
@@ -145,7 +149,7 @@ export default function CoursesPage() {
         {filterTabs.map((status) => (
           <button
             key={status}
-            onClick={() => setStatusFilter(status)}
+            onClick={() => { setStatusFilter(status); setPage(1); }}
             className={`relative px-4 py-3 text-xs font-bold uppercase tracking-widest transition-colors ${
               statusFilter === status
                 ? 'text-primary-600'
@@ -196,20 +200,33 @@ export default function CoursesPage() {
                   transition={{ delay: idx * 0.04 }}
                   className="group bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col hover:border-primary-200 hover:shadow-lg transition-all duration-200"
                 >
-                  {/* Card header bar */}
-                  <div className="h-28 bg-gradient-to-br from-primary-600 to-primary-700 relative shrink-0">
-                    <div className="absolute top-4 left-4 flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-lg bg-white/15 border border-white/30 text-white text-[10px] font-bold backdrop-blur-sm">
+                  {/* Card header — thumbnail or gradient */}
+                  <div className="h-32 relative shrink-0 overflow-hidden">
+                    {course.thumbnail && !course.thumbnail.includes('no-course-thumbnail') ? (
+                      <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary-600 via-primary-700 to-indigo-800" />
+                    )}
+                    {/* Gradient overlay for readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-md bg-black/30 border border-white/20 text-white text-[10px] font-bold backdrop-blur-sm">
                         {course.code}
                       </span>
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${status.bg} ${status.text} ${status.border}`}>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border backdrop-blur-sm bg-white/80 ${status.text} ${status.border}`}>
                         {course.status}
                       </span>
                     </div>
-                    <div className="absolute bottom-4 right-4">
-                      <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/30 flex items-center justify-center">
-                        <BookOpen size={18} className="text-white/80" />
-                      </div>
+                    <div className="absolute bottom-3 right-3">
+                      {course.certificateEnabled && (
+                        <span title="Certificate enabled" className="w-6 h-6 rounded-lg bg-amber-400/90 backdrop-blur-sm flex items-center justify-center">
+                          <Award size={12} className="text-white" />
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -274,6 +291,31 @@ export default function CoursesPage() {
           </div>
         )}
       </section>
+
+      {/* Pagination Controls */}
+      {pagination && pagination.pages > 1 && (
+        <div className="flex items-center justify-center gap-4 mt-8 pt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="flex items-center gap-1 px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronLeft size={16} /> Previous
+          </button>
+          
+          <span className="text-sm font-medium text-slate-500">
+            Page {page} of {pagination.pages}
+          </span>
+          
+          <button
+            onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+            disabled={page === pagination.pages}
+            className="flex items-center gap-1 px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            Next <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

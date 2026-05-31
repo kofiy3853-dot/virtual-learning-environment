@@ -86,3 +86,38 @@ exports.deleteContent = asyncHandler(async (req, res, next) => {
     data: {},
   });
 });
+
+// @desc    Toggle completion status of content item for current student
+// @route   POST /api/content/:id/complete
+// @access  Private (Student)
+exports.toggleContentComplete = asyncHandler(async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid ID' });
+  }
+
+  const content = await ContentItem.findById(req.params.id);
+
+  if (!content) {
+    return res.status(404).json({ success: false, message: 'Content item not found' });
+  }
+
+  const studentId = req.user.id;
+  const isCompleted = content.completedBy && content.completedBy.includes(studentId);
+
+  if (isCompleted) {
+    content.completedBy = content.completedBy.filter(id => id.toString() !== studentId);
+  } else {
+    if (!content.completedBy) {
+      content.completedBy = [];
+    }
+    content.completedBy.push(studentId);
+  }
+
+  await content.save();
+
+  res.status(200).json({
+    success: true,
+    data: content,
+    isCompleted: !isCompleted
+  });
+});

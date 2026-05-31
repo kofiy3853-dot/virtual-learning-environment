@@ -9,7 +9,12 @@ const MessageSchema = new mongoose.Schema({
   receiver: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
-    required: true,
+    required: false, // Optional for course-wide group messages
+  },
+  course: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Course',
+    required: false, // Optional for user-to-user private messages
   },
   body: {
     type: String,
@@ -27,6 +32,7 @@ const MessageSchema = new mongoose.Schema({
 
 // Compound index for conversation queries (find messages between two users)
 MessageSchema.index({ sender: 1, receiver: 1 });
+MessageSchema.index({ course: 1 });
 MessageSchema.index({ createdAt: 1 });
 
 module.exports = mongoose.model('Message', MessageSchema);

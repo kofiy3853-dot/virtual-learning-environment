@@ -7,11 +7,22 @@ const mongoose = require('mongoose');
 // @route   GET /api/courses
 // @access  Public
 exports.getCourses = asyncHandler(async (req, res, next) => {
-  const courses = await Course.find().populate('teacher', 'name email');
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const startIndex = (page - 1) * limit;
+
+  const total = await Course.countDocuments();
+  const courses = await Course.find().skip(startIndex).limit(limit).populate('teacher', 'name email');
 
   res.status(200).json({
     success: true,
     count: courses.length,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit)
+    },
     data: courses,
   });
 });

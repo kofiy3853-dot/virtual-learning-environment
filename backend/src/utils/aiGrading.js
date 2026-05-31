@@ -5,9 +5,30 @@
 
 const OpenAI = require('openai');
 
+// Lazy client — uses OpenAI key if available, falls back to OpenRouter, then NVIDIA
 let _openai = null;
 function getClient() {
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  if (!_openai) {
+    if (process.env.OPENAI_API_KEY) {
+      _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    } else if (process.env.NVIDIA_API_KEY) {
+      _openai = new OpenAI({
+        apiKey: process.env.NVIDIA_API_KEY,
+        baseURL: 'https://integrate.api.nvidia.com/v1',
+      });
+    } else if (process.env.OPENROUTER_API_KEY) {
+      _openai = new OpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+        defaultHeaders: {
+          'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:3000',
+          'X-Title': 'UniLearn LMS',
+        },
+      });
+    } else {
+      throw new Error('No AI API key set. Add OPENAI_API_KEY, NVIDIA_API_KEY, or OPENROUTER_API_KEY to .env');
+    }
+  }
   return _openai;
 }
 
