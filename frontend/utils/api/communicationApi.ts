@@ -4,6 +4,7 @@ export const communicationApi = {
   // Messages
   getConversations: () => api.get('/api/v1/communication/conversations'),
   getMessages: (userId: string) => api.get(`/api/v1/communication/messages/${userId}`),
+  getCourseMessages: (courseId: string) => api.get(`/api/v1/communication/courses/${courseId}/messages`),
 
   // Notifications
   getMyNotifications: () => api.get('/api/v1/communication/notifications/me'),
