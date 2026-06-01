@@ -52,7 +52,7 @@ const createCourseSchema = Joi.object({
     .messages({ 'string.empty': 'Course title is required' }),
   code: Joi.string().min(2).max(20).required()
     .messages({ 'string.empty': 'Course code is required' }),
-  description: Joi.string().min(10).max(1000).required()
+  description: Joi.string().min(10).max(5000).required()
     .messages({ 'string.empty': 'Course description is required', 'string.min': 'Description must be at least 10 characters' }),
   semester: Joi.string().valid('Semester 1', 'Semester 2').required(),
   academicYear: Joi.string()
@@ -77,7 +77,7 @@ const createCourseSchema = Joi.object({
 const updateCourseSchema = Joi.object({
   title: Joi.string().min(3).max(100).optional(),
   code: Joi.string().min(2).max(20).optional(),
-  description: Joi.string().max(1000).optional().allow(''),
+  description: Joi.string().max(5000).optional().allow(''),scription: Joi.string().max(5000).optional().allow(''),
   semester: Joi.string().valid('Semester 1', 'Semester 2').optional(),
   academicYear: Joi.string().pattern(/^\d{4}\/\d{4}$/).optional(),
   status: Joi.string().valid('draft', 'active', 'archived').optional(),
