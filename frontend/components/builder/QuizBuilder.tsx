@@ -140,7 +140,9 @@ export default function QuizBuilder() {
       toast.error('You must have at least one question');
       return;
     }
-    setQuestions(questions.filter(q => q.id !== id));
+    const updated = questions.filter(q => q.id !== id);
+    setQuestions(updated);
+    setQuizSettings(s => ({ ...s, totalMarks: updated.reduce((sum, q) => sum + q.marks, 0) }));
     if (activeId === id) {
       setActiveId(questions[0].id === id ? questions[1].id : questions[0].id);
     }
@@ -148,7 +150,13 @@ export default function QuizBuilder() {
   };
 
   const updateQuestion = (id: string, updates: Partial<Question>) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, ...updates } : q));
+    setQuestions(prev => {
+      const updated = prev.map(q => q.id === id ? { ...q, ...updates } : q);
+      if ('marks' in updates) {
+        setQuizSettings(s => ({ ...s, totalMarks: updated.reduce((sum, q) => sum + q.marks, 0) }));
+      }
+      return updated;
+    });
   };
 
   // Validation
@@ -539,7 +547,13 @@ export default function QuizBuilder() {
                     options: q.options || ['Option A', 'Option B', 'Option C', 'Option D'],
                     correctAnswer: q.correctAnswer !== undefined ? String(q.correctAnswer) : '0',
                   }));
-                  setQuestions(prev => [...prev, ...newQuestions]);
+                  setQuestions(prev => {
+                    const updated = [...prev, ...newQuestions];
+                    // Sync totalMarks to the sum of all question marks
+                    const total = updated.reduce((sum, q) => sum + q.marks, 0);
+                    setQuizSettings(s => ({ ...s, totalMarks: total }));
+                    return updated;
+                  });
                   if (newQuestions.length > 0) setActiveId(newQuestions[0].id);
                   toast.success(`${newQuestions.length} question${newQuestions.length !== 1 ? 's' : ''} added`);
                   setAiPanelOpen(false);
