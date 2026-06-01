@@ -28,30 +28,30 @@ const {
 quizRouter.get('/courses/:id/quizzes', protect, getQuizzes);
 quizRouter.post('/courses/:id/quizzes',
   protect,
-  authorize('teacher'),
+  authorize('teacher', 'admin'),
   validate(schemas.createQuiz),
   createQuiz
 );
 quizRouter.get('/quizzes/:id', protect, getQuiz);
 quizRouter.put('/quizzes/:id',
   protect,
-  authorize('teacher'),
+  authorize('teacher', 'admin'),
   validate(schemas.updateQuiz),
   updateQuiz
 );
-quizRouter.delete('/quizzes/:id', protect, authorize('teacher'), deleteQuiz);
-quizRouter.patch('/quizzes/:id/publish', protect, authorize('teacher'), publishQuiz);
+quizRouter.delete('/quizzes/:id', protect, authorize('teacher', 'admin'), deleteQuiz);
+quizRouter.patch('/quizzes/:id/publish', protect, authorize('teacher', 'admin'), publishQuiz);
 
 // Questions
-quizRouter.get('/quizzes/:id/questions', protect, getQuestions); // Kept getQuestions
+quizRouter.get('/quizzes/:id/questions', protect, getQuestions);
 quizRouter.post('/quizzes/:id/questions',
   protect,
-  authorize('teacher'),
+  authorize('teacher', 'admin'),
   validate(schemas.createQuestion),
   addQuestion
 );
-quizRouter.put('/questions/:id', protect, authorize('teacher'), updateQuestion);
-quizRouter.delete('/questions/:id', protect, authorize('teacher'), deleteQuestion);
+quizRouter.put('/questions/:id', protect, authorize('teacher', 'admin'), updateQuestion);
+quizRouter.delete('/questions/:id', protect, authorize('teacher', 'admin'), deleteQuestion);
 
 // Attempts
 quizRouter.post('/quizzes/:id/start', protect, authorize('student'), startAttempt);

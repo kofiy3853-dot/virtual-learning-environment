@@ -6,8 +6,9 @@ const asyncHandler = require('../middleware/asyncHandler');
 async function verifyQuizOwnership(quizId, userId, userRole) {
   const quiz = await Quiz.findById(quizId);
   if (!quiz) return { error: 'Quiz not found', status: 404 };
+  if (userRole === 'admin') return { quiz };
   const course = await Course.findById(quiz.course);
-  if (course && course.teacher.toString() !== userId && userRole !== 'admin') {
+  if (course && course.teacher.toString() !== userId) {
     return { error: 'Not authorized', status: 403 };
   }
   return { quiz };
