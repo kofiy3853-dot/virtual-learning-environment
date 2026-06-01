@@ -77,7 +77,7 @@ const createCourseSchema = Joi.object({
 const updateCourseSchema = Joi.object({
   title: Joi.string().min(3).max(100).optional(),
   code: Joi.string().min(2).max(20).optional(),
-  description: Joi.string().max(5000).optional().allow(''),scription: Joi.string().max(5000).optional().allow(''),
+  description: Joi.string().max(5000).optional().allow(''),
   semester: Joi.string().valid('Semester 1', 'Semester 2').optional(),
   academicYear: Joi.string().pattern(/^\d{4}\/\d{4}$/).optional(),
   status: Joi.string().valid('draft', 'active', 'archived').optional(),
@@ -87,9 +87,10 @@ const updateCourseSchema = Joi.object({
 // ─── MODULE SCHEMAS ────────────────────────────────────────────────────────────
 const createModuleSchema = Joi.object({
   title: Joi.string().min(2).max(100).required(),
+  description: Joi.string().max(5000).optional().allow(''),
   weekNumber: Joi.number().integer().min(1).max(52).required()
     .messages({ 'number.min': 'Week number must be at least 1' }),
-  order: Joi.number().integer().min(1).required()
+  order: Joi.number().integer().min(1).optional()
 });
 
 const updateModuleSchema = Joi.object({
@@ -173,11 +174,11 @@ const createQuestionSchema = Joi.object({
     is: 'multiple_choice',
     then: Joi.array().items(Joi.string()).min(2).max(6).required()
       .messages({ 'array.min': 'Multiple choice questions need at least 2 options' }),
-    otherwise: Joi.forbidden()
+    otherwise: Joi.array().items(Joi.string()).optional()
   }),
   correctAnswer: Joi.when('type', {
     is: 'short_answer',
-    then: Joi.forbidden(),
+    then: Joi.string().optional().allow(''),
     otherwise: Joi.string().required()
       .messages({ 'any.required': 'Correct answer is required for this question type' })
   }),
