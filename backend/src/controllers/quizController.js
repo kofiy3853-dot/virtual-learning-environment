@@ -1,10 +1,23 @@
 const Quiz = require('../models/Quiz');
+const Question = require('../models/Question');
 const Course = require('../models/Course');
 const asyncHandler = require('../middleware/asyncHandler');
 
 exports.getQuizzes = asyncHandler(async (req, res) => {
-  const quizzes = await Quiz.find({ course: req.params.id }).sort('-createdAt');
-  res.status(200).json({ success: true, count: quizzes.length, data: quizzes });
+  const quizzes = await Quiz.find({ course: req.params.id }).sort('-createdAt').lean();
+
+  // Attach question count to each quiz efficiently
+  const counts = await Question.aggregate([
+    { $match: { quiz: { $in: quizzes.map(q => q._id) } } },
+    { $group: { _id: '$quiz', count: { $sum: 1 } } }
+  ]);
+  const countMap = Object.fromEntries(counts.map(c => [c._id.toString(), c.count]));
+  const quizzesWithCount = quizzes.map(q => ({
+    ...q,
+    questionCount: countMap[q._id.toString()] ?? 0,
+  }));
+
+  res.status(200).json({ success: true, count: quizzes.length, data: quizzesWithCount });
 });
 
 exports.getQuiz = asyncHandler(async (req, res) => {

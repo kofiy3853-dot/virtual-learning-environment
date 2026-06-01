@@ -19,6 +19,7 @@ interface Quiz {
   duration?: number;
   totalMarks?: number;
   isPublished?: boolean;
+  questionCount?: number;
   questions?: unknown[];
   startTime?: string;
   endTime?: string;
@@ -128,7 +129,7 @@ export default function QuizzesPage() {
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Questions</p>
             <p className="text-2xl font-extrabold text-blue-600">
-              {(quizzes as Quiz[]).reduce((s: number, q: Quiz) => s + (q.questions?.length ?? 0), 0)}
+              {(quizzes as Quiz[]).reduce((s: number, q: Quiz) => s + (q.questionCount ?? q.questions?.length ?? 0), 0)}
             </p>
           </div>
           <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
@@ -226,7 +227,7 @@ export default function QuizzesPage() {
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Questions</p>
-                    <p className="text-sm font-bold text-slate-900">{q.questions?.length ?? 0}</p>
+                    <p className="text-sm font-bold text-slate-900">{q.questionCount ?? q.questions?.length ?? 0}</p>
                   </div>
                 </div>
 
