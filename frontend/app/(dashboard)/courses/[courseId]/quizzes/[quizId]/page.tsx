@@ -196,9 +196,9 @@ export default function QuizDetailPage() {
   }
 
   const now = new Date();
-  const isAvailable = quiz.startTime && quiz.endTime
-    ? now >= new Date(quiz.startTime) && now <= new Date(quiz.endTime)
-    : true;
+  const isAvailable = !quiz.startTime || !quiz.endTime || (
+    now >= new Date(quiz.startTime) && now <= new Date(quiz.endTime)
+  );
 
   return (
     <div className="space-y-5 pb-10">

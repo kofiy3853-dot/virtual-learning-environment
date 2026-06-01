@@ -27,14 +27,18 @@ exports.startAttempt = asyncHandler(async (req, res) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
 
-  const now = new Date();
-  if (now < quiz.startTime || now > quiz.endTime) {
-    return res.status(403).json({ success: false, message: 'Quiz is not available at this time' });
+  if (!quiz.isPublished) {
+    return res.status(403).json({ success: false, message: 'This quiz has not been published yet' });
   }
 
   const existingAttempt = await QuizAttempt.findOne({ quiz: req.params.id, student: req.user.id });
   if (existingAttempt) {
-    return res.status(400).json({ success: false, message: 'You have already attempted this quiz' });
+    // Return existing in-progress attempt with questions so student can continue
+    if (existingAttempt.status === 'in_progress') {
+      const questions = await Question.find({ quiz: req.params.id }).sort('order');
+      return res.status(200).json({ success: true, data: { attempt: existingAttempt, questions } });
+    }
+    return res.status(400).json({ success: false, message: 'You have already completed this quiz' });
   }
 
   const attempt = await QuizAttempt.create({

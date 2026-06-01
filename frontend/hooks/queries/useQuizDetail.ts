@@ -28,28 +28,35 @@ async function fetchQuizDetail(
   const qRes = await quizApi.getQuiz(quizId);
   const quiz = qRes.data.data as Quiz;
 
-  // Fetch questions from the dedicated endpoint — accessible to all roles
   let questions: Question[] = [];
-  try {
-    const qsRes = await quizApi.getQuestions(quizId);
-    questions = qsRes.data.data || [];
-  } catch {
-    questions = [];
-  }
-
   let attempt: QuizAttempt | null = null;
   let allAttempts: QuizAttempt[] = [];
 
   if (role.isStudent) {
+    // Get student's attempt first
     try {
       const aRes = await quizApi.getMyAttempt(quizId);
       attempt = aRes.data.data ?? null;
     } catch {
       attempt = null;
     }
+    // Fetch questions for the student (needed to display the quiz)
+    try {
+      const qsRes = await quizApi.getQuestions(quizId);
+      questions = qsRes.data.data || [];
+    } catch {
+      questions = [];
+    }
   }
 
   if (role.isTeacher) {
+    // Teachers always fetch questions
+    try {
+      const qsRes = await quizApi.getQuestions(quizId);
+      questions = qsRes.data.data || [];
+    } catch {
+      questions = [];
+    }
     try {
       const atRes = await quizApi.getAllAttempts(quizId);
       allAttempts = atRes.data.data || [];
