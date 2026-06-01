@@ -23,7 +23,6 @@ interface ContentItem {
   type: 'pdf' | 'video' | 'slide' | 'note' | 'image';
   fileUrl: string;
 }
-
 const CONTENT_CONFIG = {
   pdf:   { icon: FileText,     bg: 'bg-rose-50',    text: 'text-rose-600',    border: 'border-rose-100',    label: 'Lecture PDF' },
   video: { icon: Video,        bg: 'bg-blue-50',    text: 'text-blue-600',    border: 'border-blue-100',    label: 'Video Lecture' },

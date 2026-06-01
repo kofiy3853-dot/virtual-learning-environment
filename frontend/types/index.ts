@@ -20,6 +20,7 @@ export interface ContentItem {
 export interface Module {
   _id: string;
   title: string;
+  description?: string;
   weekNumber: number;
   order: number;
   content?: ContentItem[];

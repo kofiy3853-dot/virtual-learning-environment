@@ -7,6 +7,7 @@ import { queryKeys } from '@/lib/queryKeys';
 export interface CourseModule {
   _id: string;
   title: string;
+  description?: string;
   weekNumber: number;
   order: number;
 }
