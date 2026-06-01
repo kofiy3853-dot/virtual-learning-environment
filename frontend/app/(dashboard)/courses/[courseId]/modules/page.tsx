@@ -57,7 +57,7 @@ export default function ModulesPage() {
   const [toggling, setToggling] = useState<string | null>(null);
   
   const [showModForm, setShowModForm] = useState(false);
-  const [modForm, setModForm] = useState({ title: '', weekNumber: '', order: '' });
+  const [modForm, setModForm] = useState({ title: '', description: '', weekNumber: '', order: '' });
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
 
@@ -100,11 +100,12 @@ export default function ModulesPage() {
     try {
       await courseApi.createModule(courseId, {
         title: modForm.title,
+        description: modForm.description,
         weekNumber: parseInt(modForm.weekNumber),
         order: parseInt(modForm.order) || modules.length + 1,
       });
       await refetchModules();
-      setModForm({ title: '', weekNumber: '', order: '' });
+      setModForm({ title: '', description: '', weekNumber: '', order: '' });
       setShowModForm(false);
       toast.success('Syllabus module created successfully.');
     } catch (e) {
@@ -276,6 +277,19 @@ export default function ModulesPage() {
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <label htmlFor="mod-desc" className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">
+                    Module Description <span className="normal-case font-semibold opacity-60">(what students will learn this week)</span>
+                  </label>
+                  <textarea
+                    id="mod-desc"
+                    rows={3}
+                    className="input-premium text-sm resize-none w-full"
+                    placeholder="e.g., This week we cover social, legal and ethical issues in computing including privacy, intellectual property and cybercrime..."
+                    value={modForm.description}
+                    onChange={e => setModForm(p=>({...p,description:e.target.value}))}
+                  />
+                </div>
                 <div className="flex gap-3">
                   <button type="submit" disabled={creating} className="btn btn-primary h-12 px-6 text-xs font-bold shadow-sm">
                     {creating ? <Loader2 size={16} className="animate-spin" /> : 'Create Module'}
@@ -399,6 +413,14 @@ export default function ModulesPage() {
                       <div className="px-6 pb-6 pt-2">
                         <div className="h-px bg-slate-100 mb-6" />
                         
+                        {/* Module description */}
+                        {mod.description && (
+                          <div className="mb-6 p-4 rounded-2xl bg-primary-50/50 border border-primary-100">
+                            <p className="text-xs font-bold text-primary-700 uppercase tracking-wider mb-1">What you'll learn this week</p>
+                            <p className="text-sm text-slate-700 leading-relaxed">{mod.description}</p>
+                          </div>
+                        )}
+
                         {items.length === 0 ? (
                           <div className="py-12 text-center rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center gap-2">
                             <Info size={24} className="text-slate-300" />

@@ -11,6 +11,11 @@ const ModuleSchema = new mongoose.Schema({
     required: [true, 'Please add a module title'],
     trim: true,
   },
+  description: {
+    type: String,
+    trim: true,
+    default: '',
+  },
   weekNumber: {
     type: Number,
     required: true,
