@@ -135,9 +135,8 @@ exports.login = async (req, res, next) => {
 
     logger.info(`[AUTH] Login successful: ${email} (${user.role})`);
     
-    // Set lastLogin on success
-    user.lastLogin = Date.now();
-    await user.save({ validateBeforeSave: false });
+    // Update lastLogin without triggering pre-save hooks
+    await User.findByIdAndUpdate(user._id, { lastLogin: Date.now() });
 
     sendTokenResponse(user, 200, res);
   } catch (error) {
