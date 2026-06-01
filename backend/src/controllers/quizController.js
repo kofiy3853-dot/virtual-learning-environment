@@ -1,27 +1,19 @@
 const Quiz = require('../models/Quiz');
 const Course = require('../models/Course');
+const asyncHandler = require('../middleware/asyncHandler');
 
-// @desc    Get all quizzes for a course
-// @route   GET /api/courses/:id/quizzes
-// @access  Private
-exports.getQuizzes = async (req, res, next) => {
+exports.getQuizzes = asyncHandler(async (req, res) => {
   const quizzes = await Quiz.find({ course: req.params.id }).sort('-createdAt');
   res.status(200).json({ success: true, count: quizzes.length, data: quizzes });
-};
+});
 
-// @desc    Get single quiz
-// @route   GET /api/quizzes/:id
-// @access  Private
-exports.getQuiz = async (req, res, next) => {
+exports.getQuiz = asyncHandler(async (req, res) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
   res.status(200).json({ success: true, data: quiz });
-};
+});
 
-// @desc    Create a quiz
-// @route   POST /api/courses/:id/quizzes
-// @access  Private (Teacher)
-exports.createQuiz = async (req, res, next) => {
+exports.createQuiz = asyncHandler(async (req, res) => {
   const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
   if (course.teacher.toString() !== req.user.id && req.user.role !== 'admin') {
@@ -30,53 +22,38 @@ exports.createQuiz = async (req, res, next) => {
   req.body.course = req.params.id;
   const quiz = await Quiz.create(req.body);
   res.status(201).json({ success: true, data: quiz });
-};
+});
 
-// @desc    Update a quiz
-// @route   PUT /api/quizzes/:id
-// @access  Private (Teacher)
-exports.updateQuiz = async (req, res, next) => {
+exports.updateQuiz = asyncHandler(async (req, res) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
-
   const course = await Course.findById(quiz.course);
   if (course && course.teacher.toString() !== req.user.id && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Not authorized' });
   }
-
   const updated = await Quiz.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
   res.status(200).json({ success: true, data: updated });
-};
+});
 
-// @desc    Delete a quiz
-// @route   DELETE /api/quizzes/:id
-// @access  Private (Teacher)
-exports.deleteQuiz = async (req, res, next) => {
+exports.deleteQuiz = asyncHandler(async (req, res) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
-
   const course = await Course.findById(quiz.course);
   if (course && course.teacher.toString() !== req.user.id && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Not authorized' });
   }
-
   await quiz.deleteOne();
   res.status(200).json({ success: true, data: {} });
-};
+});
 
-// @desc    Publish a quiz
-// @route   PATCH /api/quizzes/:id/publish
-// @access  Private (Teacher)
-exports.publishQuiz = async (req, res, next) => {
+exports.publishQuiz = asyncHandler(async (req, res) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
-
   const course = await Course.findById(quiz.course);
   if (course && course.teacher.toString() !== req.user.id && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Not authorized' });
   }
-
   quiz.isPublished = !quiz.isPublished;
   await quiz.save();
   res.status(200).json({ success: true, data: quiz });
-};
+});
