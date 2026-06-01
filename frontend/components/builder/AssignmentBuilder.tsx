@@ -5,15 +5,18 @@ import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bold, Italic, List, ListOrdered, Code,
   Sparkles, Calendar, Target, Globe, Shield,
   Save, Loader2, Heading1, Heading2, Quote,
   ArrowLeft, ChevronUp, Plus, X,
-  CheckCircle2, AlertCircle, FileText, Clock
+  CheckCircle2, AlertCircle, FileText, Clock,
+  Brain, Zap
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { courseApi } from '@/utils/api/courseApi';
+import { aiApi } from '@/utils/api/aiApi';
 import toast from 'react-hot-toast';
 
 // ─── TOOLBAR ─────────────────────────────────────────────────────────────────
@@ -72,6 +75,7 @@ export default function AssignmentBuilder({ courseId }: { courseId: string }) {
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
   const [showRubric, setShowRubric] = useState(false);
   const [touched, setTouched] = useState({ title: false, dueDate: false, points: false });
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -222,6 +226,12 @@ export default function AssignmentBuilder({ courseId }: { courseId: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAiPanelOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 font-semibold text-xs hover:bg-violet-100 transition-all"
+          >
+            <Brain size={13} /> AI Generate
+          </button>
           <button
             onClick={saveDraft}
             disabled={isDraftSaving}
@@ -486,6 +496,44 @@ export default function AssignmentBuilder({ courseId }: { courseId: string }) {
           <ChevronUp size={18} />
         </button>
       )}
+
+      {/* AI Assignment Generator Panel */}
+      <AnimatePresence>
+        {aiPanelOpen && (
+          <AssignmentAIPanel
+            onClose={() => setAiPanelOpen(false)}
+            onGenerated={(result) => {
+              if (result.title) setTitle(result.title);
+              if (result.description && editor) {
+                // Convert plain text description to HTML paragraphs
+                const html = result.description
+                  .split('\n')
+                  .filter((l: string) => l.trim())
+                  .map((l: string) => `<p>${l}</p>`)
+                  .join('');
+                editor.commands.setContent(html);
+              }
+              if (result.rubric?.criteria?.length) {
+                const criteria = result.rubric.criteria.map((c: { name: string; description: string; points: number }) => ({
+                  id: `rc-${Date.now()}-${Math.random()}`,
+                  label: c.name,
+                  description: c.description || '',
+                  points: c.points || 10,
+                }));
+                setRubric(criteria);
+                setPoints(result.rubric.totalPoints || criteria.reduce((s: number, c: { points: number }) => s + c.points, 0));
+                setShowRubric(true);
+              }
+              if (result.objectives?.length) {
+                const objectivesHtml = `<h2>Objectives</h2><ul>${result.objectives.map((o: string) => `<li>${o}</li>`).join('')}</ul>`;
+                editor?.commands.insertContentAt(editor.state.doc.content.size, objectivesHtml);
+              }
+              setAiPanelOpen(false);
+              toast.success('Assignment filled from AI — review and publish when ready');
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -504,5 +552,131 @@ function ProtocolToggle({ label, defaultChecked }: { label: string; defaultCheck
         <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${checked ? 'left-5' : 'left-0.5'}`} />
       </button>
     </div>
+  );
+}
+
+// ─── AI ASSIGNMENT GENERATOR PANEL ───────────────────────────────────────────
+function AssignmentAIPanel({ onClose, onGenerated }: {
+  onClose: () => void;
+  onGenerated: (result: any) => void;
+}) {
+  const [topic, setTopic] = useState('');
+  const [outcomes, setOutcomes] = useState('');
+  const [difficulty, setDifficulty] = useState('medium');
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleGenerate = async () => {
+    if (!topic.trim()) { setError('Please enter a topic'); return; }
+    setError('');
+    setGenerating(true);
+    try {
+      const outcomeList = outcomes
+        ? outcomes.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : ['Understand the topic', 'Apply key concepts', 'Analyse and evaluate'];
+      const res = await aiApi.generateAssignmentPrompt(topic, outcomeList, difficulty);
+      const data = res.data?.data;
+      if (!data) throw new Error('No data returned');
+      onGenerated(data);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err.message || 'Failed to generate assignment');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col border-l border-slate-200"
+      >
+        <div className="h-14 border-b border-slate-200 flex items-center justify-between px-6 bg-gradient-to-r from-violet-50 to-indigo-50 shrink-0">
+          <div className="flex items-center gap-2 text-violet-700">
+            <Brain size={18} />
+            <span className="font-bold text-sm">AI Assignment Generator</span>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-900 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Describe the assignment topic and AI will generate the title, instructions, objectives, and grading rubric — all filled directly into the builder.
+          </p>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Topic *</label>
+            <textarea
+              rows={3}
+              placeholder="e.g. Build a REST API with Node.js, Analyse climate change data, Essay on the French Revolution..."
+              value={topic}
+              onChange={e => { setTopic(e.target.value); setError(''); }}
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all text-sm resize-none"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+              Learning Outcomes <span className="normal-case font-normal text-slate-400">(comma-separated, optional)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Understand REST principles, Apply HTTP methods, Test endpoints"
+              value={outcomes}
+              onChange={e => setOutcomes(e.target.value)}
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all text-sm"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Difficulty</label>
+            <select
+              value={difficulty}
+              onChange={e => setDifficulty(e.target.value)}
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all text-sm bg-white"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+
+          <div className="bg-violet-50 border border-violet-100 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-bold text-violet-800">What gets filled in</p>
+            <ul className="space-y-1 text-xs text-violet-700">
+              <li>• Assignment title</li>
+              <li>• Full instructions with objectives</li>
+              <li>• Grading rubric with criteria and points</li>
+              <li>• You can edit everything before publishing</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-200 bg-slate-50 shrink-0">
+          <button
+            onClick={handleGenerate}
+            disabled={generating || !topic.trim()}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition-all disabled:opacity-50"
+          >
+            {generating ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />}
+            {generating ? 'Generating...' : 'Generate Assignment'}
+          </button>
+        </div>
+      </motion.div>
+    </>
   );
 }

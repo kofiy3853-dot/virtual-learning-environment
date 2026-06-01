@@ -11,7 +11,7 @@ import {
   FileText, Video, Presentation, FileCode2, Image as ImageIcon, 
   ChevronDown, Plus, Trash2, Paperclip, Loader2, BookOpen,
   Calendar, Layers, Filter, Search, Info, AlertCircle,
-  ArrowRight, Download, CheckCircle2, X, CircleCheck
+  ArrowRight, Download, CheckCircle2, X, CircleCheck, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/utils/api/axiosInstance';
@@ -61,6 +61,7 @@ export default function ModulesPage() {
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [courseOutline, setCourseOutline] = useState<any>(null);
+  const [generatingDesc, setGeneratingDesc] = useState<string | null>(null); // moduleId or 'new'
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
   const isStudent = user?.role === 'student';
@@ -192,6 +193,56 @@ export default function ModulesPage() {
     m.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     `week ${m.weekNumber}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // AI: generate description for a module and save to MongoDB
+  const handleGenerateModuleDesc = async (moduleId: string, moduleTitle: string, weekNumber: number) => {
+    if (!course) return;
+    setGeneratingDesc(moduleId);
+    try {
+      const res = await aiApi.generateLectureNotes(
+        `${moduleTitle} — Week ${weekNumber} of ${course.title}`,
+        []
+      );
+      const data = res.data?.data;
+      // Build a plain-text description from the AI JSON response
+      const desc = data?.introduction
+        || (data?.sections?.[0]?.content)
+        || (typeof data === 'string' ? data : `Week ${weekNumber}: ${moduleTitle}`);
+      // Save to MongoDB via the update module endpoint
+      await api.put(`/api/v1/modules/${moduleId}`, { description: desc });
+      await refetchModules();
+      toast.success('Module description generated and saved.');
+    } catch {
+      toast.error('Failed to generate description.');
+    } finally {
+      setGeneratingDesc(null);
+    }
+  };
+
+  // AI: generate description for the new module form
+  const handleGenerateNewModuleDesc = async () => {
+    if (!modForm.title || !course) {
+      toast.error('Enter a module title first.');
+      return;
+    }
+    setGeneratingDesc('new');
+    try {
+      const res = await aiApi.generateLectureNotes(
+        `${modForm.title} — ${course.title}`,
+        []
+      );
+      const data = res.data?.data;
+      const desc = data?.introduction
+        || (data?.sections?.[0]?.content)
+        || (typeof data === 'string' ? data : modForm.title);
+      setModForm(p => ({ ...p, description: desc }));
+      toast.success('Description generated — review and save.');
+    } catch {
+      toast.error('Failed to generate description.');
+    } finally {
+      setGeneratingDesc(null);
+    }
+  };
 
   return (
     <div className="space-y-8 pb-12 max-w-6xl mx-auto">
@@ -335,9 +386,20 @@ export default function ModulesPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="mod-desc" className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-1">
-                    Module Description <span className="normal-case font-semibold opacity-60">(what students will learn this week)</span>
-                  </label>
+                  <div className="flex items-center justify-between px-1">
+                    <label htmlFor="mod-desc" className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                      Module Description <span className="normal-case font-semibold opacity-60">(what students will learn this week)</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleGenerateNewModuleDesc}
+                      disabled={generatingDesc === 'new' || !modForm.title}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 text-[10px] font-bold hover:bg-violet-100 transition-all disabled:opacity-50"
+                    >
+                      {generatingDesc === 'new' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                      AI Fill
+                    </button>
+                  </div>
                   <textarea
                     id="mod-desc"
                     rows={3}
@@ -471,10 +533,35 @@ export default function ModulesPage() {
                         <div className="h-px bg-slate-100 mb-6" />
                         
                         {/* Module description */}
-                        {mod.description && (
-                          <div className="mb-6 p-4 rounded-2xl bg-primary-50/50 border border-primary-100">
-                            <p className="text-xs font-bold text-primary-700 uppercase tracking-wider mb-1">What you'll learn this week</p>
-                            <p className="text-sm text-slate-700 leading-relaxed">{mod.description}</p>
+                        {(mod.description || isTeacher) && (
+                          <div className="mb-6">
+                            {mod.description ? (
+                              <div className="p-4 rounded-2xl bg-primary-50/50 border border-primary-100">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-xs font-bold text-primary-700 uppercase tracking-wider">What you'll learn this week</p>
+                                  {isTeacher && (
+                                    <button
+                                      onClick={() => handleGenerateModuleDesc(mod._id, mod.title, mod.weekNumber)}
+                                      disabled={generatingDesc === mod._id}
+                                      className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 text-[10px] font-bold hover:bg-violet-100 transition-all disabled:opacity-50"
+                                    >
+                                      {generatingDesc === mod._id ? <Loader2 size={9} className="animate-spin" /> : <Sparkles size={9} />}
+                                      Regenerate
+                                    </button>
+                                  )}
+                                </div>
+                                <p className="text-sm text-slate-700 leading-relaxed">{mod.description}</p>
+                              </div>
+                            ) : isTeacher ? (
+                              <button
+                                onClick={() => handleGenerateModuleDesc(mod._id, mod.title, mod.weekNumber)}
+                                disabled={generatingDesc === mod._id}
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/50 text-violet-600 text-xs font-bold hover:bg-violet-50 transition-all disabled:opacity-50"
+                              >
+                                {generatingDesc === mod._id ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                                {generatingDesc === mod._id ? 'Generating description...' : 'AI Generate Module Description'}
+                              </button>
+                            ) : null}
                           </div>
                         )}
 

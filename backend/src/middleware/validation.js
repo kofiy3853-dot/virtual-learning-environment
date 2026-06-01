@@ -94,6 +94,7 @@ const createModuleSchema = Joi.object({
 
 const updateModuleSchema = Joi.object({
   title: Joi.string().min(2).max(100).optional(),
+  description: Joi.string().max(5000).optional().allow(''),
   weekNumber: Joi.number().integer().min(1).max(52).optional(),
   order: Joi.number().integer().min(1).optional()
 }).min(1);
