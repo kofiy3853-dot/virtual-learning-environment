@@ -30,6 +30,10 @@ const QuestionSchema = new mongoose.Schema({
   order: {
     type: Number,
     default: 0,
+  },
+  explanation: {
+    type: String,
+    required: false
   }
 });
 

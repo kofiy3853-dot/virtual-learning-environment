@@ -76,6 +76,7 @@ export interface Question {
   correctAnswer: string;
   marks: number;
   order: number;
+  explanation?: string;
 }
 
 export interface Attempt {

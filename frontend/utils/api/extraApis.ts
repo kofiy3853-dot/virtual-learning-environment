@@ -19,5 +19,6 @@ export const quizApi = {
     api.post(`/api/v1/quizzes/${quizId}/submit`, data),
   getMyAttempt: (quizId: string) => api.get(`/api/v1/quizzes/${quizId}/my-attempt`),
   getAllAttempts: (quizId: string) => api.get(`/api/v1/quizzes/${quizId}/attempts`),
-  gradeAttempt: (attemptId: string, data: { score: number; feedback?: string }) => api.patch(`/api/v1/attempts/${attemptId}/grade`, data),
+  gradeAttempt: (attemptId: string, data: { scoreAdjustment: number; feedback?: string }) => api.patch(`/api/v1/attempts/${attemptId}/grade`, data),
+  resetAttempt: (quizId: string, studentId: string) => api.delete(`/api/v1/quizzes/${quizId}/attempts/${studentId}`),
 };

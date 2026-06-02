@@ -43,6 +43,7 @@ interface Question {
   required: boolean;
   options: string[];
   correctAnswer: string;
+  explanation?: string;
 }
 
 // --- SORTABLE QUESTION ITEM ---
@@ -207,6 +208,7 @@ export default function QuizBuilder() {
           type: q.type,
           marks: q.marks,
           order: i + 1,
+          explanation: q.explanation,
         };
         if (q.type === 'multiple_choice') {
           payload.options = q.options.filter(o => o.trim());
@@ -546,6 +548,7 @@ export default function QuizBuilder() {
                     required: true,
                     options: q.options || ['Option A', 'Option B', 'Option C', 'Option D'],
                     correctAnswer: q.correctAnswer !== undefined ? String(q.correctAnswer) : '0',
+                    explanation: q.explanation || '',
                   }));
                   setQuestions(prev => {
                     const updated = [...prev, ...newQuestions];
