@@ -1,6 +1,7 @@
 const Question = require('../models/Question');
 const Quiz = require('../models/Quiz');
 const Course = require('../models/Course');
+const QuizAttempt = require('../models/QuizAttempt');
 const asyncHandler = require('../middleware/asyncHandler');
 
 async function verifyQuizOwnership(quizId, userId, userRole) {
@@ -23,6 +24,14 @@ exports.addQuestion = asyncHandler(async (req, res) => {
 });
 
 exports.getQuestions = asyncHandler(async (req, res) => {
+  const quiz = await Quiz.findById(req.params.id);
+  if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
+
+  // Students cannot access questions for unpublished quizzes
+  if (!quiz.isPublished && req.user.role === 'student') {
+    return res.status(403).json({ success: false, message: 'This quiz has not been published yet' });
+  }
+
   const questions = await Question.find({ quiz: req.params.id }).sort('order');
   res.status(200).json({ success: true, count: questions.length, data: questions });
 });

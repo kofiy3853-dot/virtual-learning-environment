@@ -235,26 +235,72 @@ function ConfirmScreen({
 export default function ImmersiveQuizPlayer({ quiz, questions, attempt, onSubmit, timeLeft }: ImmersiveQuizPlayerProps) {
   const { user } = useAuth();
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    // Restore saved draft from localStorage on mount
+    try {
+      const saved = localStorage.getItem(`quiz-draft-${attempt._id}`);
+      if (saved) return JSON.parse(saved) as Record<string, string>;
+    } catch {
+      // ignore parse errors
+    }
+    return {};
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
 
+  // Use a ref so the auto-submit effect always reads the latest answers/isSubmitting
+  const answersRef = React.useRef(answers);
+  const isSubmittingRef = React.useRef(isSubmitting);
+  answersRef.current = answers;
+  isSubmittingRef.current = isSubmitting;
+
   const currentQ = questions[currentIdx];
   const answeredCount = Object.keys(answers).length;
-  const progressPct = (answeredCount / questions.length) * 100;
+  const progressPct = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+
+  // Guard: questions not loaded yet
+  if (!questions.length || !currentQ) {
+    return (
+      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center z-50">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+          <p className="text-sm text-slate-500">Loading questions...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleFinalSubmit = async () => {
+    if (isSubmittingRef.current) return; // prevent duplicate submits
     setIsSubmitting(true);
-    await onSubmit(answers);
+    await onSubmit(answersRef.current);
+    // Remove the draft from localStorage after successful submit
+    try {
+      localStorage.removeItem(`quiz-draft-${attempt._id}`);
+    } catch {
+      // ignore
+    }
     setIsSubmitting(false);
   };
 
-  // Auto-submit when time runs out
+  // Auto-save answers to localStorage (throttled to at most every 30 seconds)
   useEffect(() => {
-    if (timeLeft === 0 && !isSubmitting) {
-      setTimeout(() => void handleFinalSubmit(), 0);
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(`quiz-draft-${attempt._id}`, JSON.stringify(answers));
+      } catch {
+        // ignore storage errors
+      }
+    }, 30_000);
+    return () => clearTimeout(id);
+  }, [answers, attempt._id]);
+
+  // Auto-submit when time runs out — uses refs to avoid stale closure
+  useEffect(() => {
+    if (timeLeft === 0 && !isSubmittingRef.current) {
+      void handleFinalSubmit();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);

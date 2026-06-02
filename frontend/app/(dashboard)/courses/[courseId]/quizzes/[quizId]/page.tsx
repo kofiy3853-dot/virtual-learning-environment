@@ -11,13 +11,18 @@ import { queryKeys } from '@/lib/queryKeys';
 import ImmersiveQuizPlayer from '@/components/learning/ImmersiveQuizPlayer';
 import {
   Clock, Play, Loader2,
-  CheckCircle2, Plus, Trash2, AlertCircle,
+  CheckCircle2, XCircle, Plus, Trash2, AlertCircle,
   Target, ChevronLeft, TrendingUp, Users, List
 } from 'lucide-react';
 import Link from 'next/link';
 import { Quiz, Course } from '@/types';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+
+interface AnswerResult {
+  questionId: string;
+  correct: boolean | null;
+}
 
 interface Question {
   _id: string;
@@ -47,6 +52,11 @@ export default function QuizDetailPage() {
   const [showQForm, setShowQForm] = useState(false);
   const autoOpened = useRef(false);
   const [addingQ, setAddingQ] = useState(false);
+  const [answerResults, setAnswerResults] = useState<AnswerResult[]>([]);
+  const [gradingAttempt, setGradingAttempt] = useState<QuizAttempt | null>(null);
+  const [gradeForm, setGradeForm] = useState({ scoreAdjustment: '', feedback: '' });
+  const [gradeFormError, setGradeFormError] = useState('');
+  const [submittingGrade, setSubmittingGrade] = useState(false);
 
   const [qForm, setQForm] = useState({
     text: '',
@@ -66,6 +76,10 @@ export default function QuizDetailPage() {
     if (!data) return;
     setQuestions(data.questions as Question[]);
     setAttempt(data.attempt);
+    // If the attempt includes answerResults from the server, set them
+    if (data.attempt?.answerResults) {
+      setAnswerResults(data.attempt.answerResults as AnswerResult[]);
+    }
     setAllAttempts(data.allAttempts);
     if (user?.role === 'teacher' && data.questions.length === 0 && !autoOpened.current) {
       setShowQForm(true);
@@ -86,9 +100,15 @@ export default function QuizDetailPage() {
     try {
       const res = await quizApi.startAttempt(quizId);
       const { attempt: newAttempt, questions: startQuestions } = res.data.data;
+      // Ensure questions are in state before mounting the player
+      if (startQuestions?.length) {
+        setQuestions(startQuestions);
+      } else {
+        // Fallback: fetch questions separately before mounting player
+        const qRes = await quizApi.getQuestions(quizId);
+        setQuestions(qRes.data.data);
+      }
       setAttempt(newAttempt);
-      // startAttempt returns questions — use them directly so student sees them immediately
-      if (startQuestions?.length) setQuestions(startQuestions);
       invalidateQuiz();
     } catch (e) {
       const error = e as { response?: { data?: { message?: string } } };
@@ -102,7 +122,11 @@ export default function QuizDetailPage() {
     try {
       const answersArr = Object.entries(answers).map(([questionId, answer]) => ({ questionId, answer }));
       const res = await quizApi.submitAttempt(quizId, { answers: answersArr });
-      setAttempt(res.data.data);
+      const responseData = res.data.data;
+      setAttempt(responseData);
+      if (responseData.answerResults) {
+        setAnswerResults(responseData.answerResults);
+      }
       invalidateQuiz();
       toast.success('Quiz submitted successfully');
     } catch (e) {
@@ -119,7 +143,7 @@ export default function QuizDetailPage() {
     const tick = setInterval(() => {
       const left = Math.max(0, deadline - Date.now());
       setTimeLeft(left);
-      if (left === 0) { clearInterval(tick); handleFinalSubmit({}); }
+      if (left === 0) { clearInterval(tick); }
     }, 1000);
     return () => clearInterval(tick);
   }, [attempt, quiz, handleFinalSubmit]);
@@ -183,7 +207,7 @@ export default function QuizDetailPage() {
   );
 
   // Student in active attempt — full screen player
-  if (isStudent && attempt?.status === 'in_progress') {
+  if (isStudent && attempt?.status === 'in_progress' && questions.length > 0) {
     return (
       <ImmersiveQuizPlayer
         quiz={quiz}
@@ -192,6 +216,16 @@ export default function QuizDetailPage() {
         onSubmit={handleFinalSubmit}
         timeLeft={timeLeft}
       />
+    );
+  }
+
+  // Questions still loading for an active attempt
+  if (isStudent && attempt?.status === 'in_progress' && questions.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+        <span className="text-sm text-slate-500">Loading questions...</span>
+      </div>
     );
   }
 
@@ -276,30 +310,83 @@ export default function QuizDetailPage() {
                     {starting ? 'Starting...' : 'Start Quiz'}
                   </button>
                 </div>
-              ) : (
+              ) : attempt.status === 'submitted' ? (
+                /* Pending manual grading */
                 <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm text-center space-y-5">
-                  <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mx-auto">
-                    <CheckCircle2 size={24} />
+                  <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mx-auto">
+                    <Loader2 size={24} />
                   </div>
                   <div>
-                    <h2 className="text-base font-semibold text-slate-900 mb-1">Quiz Submitted</h2>
-                    <p className="text-sm text-slate-500">Your answers have been recorded.</p>
+                    <h2 className="text-base font-semibold text-slate-900 mb-1">Grading in Progress</h2>
+                    <p className="text-sm text-slate-500">Your short-answer responses are being reviewed by your teacher.</p>
                   </div>
                   {attempt.score !== undefined && (
                     <div className="inline-flex flex-col items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-8 py-5">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Your Score</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Auto-scored Points</p>
                       <p className="text-4xl font-bold text-slate-900">
                         {attempt.score}
                         <span className="text-lg text-slate-400 font-normal"> / {quiz.totalMarks}</span>
                       </p>
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-primary-600">
-                        <TrendingUp size={13} />
-                        {Math.round((attempt.score / quiz.totalMarks) * 100)}%
-                      </div>
                     </div>
                   )}
-                  {attempt.status === 'submitted' && (
-                    <p className="text-xs text-slate-400">Short answers are pending manual grading.</p>
+                </div>
+              ) : (
+                /* Graded — detailed answer review */
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  {/* Score header */}
+                  <div className="p-6 text-center border-b border-slate-100 space-y-3">
+                    <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mx-auto">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <h2 className="text-base font-semibold text-slate-900">Quiz Results</h2>
+                    {attempt.score !== undefined && (
+                      <div className="inline-flex flex-col items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-8 py-5">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Your Score</p>
+                        <p className="text-4xl font-bold text-slate-900">
+                          {attempt.score}
+                          <span className="text-lg text-slate-400 font-normal"> / {quiz.totalMarks}</span>
+                        </p>
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-primary-600">
+                          <TrendingUp size={13} />
+                          {Math.round((attempt.score / quiz.totalMarks) * 100)}%
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Per-question review */}
+                  {questions.length > 0 && (
+                    <div className="divide-y divide-slate-100">
+                      {questions.map((q, idx) => {
+                        const result = answerResults.find(r => r.questionId === q._id);
+                        const studentAnswer = attempt.answers?.find(
+                          (a: { questionId: string; answer: string }) => a.questionId === q._id
+                        );
+                        return (
+                          <div key={q._id} className="p-5 space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-sm font-semibold text-slate-900">
+                                <span className="text-slate-400 font-normal mr-1">Q{idx + 1}.</span>
+                                {q.text}
+                              </p>
+                              {q.type !== 'short_answer' && result && (
+                                result.correct
+                                  ? <CheckCircle2 size={18} className="shrink-0 text-emerald-500 mt-0.5" />
+                                  : <XCircle size={18} className="shrink-0 text-red-500 mt-0.5" />
+                              )}
+                            </div>
+                            <p className="text-sm text-slate-600">
+                              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide mr-2">Your answer:</span>
+                              {studentAnswer?.answer ?? <span className="italic text-slate-400">No answer</span>}
+                            </p>
+                            {q.type === 'short_answer' && attempt.feedback && (
+                              <p className="text-sm text-primary-700 bg-primary-50 border border-primary-100 rounded-lg px-3 py-2">
+                                <span className="font-semibold">Feedback: </span>{attempt.feedback}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}
@@ -553,22 +640,215 @@ export default function QuizDetailPage() {
               </div>
               <div className="space-y-3">
                 {allAttempts.slice(0, 5).map((a) => (
-                  <div key={a._id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
+                  <div key={a._id} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center text-xs font-bold shrink-0">
                         {a.student?.name?.charAt(0) ?? '?'}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs font-semibold text-slate-900 truncate max-w-[100px]">{a.student?.name ?? 'Student'}</p>
                         <p className="text-[10px] text-slate-400 capitalize">{a.status}</p>
                       </div>
                     </div>
-                    <p className="text-sm font-bold text-slate-700">
-                      {a.score ?? '—'}
-                      <span className="text-xs text-slate-400 font-normal"> /{quiz.totalMarks}</span>
-                    </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <p className="text-sm font-bold text-slate-700">
+                        {a.score ?? '—'}
+                        <span className="text-xs text-slate-400 font-normal"> /{quiz.totalMarks}</span>
+                      </p>
+                      {a.status === 'submitted' && (
+                        <button
+                          onClick={() => {
+                            setGradingAttempt(a);
+                            setGradeForm({ scoreAdjustment: '', feedback: '' });
+                            setGradeFormError('');
+                          }}
+                          className="text-[10px] font-semibold px-2 py-1 rounded-md bg-primary-50 text-primary-600 border border-primary-200 hover:bg-primary-100 transition-colors"
+                          title="Grade this attempt"
+                        >
+                          Grade
+                        </button>
+                      )}
+                      {a.student?._id && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Reset ${a.student?.name ?? 'this student'}'s attempt?`)) return;
+                            try {
+                              await quizApi.resetAttempt(quizId, a.student!._id);
+                              setAllAttempts(prev => prev.filter(att => att._id !== a._id));
+                              invalidateQuiz();
+                              toast.success('Attempt reset successfully');
+                            } catch {
+                              toast.error('Failed to reset attempt');
+                            }
+                          }}
+                          className="text-[10px] font-semibold px-2 py-1 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+                          title="Reset this student's attempt"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Grading Panel */}
+          {isTeacher && gradingAttempt && (
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Grading: {gradingAttempt.student?.name ?? 'Student'}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Review answers and provide feedback</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setGradingAttempt(null);
+                    setGradeForm({ scoreAdjustment: '', feedback: '' });
+                    setGradeFormError('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label="Close grading panel"
+                >
+                  <XCircle size={20} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4 max-h-[500px] overflow-y-auto">
+                {/* Student Answers */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Student Answers</h4>
+                  {questions.map((q, idx) => {
+                    const answer = gradingAttempt.answers?.find(
+                      (a: { questionId: string; answer: string }) => a.questionId === q._id
+                    );
+                    return (
+                      <div key={q._id} className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-2">
+                        <p className="text-sm font-semibold text-slate-900">
+                          <span className="text-slate-400 font-normal mr-1">Q{idx + 1}.</span>
+                          {q.text}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          <span className="font-semibold uppercase tracking-wide">Type:</span> {q.type.replace('_', ' ')}
+                        </p>
+                        <p className="text-sm text-slate-700">
+                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide mr-2">Answer:</span>
+                          {answer?.answer || <span className="italic text-slate-400">No answer provided</span>}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Grading Form */}
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    
+                    // Validation
+                    const scoreAdjustmentValue = gradeForm.scoreAdjustment.trim();
+                    if (!scoreAdjustmentValue) {
+                      setGradeFormError('Score adjustment is required');
+                      return;
+                    }
+                    
+                    const scoreNum = parseFloat(scoreAdjustmentValue);
+                    if (isNaN(scoreNum)) {
+                      setGradeFormError('Score adjustment must be a valid number');
+                      return;
+                    }
+
+                    setGradeFormError('');
+                    setSubmittingGrade(true);
+
+                    try {
+                      const res = await quizApi.gradeAttempt(gradingAttempt._id, {
+                        scoreAdjustment: scoreNum,
+                        feedback: gradeForm.feedback.trim() || undefined,
+                      });
+
+                      // Update the attempt in the list
+                      setAllAttempts(prev =>
+                        prev.map(a => (a._id === gradingAttempt._id ? res.data.data : a))
+                      );
+
+                      toast.success('Grading submitted successfully');
+                      setGradingAttempt(null);
+                      setGradeForm({ scoreAdjustment: '', feedback: '' });
+                      invalidateQuiz();
+                    } catch (e) {
+                      const error = e as { response?: { data?: { message?: string } } };
+                      toast.error(error.response?.data?.message || 'Failed to submit grade');
+                    } finally {
+                      setSubmittingGrade(false);
+                    }
+                  }}
+                  className="space-y-4 pt-4 border-t border-slate-100"
+                >
+                  <div className="space-y-2">
+                    <label htmlFor="scoreAdjustment" className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                      Score Adjustment *
+                    </label>
+                    <input
+                      id="scoreAdjustment"
+                      type="text"
+                      inputMode="decimal"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm"
+                      placeholder="Enter adjustment (e.g., 5, -2, 0)"
+                      value={gradeForm.scoreAdjustment}
+                      onChange={e => {
+                        setGradeForm({ ...gradeForm, scoreAdjustment: e.target.value });
+                        setGradeFormError('');
+                      }}
+                    />
+                    <p className="text-xs text-slate-500">
+                      Current score: {gradingAttempt.score ?? 0}. Enter positive or negative number to adjust.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="feedback" className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                      Feedback (optional)
+                    </label>
+                    <textarea
+                      id="feedback"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm resize-none min-h-[80px]"
+                      placeholder="Provide feedback to the student..."
+                      value={gradeForm.feedback}
+                      onChange={e => setGradeForm({ ...gradeForm, feedback: e.target.value })}
+                    />
+                  </div>
+
+                  {gradeFormError && (
+                    <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <AlertCircle size={14} />
+                      {gradeFormError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGradingAttempt(null);
+                        setGradeForm({ scoreAdjustment: '', feedback: '' });
+                        setGradeFormError('');
+                      }}
+                      className="btn btn-secondary flex-1 text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingGrade}
+                      className="btn btn-primary flex-[2] text-sm gap-1.5"
+                    >
+                      {submittingGrade ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                      Submit Grade
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

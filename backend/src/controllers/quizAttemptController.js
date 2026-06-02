@@ -58,7 +58,7 @@ exports.submitAttempt = asyncHandler(async (req, res) => {
 
   const quiz = await Quiz.findById(req.params.id);
   const questions = await Question.find({ quiz: req.params.id }).select('+correctAnswer');
-  const answers = req.body.answers;
+  const answers = req.body.answers || [];
   let score = 0;
   let hasShortAnswer = false;
 
@@ -82,13 +82,36 @@ exports.submitAttempt = asyncHandler(async (req, res) => {
 
   if (!hasShortAnswer) await syncToGradeBook(quiz, attempt);
 
-  res.status(200).json({ success: true, data: attempt });
+  // Build per-question correctness results (not persisted)
+  const answerResults = answers.map(ans => {
+    const question = questions.find(q => q._id.toString() === ans.questionId);
+    if (!question || question.type === 'short_answer') {
+      return { questionId: ans.questionId, correct: null };
+    }
+    return { questionId: ans.questionId, correct: question.correctAnswer === ans.answer };
+  });
+
+  res.status(200).json({ success: true, data: { ...attempt.toObject(), answerResults } });
 });
 
 exports.getMyAttempt = asyncHandler(async (req, res) => {
   const attempt = await QuizAttempt.findOne({ quiz: req.params.id, student: req.user.id });
   if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
-  res.status(200).json({ success: true, data: attempt });
+  
+  // If graded, build answer results for student review
+  let answerResults = [];
+  if (attempt.status === 'graded' || attempt.status === 'submitted') {
+    const questions = await Question.find({ quiz: req.params.id }).select('+correctAnswer');
+    answerResults = (attempt.answers || []).map(ans => {
+      const question = questions.find(q => q._id.toString() === ans.questionId);
+      if (!question || question.type === 'short_answer') {
+        return { questionId: ans.questionId, correct: null };
+      }
+      return { questionId: ans.questionId, correct: question.correctAnswer === ans.answer };
+    });
+  }
+
+  res.status(200).json({ success: true, data: { ...attempt.toObject(), answerResults } });
 });
 
 exports.getAllAttempts = asyncHandler(async (req, res) => {
@@ -112,4 +135,31 @@ exports.gradeAttempt = asyncHandler(async (req, res) => {
 
   await syncToGradeBook(attempt.quiz, attempt);
   res.status(200).json({ success: true, data: attempt });
+});
+
+exports.resetAttempt = asyncHandler(async (req, res) => {
+  const { quizId, studentId } = req.params;
+
+  // Verify the requesting user is a teacher or admin
+  if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Not authorized' });
+  }
+
+  // Verify ownership: teacher must own the quiz's course (admins bypass)
+  if (req.user.role === 'teacher') {
+    const quiz = await Quiz.findById(quizId).populate('course');
+    if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
+    const course = await Course.findById(quiz.course);
+    if (course && course.teacher.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+  }
+
+  const attempt = await QuizAttempt.findOne({ quiz: quizId, student: studentId });
+  if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
+
+  await attempt.deleteOne();
+  await GradeItem.deleteOne({ sourceId: quizId, student: studentId });
+
+  res.status(200).json({ success: true, message: 'Attempt reset successfully', data: {} });
 });

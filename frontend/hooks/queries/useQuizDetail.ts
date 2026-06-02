@@ -11,7 +11,12 @@ export interface QuizAttempt {
   startedAt?: string;
   startTime?: string;
   score?: number;
+  totalMarks?: number;
+  percentage?: number;
+  feedback?: string;
+  answers?: Array<{ questionId: string; answer: string }>;
   student?: { _id: string; name: string };
+  answerResults?: Array<{ questionId: string; correct: boolean | null }>;
 }
 
 export interface QuizDetailData {

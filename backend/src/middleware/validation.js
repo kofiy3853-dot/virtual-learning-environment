@@ -184,7 +184,8 @@ const createQuestionSchema = Joi.object({
   }),
   marks: Joi.number().integer().min(1).required()
     .messages({ 'any.required': 'Marks are required' }),
-  order: Joi.number().integer().min(1).required()
+  order: Joi.number().integer().min(1).required(),
+  explanation: Joi.string().allow('').optional()
 });
 
 const submitQuizSchema = Joi.object({
@@ -193,8 +194,7 @@ const submitQuizSchema = Joi.object({
       questionId: Joi.string().required(),
       answer: Joi.string().allow('').required()
     })
-  ).min(1).required()
-    .messages({ 'array.min': 'At least one answer is required' })
+  ).optional().default([])
 });
 
 const gradeAttemptSchema = Joi.object({

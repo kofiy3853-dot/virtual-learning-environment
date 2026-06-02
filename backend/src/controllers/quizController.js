@@ -1,5 +1,7 @@
 const Quiz = require('../models/Quiz');
 const Question = require('../models/Question');
+const QuizAttempt = require('../models/QuizAttempt');
+const GradeItem = require('../models/GradeItem');
 const Course = require('../models/Course');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -56,6 +58,11 @@ exports.deleteQuiz = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'Not authorized' });
   }
   await quiz.deleteOne();
+  await Promise.all([
+    Question.deleteMany({ quiz: quiz._id }),
+    QuizAttempt.deleteMany({ quiz: quiz._id }),
+    GradeItem.deleteMany({ sourceId: quiz._id, sourceType: 'quiz' }),
+  ]);
   res.status(200).json({ success: true, data: {} });
 });
 
