@@ -51,6 +51,16 @@ exports.getCourse = async (req, res, next) => {
 // @route   POST /api/courses
 // @access  Private (Teacher)
 exports.createCourse = async (req, res, next) => {
+  const { validateFacultyDepartment } = require('../middleware/validation');
+  
+  // Validate faculty/department combination if provided
+  if (req.body.faculty && req.body.department) {
+    const validation = validateFacultyDepartment(req.body.faculty, req.body.department);
+    if (!validation.valid) {
+      return res.status(400).json({ success: false, message: validation.error });
+    }
+  }
+  
   // Add user to req.body if not specified by admin
   if (req.user.role !== 'admin' || !req.body.teacher) {
     req.body.teacher = req.user.id;

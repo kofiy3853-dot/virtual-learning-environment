@@ -42,8 +42,9 @@ export interface Course {
   modules?: Module[];
   // Extended wizard fields
   thumbnail?: string;
-  category?: string;
-  level?: 'beginner' | 'intermediate' | 'advanced';
+  faculty: 'FAST' | 'FBMS' | 'FOE' | 'FHAS' | 'FBNE';
+  department: string;
+  level: 100 | 200 | 300 | 400;
   startDate?: string;
   endDate?: string;
   enrollmentType?: 'open' | 'invite';

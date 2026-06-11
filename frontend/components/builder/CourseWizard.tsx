@@ -45,8 +45,9 @@ interface CourseFormState {
   code: string;
   description: string;
   thumbnail: string;
-  category: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
+  faculty: 'FAST' | 'FBMS' | 'FOE' | 'FHAS' | 'FBNE' | '';
+  department: string;
+  level: 100 | 200 | 300 | 400;
   startDate: string;
   endDate: string;
   schedule: Session[];
@@ -149,8 +150,9 @@ function formReducer(state: CourseFormState, action: FormAction): CourseFormStat
         code: action.defaultCode,
         description: '',
         thumbnail: '',
-        category: '',
-        level: 'beginner',
+        faculty: '',
+        department: '',
+        level: 100,
         startDate: '',
         endDate: '',
         schedule: [],
@@ -191,8 +193,9 @@ function CourseWizardContent() {
     code: defaultCode,
     description: '',
     thumbnail: '',
-    category: '',
-    level: 'beginner',
+    faculty: '',
+    department: '',
+    level: 100,
     startDate: '',
     endDate: '',
     schedule: [],
@@ -419,7 +422,8 @@ function CourseWizardContent() {
       else if (codeStatus === 'checking') activeWarnings.push('Checking code availability...');
       if (!form.description) activeWarnings.push('Please provide a short course summary');
       else if (form.description.length < 10) activeWarnings.push('Course summary must be at least 10 characters');
-      if (!form.category) activeWarnings.push('Please select a course category');
+      if (!form.faculty) activeWarnings.push('Please select a faculty');
+      if (!form.department) activeWarnings.push('Please select a department');
     } else if (currentStep === 1) {
       if (!form.startDate) activeWarnings.push('Please configure a valid start date');
       if (!form.endDate) activeWarnings.push('Please configure a valid end date');
@@ -454,8 +458,9 @@ function CourseWizardContent() {
         title: 'Advanced React & Next.js Systems',
         code: 'CS-302',
         description: 'Dive deep into server components, routing architectures, state coordination, and performance engineering inside React 19.',
-        category: 'Technology',
-        level: 'advanced',
+        faculty: 'FAST',
+        department: 'Software Engineering',
+        level: 400,
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         schedule: [{ id: getUniqueId(), day: 'Monday', time: '10:00 AM - 12:00 PM' }],
@@ -592,7 +597,8 @@ function CourseWizardContent() {
         semester,
         academicYear,
         status: (visibility === 'published' ? 'active' : 'draft') as 'active' | 'draft',
-        category: form.category,
+        faculty: form.faculty as 'FAST' | 'FBMS' | 'FOE' | 'FHAS' | 'FBNE',
+        department: form.department,
         level: form.level,
         startDate: form.startDate,
         endDate: form.endDate,
@@ -854,25 +860,49 @@ function CourseWizardContent() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label htmlFor="course-category" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Category *</label>
+                          <label htmlFor="course-faculty" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Faculty *</label>
                           <select 
-                            id="course-category"
-                            title="Course Category"
-                            value={form.category}
-                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'category', value: e.target.value })}
+                            id="course-faculty"
+                            title="Course Faculty"
+                            value={form.faculty}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'faculty', value: e.target.value as any })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
                           >
-                            <option value="">Select category ▼</option>
-                            <option value="Science">Science</option>
-                            <option value="Technology">Technology</option>
-                            <option value="Business">Business</option>
+                            <option value="">Select faculty ▼</option>
+                            <option value="FAST">FAST - Applied Sciences & Technology</option>
+                            <option value="FBMS">FBMS - Business & Management</option>
+                            <option value="FOE">FOE - Engineering</option>
+                            <option value="FHAS">FHAS - Health & Allied Sciences</option>
+                            <option value="FBNE">FBNE - Basic & Natural Sciences</option>
                           </select>
                         </div>
                         
                         <div>
+                          <label htmlFor="course-department" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Department *</label>
+                          <select 
+                            id="course-department"
+                            title="Course Department"
+                            value={form.department}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'department', value: e.target.value })}
+                            disabled={!form.faculty}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <option value="">Select department ▼</option>
+                            {form.faculty && (() => {
+                              const { FACULTIES } = require('@/lib/faculties');
+                              return FACULTIES[form.faculty as any]?.departments.map((dept: string) => (
+                                <option key={dept} value={dept}>{dept}</option>
+                              ));
+                            })()}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Level *</label>
                           <div className="flex items-center gap-3 h-12">
-                            {(['beginner', 'intermediate', 'advanced'] as const).map(l => (
+                            {([100, 200, 300, 400] as const).map(l => (
                               <button
                                 key={l}
                                 type="button"
@@ -883,7 +913,7 @@ function CourseWizardContent() {
                                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                                 }`}
                               >
-                                {l}
+                                Level {l}
                               </button>
                             ))}
                           </div>
@@ -1511,7 +1541,7 @@ function CourseWizardContent() {
 
                 <div className="p-5 space-y-4">
                   <div>
-                    <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest">{form.category || 'CATEGORY'}</span>
+                    <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest">{form.faculty ? `${form.faculty} - ${form.department}` : 'NO FACULTY'}</span>
                     <h3 className="text-sm font-extrabold text-slate-900 break-words leading-snug mt-1">{form.title || 'Course Title'}</h3>
                     <p className="text-xs text-slate-500 font-medium line-clamp-3 mt-1.5 leading-relaxed break-words">
                       {form.description || 'Describe what your students will learn in this course catalog...'}

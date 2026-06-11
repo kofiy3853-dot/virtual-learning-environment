@@ -172,6 +172,8 @@ export default function QuizzesPage() {
         </div>
         {isTeacher && (
           <select
+            aria-label="Filter quizzes by status"
+            title="Filter quizzes by status"
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
             className="bg-white border border-slate-200 px-4 h-12 rounded-xl focus:border-primary-500 transition-all outline-none font-bold text-xs shadow-sm cursor-pointer"

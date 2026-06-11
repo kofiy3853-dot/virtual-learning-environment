@@ -63,8 +63,9 @@ const createCourseSchema = Joi.object({
   status: Joi.string().valid('draft', 'active', 'archived').default('draft'),
   teacher: Joi.string().hex().length(24).optional(),
   // Extended wizard fields
-  category: Joi.string().max(100).optional().allow(''),
-  level: Joi.string().valid('beginner', 'intermediate', 'advanced').optional(),
+  faculty: Joi.string().valid('FAST', 'FBMS', 'FOE', 'FHAS', 'FBNE').required(),
+  department: Joi.string().min(2).max(50).required(),
+  level: Joi.number().valid(100, 200, 300, 400).required(),
   startDate: Joi.date().iso().optional().allow('', null),
   endDate: Joi.date().iso().optional().allow('', null),
   enrollmentType: Joi.string().valid('open', 'invite').optional(),
@@ -82,7 +83,10 @@ const updateCourseSchema = Joi.object({
   semester: Joi.string().valid('Semester 1', 'Semester 2').optional(),
   academicYear: Joi.string().pattern(/^\d{4}\/\d{4}$/).optional(),
   status: Joi.string().valid('draft', 'active', 'archived').optional(),
-  teacher: Joi.string().hex().length(24).optional()
+  teacher: Joi.string().hex().length(24).optional(),
+  faculty: Joi.string().valid('FAST', 'FBMS', 'FOE', 'FHAS', 'FBNE').optional(),
+  department: Joi.string().min(2).max(50).optional(),
+  level: Joi.number().valid(100, 200, 300, 400).optional()
 }).min(1).messages({ 'object.min': 'At least one field must be provided to update' });
 
 // ─── MODULE SCHEMAS ────────────────────────────────────────────────────────────
@@ -283,10 +287,26 @@ const reassignTeacherSchema = Joi.object({
   teacherId: Joi.string().required()
     .messages({ 'string.empty': 'Teacher ID is required' })
 });
+// ─── FACULTY/DEPARTMENT VALIDATION ────────────────────────────────────────────
+const { FACULTIES } = require('../config/faculties');
+
+const validateFacultyDepartment = (faculty, department) => {
+  if (!FACULTIES[faculty]) {
+    return { valid: false, error: `Invalid faculty: ${faculty}` };
+  }
+  
+  const validDepts = FACULTIES[faculty].departments;
+  if (!validDepts.includes(department)) {
+    return { valid: false, error: `Department "${department}" not available for faculty ${faculty}` };
+  }
+  
+  return { valid: true };
+};
 
 // ─── EXPORTS ───────────────────────────────────────────────────────────────────
 module.exports = {
   validate,
+  validateFacultyDepartment,
   schemas: {
     // Auth
     register: registerSchema,

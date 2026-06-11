@@ -39,8 +39,16 @@ const CourseSchema = new mongoose.Schema({
     default: 'no-course-thumbnail.jpg',
   },
   // Extended fields from wizard
-  category: { type: String, trim: true },
-  level: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
+  faculty: {
+    type: String,
+    enum: ['FAST', 'FBMS', 'FOE', 'FHAS', 'FBNE'],
+    required: true,
+  },
+  department: {
+    type: String,
+    required: true,
+  },
+  level: { type: Number, enum: [100, 200, 300, 400], default: 100 },
   startDate: { type: Date },
   endDate: { type: Date },
   enrollmentType: { type: String, enum: ['open', 'invite'], default: 'open' },
