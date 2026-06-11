@@ -23,7 +23,7 @@ exports.getQuizzes = asyncHandler(async (req, res) => {
 });
 
 exports.getQuiz = asyncHandler(async (req, res) => {
-  const quiz = await Quiz.findById(req.params.id);
+  const quiz = await Quiz.findById(req.params.id).populate('course');
   if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
   res.status(200).json({ success: true, data: quiz });
 });

@@ -76,6 +76,7 @@ export default function TeacherCoursesPage() {
         </div>
         <div className="flex gap-2">
           <select
+            aria-label="Sort courses by"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'name' | 'students' | 'recent')}
             className="input-premium"

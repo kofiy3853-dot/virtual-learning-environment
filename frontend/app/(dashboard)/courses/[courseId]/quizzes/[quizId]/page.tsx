@@ -932,8 +932,25 @@ export default function QuizDetailPage() {
                         {idx + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{q.text}</p>
-                        <div className="flex gap-2 mt-1">
+                        <p className="text-sm font-semibold text-slate-900">{q.text}</p>
+                        
+                        {q.type === 'multiple_choice' && q.options && (
+                          <div className="mt-2 space-y-1">
+                            {q.options.map((opt, oIdx) => (
+                              <div key={oIdx} className={`text-xs px-2 py-1 rounded border ${String(oIdx) === q.correctAnswer ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-medium' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                                <span className="font-semibold mr-1">{String.fromCharCode(65 + oIdx)}.</span> {opt}
+                                {String(oIdx) === q.correctAnswer && <span className="ml-1 text-emerald-600 text-[10px] uppercase tracking-wide">(Correct)</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {q.type === 'true_false' && (
+                          <div className="mt-2 text-xs font-medium text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100 inline-block">
+                            Correct Answer: <span className="font-semibold capitalize text-emerald-600">{q.correctAnswer}</span>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 mt-2">
                           <span className="px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
                             {q.type.replace('_', ' ')}
                           </span>

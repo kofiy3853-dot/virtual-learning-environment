@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, useReducer } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, Calendar, Layout, Users, Settings, Clock, Plus, Trash2, 
   CheckCircle2, ArrowLeft, ArrowRight, Save, X,
   AlertCircle, Sparkle, FileText, Video, HelpCircle, Search,
-  RefreshCw, Loader2 as SpinnerIcon
+  RefreshCw, Loader2 as SpinnerIcon, Image, Upload
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -76,6 +76,99 @@ const STEPS = [
   { id: 'publish', title: 'Settings & Publish', icon: Settings, desc: 'Grading options and catalog launch' },
 ];
 
+// Form reducer for complex state management
+type FormAction =
+  | { type: 'SET_FIELD'; field: keyof CourseFormState; value: CourseFormState[keyof CourseFormState] }
+  | { type: 'SET_MULTIPLE'; fields: Partial<CourseFormState> }
+  | { type: 'ADD_SCHEDULE'; session: Session }
+  | { type: 'REMOVE_SCHEDULE'; id: string }
+  | { type: 'UPDATE_SCHEDULE'; id: string; field: keyof Session; value: string }
+  | { type: 'ADD_MODULE'; module: Module }
+  | { type: 'REMOVE_MODULE'; id: string }
+  | { type: 'UPDATE_MODULE_TITLE'; id: string; title: string }
+  | { type: 'ADD_LESSON'; moduleId: string; lesson: Lesson }
+  | { type: 'REMOVE_LESSON'; moduleId: string; lessonId: string }
+  | { type: 'UPDATE_LESSON_TITLE'; moduleId: string; lessonId: string; title: string }
+  | { type: 'TOGGLE_STUDENT'; id: string }
+  | { type: 'RESET_FORM'; defaultTitle: string; defaultCode: string };
+
+function formReducer(state: CourseFormState, action: FormAction): CourseFormState {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value };
+    case 'SET_MULTIPLE':
+      return { ...state, ...action.fields };
+    case 'ADD_SCHEDULE':
+      return { ...state, schedule: [...state.schedule, action.session] };
+    case 'REMOVE_SCHEDULE':
+      return { ...state, schedule: state.schedule.filter(s => s.id !== action.id) };
+    case 'UPDATE_SCHEDULE':
+      return {
+        ...state,
+        schedule: state.schedule.map(s => s.id === action.id ? { ...s, [action.field]: action.value } : s)
+      };
+    case 'ADD_MODULE':
+      return { ...state, modules: [...state.modules, action.module] };
+    case 'REMOVE_MODULE':
+      return { ...state, modules: state.modules.filter(m => m.id !== action.id) };
+    case 'UPDATE_MODULE_TITLE':
+      return {
+        ...state,
+        modules: state.modules.map(m => m.id === action.id ? { ...m, title: action.title } : m)
+      };
+    case 'ADD_LESSON':
+      return {
+        ...state,
+        modules: state.modules.map(m => m.id === action.moduleId ? { ...m, lessons: [...m.lessons, action.lesson] } : m)
+      };
+    case 'REMOVE_LESSON':
+      return {
+        ...state,
+        modules: state.modules.map(m => m.id === action.moduleId ? {
+          ...m,
+          lessons: m.lessons.filter(l => l.id !== action.lessonId)
+        } : m)
+      };
+    case 'UPDATE_LESSON_TITLE':
+      return {
+        ...state,
+        modules: state.modules.map(m => m.id === action.moduleId ? {
+          ...m,
+          lessons: m.lessons.map(l => l.id === action.lessonId ? { ...l, title: action.title } : l)
+        } : m)
+      };
+    case 'TOGGLE_STUDENT':
+      const exists = state.students.includes(action.id);
+      return {
+        ...state,
+        students: exists ? state.students.filter(s => s !== action.id) : [...state.students, action.id]
+      };
+    case 'RESET_FORM':
+      return {
+        title: action.defaultTitle,
+        code: action.defaultCode,
+        description: '',
+        thumbnail: '',
+        category: '',
+        level: 'beginner',
+        startDate: '',
+        endDate: '',
+        schedule: [],
+        modules: [],
+        enrollmentType: 'open',
+        semester: 'Semester 1',
+        students: [],
+        maxStudents: 50,
+        gradingSystem: 'percentage',
+        assignmentsEnabled: true,
+        certificateEnabled: true,
+        visibility: 'draft',
+      };
+    default:
+      return state;
+  }
+}
+
 function CourseWizardContent() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
@@ -92,8 +185,8 @@ function CourseWizardContent() {
   const defaultTitle = searchParams.get('title') || '';
   const defaultCode = searchParams.get('code') || '';
 
-  // Form core state
-  const [form, setForm] = useState<CourseFormState>({
+  // Form core state with reducer
+  const [form, dispatch] = useReducer(formReducer, {
     title: defaultTitle,
     code: defaultCode,
     description: '',
@@ -114,6 +207,25 @@ function CourseWizardContent() {
     visibility: 'draft',
   });
 
+  // Thumbnail file upload state
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+
+  // Student pagination state
+  const [studentPage, setStudentPage] = useState(0);
+  const [hasMoreStudents, setHasMoreStudents] = useState(true);
+  const STUDENTS_PER_PAGE = 50;
+
+  // Abort controller for code suggestion
+  const suggestCodeAbortRef = useRef<AbortController | null>(null);
+
+  // Today's date for min date validation
+  const today = new Date().toISOString().split('T')[0];
+
+  // Time format regex for schedule validation
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?(AM|PM)\s?-\s?([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s?(AM|PM)$/i;
+
   // Load from localStorage on mount (safe for SSR)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -122,12 +234,11 @@ function CourseWizardContent() {
         if (saved) {
           const parsed = JSON.parse(saved) as Partial<CourseFormState>;
           if (parsed.title || parsed.code) {
-            setForm(prev => ({
-              ...prev,
+            dispatch({ type: 'SET_MULTIPLE', fields: {
               ...parsed,
               title: defaultTitle || parsed.title || '',
               code: defaultCode || parsed.code || '',
-            }));
+            }});
             setAutoSaveStatus('Draft restored from local save');
           }
         }
@@ -145,18 +256,28 @@ function CourseWizardContent() {
   const [codeStatus, setCodeStatus] = useState<'idle' | 'checking' | 'taken' | 'available'>('idle');
   const codeCheckTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch actual students from API
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        setIsLoadingStudents(true);
-        const res = await adminApi.getAllUsers({ role: 'student', limit: 100 });
-        if (res.data && res.data.success) {
-          setAvailableStudents(res.data.data);
+  // Fetch actual students from API with pagination
+  const fetchStudents = useCallback(async (page = 0, append = false) => {
+    try {
+      setIsLoadingStudents(true);
+      const res = await adminApi.getAllUsers({ 
+        role: 'student', 
+        limit: STUDENTS_PER_PAGE, 
+        page 
+      });
+      if (res.data && res.data.success) {
+        const newStudents = res.data.data || [];
+        if (append) {
+          setAvailableStudents(prev => [...prev, ...newStudents]);
+        } else {
+          setAvailableStudents(newStudents);
         }
-      } catch (err) {
-        console.error("Failed to fetch students from API:", err);
-        // Fallback to beautiful mock list if API fails or is loading
+        setHasMoreStudents(newStudents.length === STUDENTS_PER_PAGE);
+      }
+    } catch (err) {
+      console.error("Failed to fetch students from API:", err);
+      // Fallback to beautiful mock list if API fails or is loading
+      if (!append) {
         setAvailableStudents([
           { _id: 's1', name: 'John Doe', email: 'john@unipartner.com' },
           { _id: 's2', name: 'Ama Mensah', email: 'ama@unipartner.com' },
@@ -164,12 +285,28 @@ function CourseWizardContent() {
           { _id: 's4', name: 'Sarah Adams', email: 'sarah@unipartner.com' },
           { _id: 's5', name: 'Emmanuel Debrah', email: 'emmanuel@unipartner.com' },
         ]);
-      } finally {
-        setIsLoadingStudents(false);
       }
-    };
-    fetchStudents();
+      setHasMoreStudents(false);
+    } finally {
+      setIsLoadingStudents(false);
+    }
   }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchStudents(0, false);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchStudents]);
+
+  // Load more students when scrolling
+  const handleLoadMoreStudents = useCallback(() => {
+    if (!isLoadingStudents && hasMoreStudents) {
+      fetchStudents(studentPage + 1, true);
+      setStudentPage(prev => prev + 1);
+    }
+  }, [fetchStudents, isLoadingStudents, hasMoreStudents, studentPage]);
 
   // Auto-save: debounced persist to localStorage — 800ms after the last form change
   useEffect(() => {
@@ -215,8 +352,37 @@ function CourseWizardContent() {
     };
   }, [form.code]);
 
-  // Generate a unique code suggestion based on title
+  // Handle thumbnail file upload
+  const handleThumbnailFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (PNG, JPG, etc.)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+    setIsUploadingThumbnail(true);
+    setThumbnailFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setThumbnailPreview(result);
+      dispatch({ type: 'SET_FIELD', field: 'thumbnail', value: result });
+      setIsUploadingThumbnail(false);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  // Generate a unique code suggestion based on title (with abort controller for race condition prevention)
   const suggestCode = useCallback(async () => {
+    // Cancel any in-flight suggestion request
+    if (suggestCodeAbortRef.current) {
+      suggestCodeAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    suggestCodeAbortRef.current = abortController;
+
     const base = form.title
       ? form.title.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4)
       : 'CRS';
@@ -225,13 +391,19 @@ function CourseWizardContent() {
       // Try up to 10 candidates until we find an available one
       let attempts = 0;
       while (attempts < 10) {
+        if (abortController.signal.aborted) return;
         const res = await courseApi.checkCode(candidate);
         if (res.data?.data?.available) break;
         candidate = `${base}${Math.floor(100 + Math.random() * 900)}`;
         attempts++;
       }
-    } catch { /* use candidate as-is */ }
-    setForm(p => ({ ...p, code: candidate }));
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      /* use candidate as-is */
+    }
+    if (!abortController.signal.aborted) {
+      dispatch({ type: 'SET_FIELD', field: 'code', value: candidate });
+    }
   }, [form.title]);
 
 
@@ -278,8 +450,7 @@ function CourseWizardContent() {
     }
     setIsAiGenerating(true);
     setTimeout(() => {
-      setForm(prev => ({
-        ...prev,
+      dispatch({ type: 'SET_MULTIPLE', fields: {
         title: 'Advanced React & Next.js Systems',
         code: 'CS-302',
         description: 'Dive deep into server components, routing architectures, state coordination, and performance engineering inside React 19.',
@@ -306,12 +477,12 @@ function CourseWizardContent() {
             ]
           }
         ]
-      }));
+      }});
       setIsAiGenerating(false);
       const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       setAutoSaveStatus(`AI generation loaded & saved at ${now}`);
     }, 1500);
-  }, [form]);
+  }, []);
 
   useEffect(() => {
     if (searchParams.get('ai') === 'true') {
@@ -325,74 +496,47 @@ function CourseWizardContent() {
   // Schedule sub-sessions
   const addScheduleSession = () => {
     const newSession: Session = { id: getUniqueId(), day: 'Monday', time: '10:00 AM - 12:00 PM' };
-    setForm(prev => ({ ...prev, schedule: [...prev.schedule, newSession] }));
+    dispatch({ type: 'ADD_SCHEDULE', session: newSession });
   };
 
   const removeScheduleSession = (id: string) => {
-    setForm(prev => ({ ...prev, schedule: prev.schedule.filter(s => s.id !== id) }));
+    dispatch({ type: 'REMOVE_SCHEDULE', id });
   };
 
   const updateScheduleSession = (id: string, field: keyof Session, value: string) => {
-    setForm(prev => ({
-      ...prev,
-      schedule: prev.schedule.map(s => s.id === id ? { ...s, [field]: value } : s)
-    }));
+    dispatch({ type: 'UPDATE_SCHEDULE', id, field, value });
   };
 
   // Content Modules / Lessons
   const addModule = () => {
     const newModule: Module = { id: getUniqueId(), title: 'Untitled Module', lessons: [] };
-    setForm(prev => ({ ...prev, modules: [...prev.modules, newModule] }));
+    dispatch({ type: 'ADD_MODULE', module: newModule });
   };
 
   const updateModuleTitle = (id: string, title: string) => {
-    setForm(prev => ({
-      ...prev,
-      modules: prev.modules.map(m => m.id === id ? { ...m, title } : m)
-    }));
+    dispatch({ type: 'UPDATE_MODULE_TITLE', id, title });
   };
 
   const removeModule = (id: string) => {
-    setForm(prev => ({ ...prev, modules: prev.modules.filter(m => m.id !== id) }));
+    dispatch({ type: 'REMOVE_MODULE', id });
   };
 
   const addLesson = (moduleId: string, type: Lesson['type']) => {
     const newLesson: Lesson = { id: getUniqueId(), title: `New ${type.toUpperCase()}`, type };
-    setForm(prev => ({
-      ...prev,
-      modules: prev.modules.map(m => m.id === moduleId ? { ...m, lessons: [...m.lessons, newLesson] } : m)
-    }));
+    dispatch({ type: 'ADD_LESSON', moduleId, lesson: newLesson });
   };
 
   const updateLessonTitle = (moduleId: string, lessonId: string, title: string) => {
-    setForm(prev => ({
-      ...prev,
-      modules: prev.modules.map(m => m.id === moduleId ? {
-        ...m,
-        lessons: m.lessons.map(l => l.id === lessonId ? { ...l, title } : l)
-      } : m)
-    }));
+    dispatch({ type: 'UPDATE_LESSON_TITLE', moduleId, lessonId, title });
   };
 
   const removeLesson = (moduleId: string, lessonId: string) => {
-    setForm(prev => ({
-      ...prev,
-      modules: prev.modules.map(m => m.id === moduleId ? {
-        ...m,
-        lessons: m.lessons.filter(l => l.id !== lessonId)
-      } : m)
-    }));
+    dispatch({ type: 'REMOVE_LESSON', moduleId, lessonId });
   };
 
   // Student list additions
   const toggleStudent = (id: string) => {
-    setForm(prev => {
-      const exists = prev.students.includes(id);
-      return {
-        ...prev,
-        students: exists ? prev.students.filter(s => s !== id) : [...prev.students, id]
-      };
-    });
+    dispatch({ type: 'TOGGLE_STUDENT', id });
   };
 
   // Memoized filtered student list
@@ -649,7 +793,7 @@ function CourseWizardContent() {
                           type="text"
                           required
                           value={form.title}
-                          onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                          onChange={e => dispatch({ type: 'SET_FIELD', field: 'title', value: e.target.value })}
                           placeholder="Introduction to Programming"
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
                         />
@@ -671,7 +815,7 @@ function CourseWizardContent() {
                             type="text"
                             required
                             value={form.code}
-                            onChange={e => setForm(p => ({ ...p, code: e.target.value.toUpperCase() }))}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'code', value: e.target.value.toUpperCase() })}
                             placeholder="CS101"
                             className={`w-full bg-slate-50 border rounded-xl px-4 py-3 pr-10 text-slate-900 placeholder:text-slate-400 text-sm font-bold focus:bg-white transition-all outline-none ${
                               codeStatus === 'taken'      ? 'border-red-400 focus:border-red-500' :
@@ -702,7 +846,7 @@ function CourseWizardContent() {
                           rows={4}
                           required
                           value={form.description}
-                          onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                          onChange={e => dispatch({ type: 'SET_FIELD', field: 'description', value: e.target.value })}
                           placeholder="Write a short description of the course..."
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:bg-white focus:border-primary-500 transition-all outline-none resize-none"
                         />
@@ -715,7 +859,7 @@ function CourseWizardContent() {
                             id="course-category"
                             title="Course Category"
                             value={form.category}
-                            onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'category', value: e.target.value })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
                           >
                             <option value="">Select category ▼</option>
@@ -732,7 +876,7 @@ function CourseWizardContent() {
                               <button
                                 key={l}
                                 type="button"
-                                onClick={() => setForm(p => ({ ...p, level: l }))}
+                                onClick={() => dispatch({ type: 'SET_FIELD', field: 'level', value: l })}
                                 className={`flex-1 h-full rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                                   form.level === l 
                                     ? 'bg-primary-600 text-white border-primary-600' 
@@ -746,13 +890,101 @@ function CourseWizardContent() {
                         </div>
                       </div>
 
+                      {/* Thumbnail - URL or File Upload */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Thumbnail <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+                        
+                        {/* File Upload Dropzone */}
+                        <div 
+                          className={`relative border-2 border-dashed rounded-xl p-6 transition-all ${
+                            isUploadingThumbnail 
+                              ? 'border-primary-400 bg-primary-50' 
+                              : 'border-slate-200 hover:border-primary-300 bg-slate-50'
+                          }`}
+                          onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                          onDragLeave={e => { e.preventDefault(); e.stopPropagation(); }}
+                          onDrop={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const file = e.dataTransfer.files[0];
+                            if (file && file.type.startsWith('image/')) {
+                              handleThumbnailFile(file);
+                            }
+                          }}
+                        >
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (file) handleThumbnailFile(file);
+                            }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            aria-label="Upload thumbnail image"
+                          />
+                          <div className="flex flex-col items-center justify-center text-center">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
+                              isUploadingThumbnail ? 'bg-primary-100' : 'bg-slate-100'
+                            }`}>
+                              {isUploadingThumbnail ? (
+                                <SpinnerIcon size={20} className="animate-spin text-primary-600" />
+                              ) : (
+                                <Upload size={24} className="text-slate-400" />
+                              )}
+                            </div>
+                            <p className="text-sm font-medium text-slate-600 mb-1">
+                              {isUploadingThumbnail ? 'Uploading...' : 'Drag & drop or click to upload'}
+                            </p>
+                            <p className="text-xs text-slate-400">PNG, JPG up to 5MB</p>
+                          </div>
+                        </div>
+
+                        {/* URL Input Alternative */}
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Or enter image URL</label>
+                          <input
+                            type="url"
+                            value={form.thumbnail}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'thumbnail', value: e.target.value })}
+                            placeholder="https://images.unsplash.com/..."
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:bg-white focus:border-primary-500 transition-all outline-none"
+                          />
+                        </div>
+
+                        {/* Preview */}
+                        {(thumbnailPreview || form.thumbnail) && (
+                          <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 h-28 relative">
+                            <img 
+                              src={thumbnailPreview || form.thumbnail} 
+                              alt="Thumbnail preview" 
+                              className="w-full h-full object-cover" 
+                              onError={e => { 
+                                e.currentTarget.style.display = 'none';
+                                if (thumbnailPreview) setThumbnailPreview('');
+                              }} 
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setThumbnailFile(null);
+                                setThumbnailPreview('');
+                                dispatch({ type: 'SET_FIELD', field: 'thumbnail', value: '' });
+                              }}
+                              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                              aria-label="Remove thumbnail"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       {/* Thumbnail URL */}
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Thumbnail URL <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                         <input
                           type="url"
                           value={form.thumbnail}
-                          onChange={e => setForm(p => ({ ...p, thumbnail: e.target.value }))}
+                          onChange={e => dispatch({ type: 'SET_FIELD', field: 'thumbnail', value: e.target.value })}
                           placeholder="https://images.unsplash.com/..."
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 text-sm font-medium focus:bg-white focus:border-primary-500 transition-all outline-none"
                         />
@@ -788,8 +1020,9 @@ function CourseWizardContent() {
                             id="start-date"
                             type="date"
                             title="Start Date"
+                            min={today}
                             value={form.startDate}
-                            onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'startDate', value: e.target.value })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
                           />
                         </div>
@@ -799,8 +1032,9 @@ function CourseWizardContent() {
                             id="end-date"
                             type="date"
                             title="End Date"
+                            min={form.startDate || today}
                             value={form.endDate}
-                            onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'endDate', value: e.target.value })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
                           />
                         </div>
@@ -813,7 +1047,7 @@ function CourseWizardContent() {
                             <button
                               key={s}
                               type="button"
-                              onClick={() => setForm(p => ({ ...p, semester: s }))}
+                              onClick={() => dispatch({ type: 'SET_FIELD', field: 'semester', value: s })}
                               className={`flex-1 h-full text-xs font-bold uppercase tracking-wider transition-all ${
                                 form.semester === s
                                   ? 'bg-primary-600 text-white border-primary-600'
@@ -861,8 +1095,15 @@ function CourseWizardContent() {
                                   value={session.time} 
                                   onChange={e => updateScheduleSession(session.id, 'time', e.target.value)}
                                   placeholder="e.g. 10:00 AM - 12:00 PM"
-                                  className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 outline-none"
+                                  className={`flex-1 bg-white border rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 outline-none ${
+                                    session.time && !timeRegex.test(session.time) 
+                                      ? 'border-red-400 focus:border-red-500' 
+                                      : 'border-slate-200 focus:border-primary-500'
+                                  }`}
                                 />
+                                {session.time && !timeRegex.test(session.time) && (
+                                  <span className="text-[10px] text-red-500 font-medium">Invalid format (use 10:00 AM - 12:00 PM)</span>
+                                )}
                                 <button 
                                   type="button" 
                                   onClick={() => removeScheduleSession(session.id)}
@@ -1011,7 +1252,7 @@ function CourseWizardContent() {
                         <div className="flex items-center gap-4 h-12">
                           <button
                             type="button"
-                            onClick={() => setForm(p => ({ ...p, enrollmentType: 'open' }))}
+                            onClick={() => dispatch({ type: 'SET_FIELD', field: 'enrollmentType', value: 'open' })}
                             className={`flex-1 h-full rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                               form.enrollmentType === 'open' 
                                 ? 'bg-primary-600 text-white border-primary-600' 
@@ -1022,7 +1263,7 @@ function CourseWizardContent() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setForm(p => ({ ...p, enrollmentType: 'invite' }))}
+                            onClick={() => dispatch({ type: 'SET_FIELD', field: 'enrollmentType', value: 'invite' })}
                             className={`flex-1 h-full rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                               form.enrollmentType === 'invite' 
                                 ? 'bg-primary-600 text-white border-primary-600' 
@@ -1085,7 +1326,7 @@ function CourseWizardContent() {
                         <input 
                           type="number"
                           value={form.maxStudents}
-                          onChange={e => setForm(p => ({ ...p, maxStudents: parseInt(e.target.value, 10) || 0 }))}
+                          onChange={e => dispatch({ type: 'SET_FIELD', field: 'maxStudents', value: parseInt(e.target.value, 10) || 0 })}
                           placeholder="50"
                           className="w-24 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
                         />
@@ -1108,7 +1349,7 @@ function CourseWizardContent() {
                         <div className="flex items-center gap-4 h-12">
                           <button
                             type="button"
-                            onClick={() => setForm(p => ({ ...p, gradingSystem: 'percentage' }))}
+                            onClick={() => dispatch({ type: 'SET_FIELD', field: 'gradingSystem', value: 'percentage' })}
                             className={`flex-1 h-full rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                               form.gradingSystem === 'percentage' 
                                 ? 'bg-primary-600 text-white border-primary-600' 
@@ -1119,7 +1360,7 @@ function CourseWizardContent() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setForm(p => ({ ...p, gradingSystem: 'passfail' }))}
+                            onClick={() => dispatch({ type: 'SET_FIELD', field: 'gradingSystem', value: 'passfail' })}
                             className={`flex-1 h-full rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                               form.gradingSystem === 'passfail' 
                                 ? 'bg-primary-600 text-white border-primary-600' 
@@ -1142,7 +1383,7 @@ function CourseWizardContent() {
                           <input 
                             type="checkbox" 
                             checked={form.assignmentsEnabled}
-                            onChange={e => setForm(p => ({ ...p, assignmentsEnabled: e.target.checked }))}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'assignmentsEnabled', value: e.target.checked })}
                             className="w-4 h-4 rounded accent-primary-600 cursor-pointer"
                           />
                         </label>
@@ -1155,7 +1396,7 @@ function CourseWizardContent() {
                           <input 
                             type="checkbox" 
                             checked={form.certificateEnabled}
-                            onChange={e => setForm(p => ({ ...p, certificateEnabled: e.target.checked }))}
+                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'certificateEnabled', value: e.target.checked })}
                             className="w-4 h-4 rounded accent-primary-600 cursor-pointer"
                           />
                         </label>
@@ -1166,7 +1407,7 @@ function CourseWizardContent() {
                         <div className="flex items-center gap-4 h-12">
                           <button
                             type="button"
-                            onClick={() => setForm(p => ({ ...p, visibility: 'draft' }))}
+                            onClick={() => dispatch({ type: 'SET_FIELD', field: 'visibility', value: 'draft' })}
                             className={`flex-1 h-full rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                               form.visibility === 'draft' 
                                 ? 'bg-slate-900 text-white border-slate-900' 
@@ -1177,7 +1418,7 @@ function CourseWizardContent() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setForm(p => ({ ...p, visibility: 'published' }))}
+                            onClick={() => dispatch({ type: 'SET_FIELD', field: 'visibility', value: 'published' })}
                             className={`flex-1 h-full rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${
                               form.visibility === 'published' 
                                 ? 'bg-primary-600 text-white border-primary-600' 

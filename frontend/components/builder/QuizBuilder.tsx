@@ -227,8 +227,8 @@ export default function QuizBuilder() {
       });
       const newQuiz = res.data.data;
       
-      // 2. Create Questions — sequential to guarantee order field integrity
-      for (const [i, q] of questions.entries()) {
+      // 2. Create Questions — bulk add
+      const questionsPayload = questions.map((q, i) => {
         const payload: Record<string, unknown> = {
           text: q.text,
           type: q.type,
@@ -238,22 +238,45 @@ export default function QuizBuilder() {
         };
         if (q.type === 'multiple_choice') {
           const validOptions: string[] = [];
-          let newCorrect = parseInt(q.correctAnswer) || 0;
+          
+          let parsedCorrect = String(q.correctAnswer).trim();
+          
+          // Map 'A', 'B', 'C', 'D' directly to index '0', '1', '2', '3'
+          const letterMatch = parsedCorrect.match(/^[A-Z]$/i);
+          if (letterMatch) {
+            parsedCorrect = String(parsedCorrect.toUpperCase().charCodeAt(0) - 65);
+          } else if (isNaN(parseInt(parsedCorrect))) {
+            // It might be the exact text of an option
+            const idx = q.options.findIndex(opt => opt.trim().toLowerCase() === parsedCorrect.toLowerCase());
+            if (idx !== -1) {
+              parsedCorrect = String(idx);
+            }
+          }
+
+          let newCorrect = parseInt(parsedCorrect);
+          if (isNaN(newCorrect)) newCorrect = 0;
+
           for (let optIdx = 0; optIdx < q.options.length; optIdx++) {
             if (q.options[optIdx].trim()) {
               validOptions.push(q.options[optIdx]);
-            } else if (String(optIdx) === q.correctAnswer) {
+            } else if (String(optIdx) === parsedCorrect) {
               newCorrect = 0; // Correct answer was empty, fallback to 0
-            } else if (parseInt(q.correctAnswer) > optIdx) {
+            } else if (parseInt(parsedCorrect) > optIdx) {
               newCorrect -= 1; // Shift correct answer index down
             }
           }
           payload.options = validOptions.length ? validOptions : ['Option A', 'Option B'];
           payload.correctAnswer = String(Math.max(0, newCorrect));
         } else if (q.type === 'true_false') {
-          payload.correctAnswer = q.correctAnswer;
+          payload.correctAnswer = String(q.correctAnswer).toLowerCase();
+        } else if (q.type === 'short_answer') {
+          payload.correctAnswer = q.correctAnswer || '';
         }
-        await quizApi.addQuestion(newQuiz._id, payload);
+        return payload;
+      });
+
+      if (questionsPayload.length > 0) {
+        await quizApi.bulkAddQuestions(newQuiz._id, questionsPayload);
       }
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.list(courseId) });

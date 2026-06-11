@@ -169,6 +169,7 @@ export default function QuestionHistoryPage() {
         <div className="flex items-center gap-2">
           <Filter size={14} className="text-slate-400 shrink-0" />
           <select
+            aria-label="Filter by question type"
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
             className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-400 outline-none bg-white text-slate-700"
@@ -183,6 +184,7 @@ export default function QuestionHistoryPage() {
         {/* Course filter */}
         {courseOptions.length > 1 && (
           <select
+            aria-label="Filter by course"
             value={courseFilter}
             onChange={e => setCourseFilter(e.target.value)}
             className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-400 outline-none bg-white text-slate-700"
@@ -197,6 +199,7 @@ export default function QuestionHistoryPage() {
         {/* Quiz filter */}
         {quizOptions.length > 1 && (
           <select
+            aria-label="Filter by quiz"
             value={quizFilter}
             onChange={e => setQuizFilter(e.target.value)}
             className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-400 outline-none bg-white text-slate-700"
