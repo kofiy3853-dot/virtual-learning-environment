@@ -41,7 +41,7 @@ const CourseSchema = new mongoose.Schema({
   // Extended fields from wizard
   faculty: {
     type: String,
-    enum: ['FAST', 'FBMS', 'FOE', 'FHAS', 'FBNE'],
+    enum: ['FOE', 'FAST', 'FBMS', 'FBNE', 'FHAS', 'SGS'],
     default: null,
   },
   department: {

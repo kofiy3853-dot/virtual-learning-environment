@@ -458,8 +458,8 @@ function CourseWizardContent() {
         title: 'Advanced React & Next.js Systems',
         code: 'CS-302',
         description: 'Dive deep into server components, routing architectures, state coordination, and performance engineering inside React 19.',
-        faculty: 'FAST',
-        department: 'Software Engineering',
+        faculty: 'FOE',
+        department: '',
         level: 400,
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -865,15 +865,19 @@ function CourseWizardContent() {
                             id="course-faculty"
                             title="Course Faculty"
                             value={form.faculty}
-                            onChange={e => dispatch({ type: 'SET_FIELD', field: 'faculty', value: e.target.value as any })}
+                            onChange={e => {
+                              dispatch({ type: 'SET_FIELD', field: 'faculty', value: e.target.value as any });
+                              dispatch({ type: 'SET_FIELD', field: 'department', value: '' });
+                            }}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm font-bold focus:bg-white focus:border-primary-500 transition-all outline-none"
                           >
                             <option value="">Select faculty ▼</option>
-                            <option value="FAST">FAST - Applied Sciences & Technology</option>
-                            <option value="FBMS">FBMS - Business & Management</option>
-                            <option value="FOE">FOE - Engineering</option>
-                            <option value="FHAS">FHAS - Health & Allied Sciences</option>
-                            <option value="FBNE">FBNE - Basic & Natural Sciences</option>
+                            <option value="FOE">FOE - Faculty of Engineering</option>
+                            <option value="FAST">FAST - Faculty of Applied Science and Technology</option>
+                            <option value="FBMS">FBMS - Faculty of Business and Management Studies</option>
+                            <option value="FBNE">FBNE - Faculty of Built and Natural Environment</option>
+                            <option value="FHAS">FHAS - Faculty of Health and Allied Sciences</option>
+                            <option value="SGS">SGS - School of Graduate Studies</option>
                           </select>
                         </div>
                         
@@ -890,7 +894,8 @@ function CourseWizardContent() {
                             <option value="">Select department ▼</option>
                             {form.faculty && (() => {
                               const { FACULTIES } = require('@/lib/faculties');
-                              return FACULTIES[form.faculty as any]?.departments.map((dept: string) => (
+                              const departments = FACULTIES[form.faculty as any]?.departments || {};
+                              return Object.keys(departments).map((dept: string) => (
                                 <option key={dept} value={dept}>{dept}</option>
                               ));
                             })()}

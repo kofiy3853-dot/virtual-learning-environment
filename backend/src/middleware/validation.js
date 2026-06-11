@@ -63,8 +63,8 @@ const createCourseSchema = Joi.object({
   status: Joi.string().valid('draft', 'active', 'archived').default('draft'),
   teacher: Joi.string().hex().length(24).optional(),
   // Extended wizard fields
-  faculty: Joi.string().valid('FAST', 'FBMS', 'FOE', 'FHAS', 'FBNE').required(),
-  department: Joi.string().min(2).max(50).required(),
+  faculty: Joi.string().valid('FOE', 'FAST', 'FBMS', 'FBNE', 'FHAS', 'SGS').required(),
+  department: Joi.string().min(2).max(100).required(),
   level: Joi.number().valid(100, 200, 300, 400).required(),
   startDate: Joi.date().iso().optional().allow('', null),
   endDate: Joi.date().iso().optional().allow('', null),
@@ -84,8 +84,8 @@ const updateCourseSchema = Joi.object({
   academicYear: Joi.string().pattern(/^\d{4}\/\d{4}$/).optional(),
   status: Joi.string().valid('draft', 'active', 'archived').optional(),
   teacher: Joi.string().hex().length(24).optional(),
-  faculty: Joi.string().valid('FAST', 'FBMS', 'FOE', 'FHAS', 'FBNE').optional(),
-  department: Joi.string().min(2).max(50).optional(),
+  faculty: Joi.string().valid('FOE', 'FAST', 'FBMS', 'FBNE', 'FHAS', 'SGS').optional(),
+  department: Joi.string().min(2).max(100).optional(),
   level: Joi.number().valid(100, 200, 300, 400).optional()
 }).min(1).messages({ 'object.min': 'At least one field must be provided to update' });
 
@@ -296,7 +296,7 @@ const validateFacultyDepartment = (faculty, department) => {
   }
   
   const validDepts = FACULTIES[faculty].departments;
-  if (!validDepts.includes(department)) {
+  if (!Object.keys(validDepts).includes(department)) {
     return { valid: false, error: `Department "${department}" not available for faculty ${faculty}` };
   }
   
