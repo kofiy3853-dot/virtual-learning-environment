@@ -129,6 +129,29 @@ exports.getAllAttempts = asyncHandler(async (req, res) => {
     .skip(startIndex)
     .limit(limit);
 
+  // Fetch questions WITH correctAnswer so teacher can see correct/wrong per student
+  const questions = await Question.find({ quiz: req.params.id }).select('+correctAnswer');
+
+  // Annotate each attempt with per-question correctness details
+  const annotated = attempts.map(attempt => {
+    const attemptObj = attempt.toObject();
+    const answerResults = (attemptObj.answers || []).map(ans => {
+      const question = questions.find(q => q._id.toString() === ans.questionId.toString());
+      if (!question) return { questionId: ans.questionId, studentAnswer: ans.answer, correct: null, correctAnswer: null };
+      if (question.type === 'short_answer') {
+        return { questionId: ans.questionId, studentAnswer: ans.answer, correct: null, correctAnswer: null };
+      }
+      const isCorrect = question.correctAnswer === ans.answer;
+      return {
+        questionId: ans.questionId,
+        studentAnswer: ans.answer,
+        correct: isCorrect,
+        correctAnswer: question.correctAnswer,
+      };
+    });
+    return { ...attemptObj, answerResults };
+  });
+
   const pagination = {
     total,
     page,
@@ -136,7 +159,7 @@ exports.getAllAttempts = asyncHandler(async (req, res) => {
     pages: Math.ceil(total / limit)
   };
 
-  res.status(200).json({ success: true, count: attempts.length, pagination, data: attempts });
+  res.status(200).json({ success: true, count: annotated.length, pagination, data: annotated });
 });
 
 exports.gradeAttempt = asyncHandler(async (req, res) => {

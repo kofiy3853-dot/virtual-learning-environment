@@ -21,4 +21,6 @@ export const quizApi = {
   getAllAttempts: (quizId: string) => api.get(`/api/v1/quizzes/${quizId}/attempts`),
   gradeAttempt: (attemptId: string, data: { scoreAdjustment: number; feedback?: string }) => api.patch(`/api/v1/attempts/${attemptId}/grade`, data),
   resetAttempt: (quizId: string, studentId: string) => api.delete(`/api/v1/quizzes/${quizId}/attempts/${studentId}`),
+  // Bulk question upload
+  bulkAddQuestions: (quizId: string, questions: unknown[]) => api.post(`/api/v1/quizzes/${quizId}/questions/bulk`, { questions }),
 };

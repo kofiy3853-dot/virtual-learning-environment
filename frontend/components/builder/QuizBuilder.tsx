@@ -47,16 +47,29 @@ interface Question {
 }
 
 // --- SORTABLE QUESTION ITEM ---
+interface QuestionSidebarItemContentProps {
+  question: Question;
+  isActive: boolean;
+  isDragging: boolean;
+  onClick: () => void;
+  onDelete: () => void;
+  index: number;
+  attributes?: ReturnType<typeof useSortable>['attributes'];
+  listeners?: ReturnType<typeof useSortable>['listeners'];
+  setNodeRef?: (node: HTMLElement | null) => void;
+  style: React.CSSProperties;
+}
+
 function QuestionSidebarItemContent({ 
   question, isActive, isDragging, onClick, onDelete, index, attributes, listeners, setNodeRef, style 
-}: any) {
+}: QuestionSidebarItemContentProps) {
   return (
     <div 
       ref={setNodeRef} 
       style={style}
       role="button"
       tabIndex={0}
-      aria-pressed={isActive}
+      {...(isActive ? { 'aria-pressed': 'true' } : { 'aria-pressed': 'false' })}
       onKeyDown={e => e.key === 'Enter' && onClick()}
       className={`group flex items-center gap-2 p-3 rounded-lg border transition-all cursor-pointer mb-2 ${
         isDragging

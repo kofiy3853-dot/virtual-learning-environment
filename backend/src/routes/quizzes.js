@@ -12,10 +12,11 @@ const {
   publishQuiz
 } = require('../controllers/quizController');
 const {
-  getQuestions, // Adding getQuestions from the controller
+  getQuestions,
   addQuestion,
   updateQuestion,
-  deleteQuestion
+  deleteQuestion,
+  bulkAddQuestions
 } = require('../controllers/questionController');
 const {
   startAttempt,
@@ -45,6 +46,7 @@ quizRouter.patch('/quizzes/:id/publish', protect, authorize('teacher', 'admin'),
 
 // Questions — readable by any authenticated user (students need questions to take the quiz)
 quizRouter.get('/quizzes/:id/questions', protect, getQuestions);
+quizRouter.post('/quizzes/:id/questions/bulk', protect, authorize('teacher', 'admin'), bulkAddQuestions);
 quizRouter.post('/quizzes/:id/questions',
   protect,
   authorize('teacher', 'admin'),

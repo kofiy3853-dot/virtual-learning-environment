@@ -12,7 +12,8 @@ import ImmersiveQuizPlayer from '@/components/learning/ImmersiveQuizPlayer';
 import {
   Clock, Play, Loader2,
   CheckCircle2, XCircle, Plus, Trash2, AlertCircle,
-  Target, ChevronLeft, TrendingUp, Users, List
+  Target, ChevronLeft, TrendingUp, Users, List,
+  Pencil, Save, Upload, Download, FileSpreadsheet, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { Quiz, Course } from '@/types';
@@ -22,6 +23,8 @@ import { format } from 'date-fns';
 interface AnswerResult {
   questionId: string;
   correct: boolean | null;
+  studentAnswer?: string;
+  correctAnswer?: string | null;
 }
 
 interface Question {
@@ -58,6 +61,25 @@ export default function QuizDetailPage() {
   const [gradeFormError, setGradeFormError] = useState('');
   const [submittingGrade, setSubmittingGrade] = useState(false);
 
+  // Edit / Delete quiz state
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingQuiz, setDeletingQuiz] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    duration: 30,
+    totalMarks: 100,
+    startTime: '',
+    endTime: '',
+  });
+
+  // Bulk Upload State
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkQuestions, setBulkQuestions] = useState<any[]>([]);
+  const [bulkUploadError, setBulkUploadError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
   const [qForm, setQForm] = useState({
     text: '',
     type: 'multiple_choice' as 'multiple_choice' | 'true_false' | 'short_answer',
@@ -81,6 +103,18 @@ export default function QuizDetailPage() {
       setAnswerResults(data.attempt.answerResults as AnswerResult[]);
     }
     setAllAttempts(data.allAttempts);
+    // Pre-populate edit form whenever quiz data loads
+    if (data.quiz) {
+      const q = data.quiz;
+      setEditForm({
+        title: q.title ?? '',
+        description: q.description ?? '',
+        duration: q.duration ?? 30,
+        totalMarks: q.totalMarks ?? 100,
+        startTime: q.startTime ? new Date(q.startTime).toISOString().slice(0, 16) : '',
+        endTime: q.endTime ? new Date(q.endTime).toISOString().slice(0, 16) : '',
+      });
+    }
     if (user?.role === 'teacher' && data.questions.length === 0 && !autoOpened.current) {
       setShowQForm(true);
       autoOpened.current = true;
@@ -94,6 +128,41 @@ export default function QuizDetailPage() {
   const invalidateQuiz = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.detail(quizId) });
   }, [queryClient, quizId]);
+
+  const handleDeleteQuiz = async () => {
+    if (!confirm('Are you sure you want to delete this quiz? This cannot be undone.')) return;
+    setDeletingQuiz(true);
+    try {
+      await quizApi.deleteQuiz(quizId);
+      toast.success('Quiz deleted');
+      router.push(`/courses/${courseId}/quizzes`);
+    } catch {
+      toast.error('Failed to delete quiz');
+      setDeletingQuiz(false);
+    }
+  };
+
+  const handleUpdateQuiz = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEdit(true);
+    try {
+      await quizApi.updateQuiz(quizId, {
+        title: editForm.title,
+        description: editForm.description,
+        duration: Number(editForm.duration),
+        totalMarks: Number(editForm.totalMarks),
+        startTime: editForm.startTime ? new Date(editForm.startTime).toISOString() : undefined,
+        endTime: editForm.endTime ? new Date(editForm.endTime).toISOString() : undefined,
+      } as Partial<Quiz>);
+      invalidateQuiz();
+      setShowEditForm(false);
+      toast.success('Quiz updated successfully');
+    } catch {
+      toast.error('Failed to update quiz');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const handleStart = async () => {
     setStarting(true);
@@ -183,13 +252,10 @@ export default function QuizDetailPage() {
       } else {
         delete payload.options;
       }
-      if (qForm.type === 'short_answer') delete payload.correctAnswer;
-
-      const res = await quizApi.addQuestion(quizId, payload);
-      setQuestions(p => [...p, res.data.data]);
+      await quizApi.addQuestion(quizId, payload as any);
       invalidateQuiz();
-      setShowQForm(false);
       setQForm({ text: '', type: 'multiple_choice', options: ['', '', '', ''], correctAnswer: '', marks: 5 });
+      setShowQForm(false);
       toast.success('Question added');
     } catch (e) {
       const error = e as { response?: { data?: { message?: string } } };
@@ -197,6 +263,85 @@ export default function QuizDetailPage() {
     } finally {
       setAddingQ(false);
     }
+  };
+
+  const handleBulkFileSelection = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setBulkUploadError('');
+    setBulkQuestions([]);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        let parsed: any[] = [];
+        
+        if (file.name.endsWith('.json')) {
+          parsed = JSON.parse(text);
+          if (!Array.isArray(parsed)) throw new Error('JSON must contain an array of questions');
+        } else if (file.name.endsWith('.csv')) {
+          // Simple CSV parser
+          const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+          const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
+          
+          parsed = lines.slice(1).map((line, index) => {
+            const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
+            const obj: any = {};
+            
+            headers.forEach((header, i) => {
+              let val = values[i] ? values[i].replace(/(^"|"$)/g, '').trim() : '';
+              if (header === 'options') {
+                 obj[header] = val ? val.split('|').map(o => o.trim()) : [];
+              } else if (header === 'marks') {
+                 obj[header] = parseInt(val, 10) || 1;
+              } else {
+                 obj[header] = val;
+              }
+            });
+            return obj;
+          });
+        } else {
+          throw new Error('Unsupported file format. Please use .csv or .json');
+        }
+
+        setBulkQuestions(parsed);
+      } catch (err: any) {
+        setBulkUploadError(err.message || 'Failed to parse file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleBulkUploadSubmit = async () => {
+    if (bulkQuestions.length === 0) return;
+    setIsUploading(true);
+    try {
+      await quizApi.bulkAddQuestions(quizId, bulkQuestions);
+      invalidateQuiz();
+      setShowBulkUpload(false);
+      setBulkQuestions([]);
+      toast.success(`Successfully added ${bulkQuestions.length} questions`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to bulk upload questions');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const downloadCsvTemplate = () => {
+    const csvContent = "text,type,marks,correctAnswer,options\n" + 
+      "What is 2+2?,multiple_choice,5,4,3|4|5|6\n" +
+      "The earth is flat,true_false,2,false,\n" +
+      "Name the capital of France,short_answer,10,,";
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'quiz_questions_template.csv';
+    link.click();
   };
 
   if (isLoading || !quiz) return (
@@ -269,15 +414,153 @@ export default function QuizDetailPage() {
               )}
             </div>
           </div>
-          <span className={`shrink-0 px-3 py-1 rounded-lg text-xs font-semibold border ${
-            quiz.isPublished
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : 'bg-amber-50 text-amber-700 border-amber-200'
-          }`}>
-            {quiz.isPublished ? 'Published' : 'Draft'}
-          </span>
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <span className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
+              quiz.isPublished
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+              {quiz.isPublished ? 'Published' : 'Draft'}
+            </span>
+            {isOwner && (
+              <>
+                <button
+                  onClick={() => setShowEditForm(v => !v)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    showEditForm
+                      ? 'bg-primary-600 border-primary-600 text-white'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300 hover:text-primary-600'
+                  }`}
+                  title="Edit quiz details"
+                >
+                  <Pencil size={12} />
+                  {showEditForm ? 'Cancel Edit' : 'Edit'}
+                </button>
+                <button
+                  onClick={handleDeleteQuiz}
+                  disabled={deletingQuiz}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border bg-white border-red-200 text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
+                  title="Delete quiz"
+                >
+                  {deletingQuiz ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Inline Edit Form */}
+      <AnimatePresence>
+        {showEditForm && isOwner && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <form
+              onSubmit={handleUpdateQuiz}
+              className="bg-white rounded-xl border border-primary-200 p-5 shadow-sm space-y-4"
+            >
+              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <Pencil size={14} className="text-primary-600" /> Edit Quiz Details
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label htmlFor="eq-title" className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Title *</label>
+                  <input
+                    id="eq-title"
+                    required
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm"
+                    value={editForm.title}
+                    onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                  />
+                </div>
+
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label htmlFor="eq-desc" className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Description</label>
+                  <textarea
+                    id="eq-desc"
+                    rows={2}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm resize-none"
+                    value={editForm.description}
+                    onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="eq-duration" className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Duration (minutes) *</label>
+                  <input
+                    id="eq-duration"
+                    type="number"
+                    min={1}
+                    required
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm"
+                    value={editForm.duration}
+                    onChange={e => setEditForm({ ...editForm, duration: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="eq-marks" className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Total Marks *</label>
+                  <input
+                    id="eq-marks"
+                    type="number"
+                    min={1}
+                    required
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm"
+                    value={editForm.totalMarks}
+                    onChange={e => setEditForm({ ...editForm, totalMarks: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="eq-start" className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Start Time</label>
+                  <input
+                    id="eq-start"
+                    type="datetime-local"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm"
+                    value={editForm.startTime}
+                    onChange={e => setEditForm({ ...editForm, startTime: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="eq-end" className="text-xs font-semibold text-slate-700 uppercase tracking-wide">End Time</label>
+                  <input
+                    id="eq-end"
+                    type="datetime-local"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition-all text-sm"
+                    value={editForm.endTime}
+                    onChange={e => setEditForm({ ...editForm, endTime: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowEditForm(false)}
+                  className="btn btn-secondary flex-1 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="btn btn-primary flex-[2] text-sm gap-1.5"
+                >
+                  {savingEdit ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
@@ -401,13 +684,110 @@ export default function QuizDetailPage() {
                   <h2 className="text-sm font-semibold text-slate-900">Questions</h2>
                   <p className="text-xs text-slate-500 mt-0.5">{questions.length} question{questions.length !== 1 ? 's' : ''}</p>
                 </div>
-                <button
-                  onClick={() => setShowQForm(!showQForm)}
-                  className="btn btn-primary btn-sm gap-1.5"
-                >
-                  <Plus size={14} /> Add Question
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowBulkUpload(!showBulkUpload); setShowQForm(false); }}
+                    className={`btn btn-sm gap-1.5 ${showBulkUpload ? 'bg-primary-50 text-primary-600 border-primary-200' : 'btn-secondary'}`}
+                  >
+                    <Upload size={14} /> Bulk Upload
+                  </button>
+                  <button
+                    onClick={() => { setShowQForm(!showQForm); setShowBulkUpload(false); }}
+                    className="btn btn-primary btn-sm gap-1.5"
+                  >
+                    <Plus size={14} /> Add Question
+                  </button>
+                </div>
               </div>
+
+              {/* Bulk Upload Form */}
+              <AnimatePresence>
+                {showBulkUpload && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden mb-4"
+                  >
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                          <FileSpreadsheet size={16} className="text-primary-600" /> 
+                          Bulk Upload Questions
+                        </h3>
+                        <button onClick={downloadCsvTemplate} className="text-xs font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                          <Download size={12} /> Download CSV Template
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors">
+                          <input 
+                            type="file" 
+                            accept=".csv,.json" 
+                            onChange={handleBulkFileSelection} 
+                            className="hidden" 
+                            id="bulk-upload-input" 
+                          />
+                          <label htmlFor="bulk-upload-input" className="cursor-pointer flex flex-col items-center gap-3">
+                            <div className="w-12 h-12 bg-primary-50 text-primary-600 rounded-full flex items-center justify-center">
+                              <Upload size={24} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-700">Click to select a CSV or JSON file</p>
+                              <p className="text-xs text-slate-500 mt-1">Options in CSV should be separated by a pipe (|)</p>
+                            </div>
+                          </label>
+                        </div>
+
+                        {bulkUploadError && (
+                          <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-start gap-2">
+                            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                            <p>{bulkUploadError}</p>
+                          </div>
+                        )}
+
+                        {bulkQuestions.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-semibold text-slate-700">Preview ({bulkQuestions.length} questions)</h4>
+                            <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg">
+                              <table className="w-full text-sm text-left">
+                                <thead className="bg-slate-50 text-xs uppercase text-slate-500 sticky top-0">
+                                  <tr>
+                                    <th className="px-4 py-2 font-semibold">Type</th>
+                                    <th className="px-4 py-2 font-semibold">Text</th>
+                                    <th className="px-4 py-2 font-semibold">Marks</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {bulkQuestions.map((q, i) => (
+                                    <tr key={i} className="hover:bg-slate-50">
+                                      <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{q.type}</td>
+                                      <td className="px-4 py-2 font-medium text-slate-800 truncate max-w-[200px]" title={q.text}>{q.text}</td>
+                                      <td className="px-4 py-2 text-slate-600">{q.marks}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <div className="flex gap-2 justify-end pt-2">
+                               <button onClick={() => {setBulkQuestions([]); setShowBulkUpload(false);}} className="btn btn-secondary text-sm px-4">Cancel</button>
+                               <button 
+                                 onClick={handleBulkUploadSubmit} 
+                                 disabled={isUploading}
+                                 className="btn btn-primary text-sm px-4 gap-2"
+                               >
+                                 {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                                 Upload {bulkQuestions.length} Questions
+                               </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Add Question Form */}
               <AnimatePresence>
@@ -652,7 +1032,7 @@ export default function QuizDetailPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <p className="text-sm font-bold text-slate-700">
-                        {a.score ?? '—'}
+                        {a.score !== undefined && a.score !== null ? a.score : (a.status === 'in_progress' ? '—' : 0)}
                         <span className="text-xs text-slate-400 font-normal"> /{quiz.totalMarks}</span>
                       </p>
                       {a.status === 'submitted' && (
@@ -716,26 +1096,78 @@ export default function QuizDetailPage() {
               </div>
 
               <div className="p-5 space-y-4 max-h-[500px] overflow-y-auto">
-                {/* Student Answers */}
+                {/* Score Summary */}
+                {(gradingAttempt.score !== undefined && gradingAttempt.score !== null) && (
+                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Current Score</span>
+                    <span className="text-lg font-bold text-slate-900">
+                      {gradingAttempt.score}
+                      <span className="text-sm text-slate-400 font-normal"> / {quiz.totalMarks}</span>
+                      <span className="ml-2 text-xs font-semibold text-primary-600">
+                        ({Math.round((gradingAttempt.score / (quiz.totalMarks || 1)) * 100)}%)
+                      </span>
+                    </span>
+                  </div>
+                )}
+                {/* Student Answers with correctness */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Student Answers</h4>
                   {questions.map((q, idx) => {
-                    const answer = gradingAttempt.answers?.find(
-                      (a: { questionId: string; answer: string }) => a.questionId === q._id
+                    // Use rich answerResults from backend (includes correctAnswer & correct flag)
+                    const result = (gradingAttempt.answerResults as AnswerResult[] | undefined)?.find(
+                      r => r.questionId === q._id
                     );
+                    const studentAns = result?.studentAnswer
+                      ?? gradingAttempt.answers?.find(
+                          (a: { questionId: string; answer: string }) => a.questionId === q._id
+                        )?.answer;
+                    const isCorrect = result?.correct;
+                    const correctAns = result?.correctAnswer;
+                    const isShortAnswer = q.type === 'short_answer';
                     return (
-                      <div key={q._id} className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-2">
-                        <p className="text-sm font-semibold text-slate-900">
-                          <span className="text-slate-400 font-normal mr-1">Q{idx + 1}.</span>
-                          {q.text}
-                        </p>
+                      <div
+                        key={q._id}
+                        className={`border rounded-lg p-3 space-y-2 ${
+                          isShortAnswer
+                            ? 'bg-slate-50 border-slate-100'
+                            : isCorrect === true
+                            ? 'bg-emerald-50 border-emerald-200'
+                            : isCorrect === false
+                            ? 'bg-red-50 border-red-200'
+                            : 'bg-slate-50 border-slate-100'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-900 flex-1">
+                            <span className="text-slate-400 font-normal mr-1">Q{idx + 1}.</span>
+                            {q.text}
+                          </p>
+                          {!isShortAnswer && isCorrect !== undefined && isCorrect !== null && (
+                            isCorrect
+                              ? <CheckCircle2 size={16} className="shrink-0 text-emerald-500 mt-0.5" />
+                              : <XCircle size={16} className="shrink-0 text-red-500 mt-0.5" />
+                          )}
+                        </div>
                         <p className="text-xs text-slate-500">
                           <span className="font-semibold uppercase tracking-wide">Type:</span> {q.type.replace('_', ' ')}
+                          <span className="ml-2 font-semibold uppercase tracking-wide">Marks:</span> {q.marks} pts
                         </p>
-                        <p className="text-sm text-slate-700">
-                          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide mr-2">Answer:</span>
-                          {answer?.answer || <span className="italic text-slate-400">No answer provided</span>}
-                        </p>
+                        <div className="space-y-1">
+                          <p className="text-sm text-slate-700">
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide mr-2">Student answered:</span>
+                            <span className={`font-medium ${
+                              isCorrect === true ? 'text-emerald-700' : isCorrect === false ? 'text-red-700' : 'text-slate-700'
+                            }`}>
+                              {studentAns || <span className="italic text-slate-400">No answer provided</span>}
+                            </span>
+                          </p>
+                          {!isShortAnswer && correctAns !== undefined && correctAns !== null && (
+                            <p className="text-sm text-slate-700">
+                              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mr-2">Correct answer:</span>
+                              <span className="font-medium text-emerald-700">{correctAns}</span>
+                            </p>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

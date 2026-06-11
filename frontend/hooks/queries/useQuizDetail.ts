@@ -16,7 +16,12 @@ export interface QuizAttempt {
   feedback?: string;
   answers?: Array<{ questionId: string; answer: string }>;
   student?: { _id: string; name: string };
-  answerResults?: Array<{ questionId: string; correct: boolean | null }>;
+  answerResults?: Array<{
+    questionId: string;
+    correct: boolean | null;
+    studentAnswer?: string;
+    correctAnswer?: string | null;
+  }>;
 }
 
 export interface QuizDetailData {

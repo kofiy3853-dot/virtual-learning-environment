@@ -16,4 +16,7 @@ export const teacherApi = {
   // Assignment and quiz submissions
   getAssignmentSubmissions: (assignmentId: string) => api.get(`/api/v1/teachers/me/assignments/${assignmentId}/submissions`),
   getQuizAttempts: (quizId: string) => api.get(`/api/v1/teachers/me/quizzes/${quizId}/attempts`),
+
+  // Question history
+  getMyQuestions: () => api.get('/api/v1/teachers/me/questions'),
 };

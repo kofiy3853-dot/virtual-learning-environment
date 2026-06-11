@@ -11,7 +11,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import {
   BookOpen, Users, AlertTriangle, Clock, TrendingUp,
   ArrowRight, CheckCircle2, AlertCircle, Loader2,
-  BarChart3, FileText, Zap, Calendar, Eye
+  BarChart3, FileText, Zap, Calendar, Eye, FileQuestion
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -251,6 +251,7 @@ export default function TeacherPortal() {
                 { label: 'View Analytics', icon: BarChart3, href: '/teacher/analytics' },
                 { label: 'My Courses', icon: BookOpen, href: '/teacher/courses' },
                 { label: 'Submissions', icon: FileText, href: '/teacher/submissions' },
+                { label: 'Question History', icon: FileQuestion, href: '/teacher/questions' },
               ].map(({ label, icon: Icon, href }) => (
                 <Link
                   key={label}

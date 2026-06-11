@@ -7,6 +7,7 @@ const LiveSession = require('../models/LiveSession');
 const Submission = require('../models/Submission');
 const Quiz = require('../models/Quiz');
 const QuizAttempt = require('../models/QuizAttempt');
+const Question = require('../models/Question');
 const GradeBook = require('../models/GradeBook');
 const GradeItem = require('../models/GradeItem');
 const mongoose = require('mongoose');
@@ -366,4 +367,44 @@ exports.getQuizAttempts = async (req, res, next) => {
     count: attempts.length,
     data: attempts
   });
+};
+
+// @desc    Get all questions created by the teacher (across all their quizzes)
+// @route   GET /api/teachers/me/questions
+// @access  Private/Teacher
+exports.getMyQuestions = async (req, res, next) => {
+  // Find all courses this teacher owns
+  const courses = await Course.find({ teacher: req.user.id }).select('_id title').lean();
+  if (!courses.length) {
+    return res.status(200).json({ success: true, count: 0, data: [] });
+  }
+  const courseIds = courses.map(c => c._id);
+  const courseMap = Object.fromEntries(courses.map(c => [c._id.toString(), c.title]));
+
+  // Find all quizzes for those courses
+  const quizzes = await Quiz.find({ course: { $in: courseIds } }).select('_id title course').lean();
+  if (!quizzes.length) {
+    return res.status(200).json({ success: true, count: 0, data: [] });
+  }
+  const quizIds = quizzes.map(q => q._id);
+  const quizMap = Object.fromEntries(quizzes.map(q => [q._id.toString(), q]));
+
+  // Fetch all questions across those quizzes (without correctAnswer for security)
+  const questions = await Question.find({ quiz: { $in: quizIds } })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Annotate each question with quiz and course info
+  const annotated = questions.map(q => {
+    const quiz = quizMap[q.quiz.toString()] || {};
+    return {
+      ...q,
+      quizId: quiz._id,
+      quizTitle: quiz.title || 'Unknown Quiz',
+      courseId: quiz.course,
+      courseTitle: courseMap[quiz.course?.toString()] || 'Unknown Course',
+    };
+  });
+
+  res.status(200).json({ success: true, count: annotated.length, data: annotated });
 };

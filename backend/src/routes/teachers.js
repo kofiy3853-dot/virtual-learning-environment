@@ -9,7 +9,8 @@ const {
   getCourseAssignments,
   getAssignmentSubmissions,
   getCourseQuizzes,
-  getQuizAttempts
+  getQuizAttempts,
+  getMyQuestions
 } = require('../controllers/teacherController');
 
 const router = express.Router();
@@ -26,6 +27,7 @@ router.get('/test', (req, res) => {
 router.get('/me/stats', protect, authorize('teacher'), getMyStats);
 router.get('/me/courses', protect, authorize('teacher'), getMyCourses);
 router.get('/me/pending-submissions', protect, authorize('teacher'), getPendingSubmissions);
+router.get('/me/questions', protect, authorize('teacher'), getMyQuestions);
 
 // Course-specific endpoints (with params - registered AFTER specific routes)
 router.get('/me/courses/:courseId/gradebook', protect, authorize('teacher'), getCourseGradebook);

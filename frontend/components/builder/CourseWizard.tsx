@@ -116,21 +116,25 @@ function CourseWizardContent() {
 
   // Load from localStorage on mount (safe for SSR)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('courseWizard_draft');
-      if (saved) {
-        const parsed = JSON.parse(saved) as Partial<CourseFormState>;
-        if (parsed.title || parsed.code) {
-          setForm(prev => ({
-            ...prev,
-            ...parsed,
-            title: defaultTitle || parsed.title || '',
-            code: defaultCode || parsed.code || '',
-          }));
-          setAutoSaveStatus('Draft restored from local save');
+    const timer = setTimeout(() => {
+      try {
+        const saved = localStorage.getItem('courseWizard_draft');
+        if (saved) {
+          const parsed = JSON.parse(saved) as Partial<CourseFormState>;
+          if (parsed.title || parsed.code) {
+            setForm(prev => ({
+              ...prev,
+              ...parsed,
+              title: defaultTitle || parsed.title || '',
+              code: defaultCode || parsed.code || '',
+            }));
+            setAutoSaveStatus('Draft restored from local save');
+          }
         }
-      }
-    } catch { /* ignore corrupt drafts */ }
+      } catch { /* ignore corrupt drafts */ }
+    }, 0);
+    
+    return () => clearTimeout(timer);
   }, [defaultTitle, defaultCode]);
 
   const [availableStudents, setAvailableStudents] = useState<StudentOption[]>([]);
@@ -184,22 +188,31 @@ function CourseWizardContent() {
 
   // Debounced course code uniqueness check
   useEffect(() => {
-    if (!form.code || form.code.length < 2) {
-      setCodeStatus('idle');
-      return;
-    }
-    setCodeStatus('checking');
-    if (codeCheckTimer.current) clearTimeout(codeCheckTimer.current);
-    codeCheckTimer.current = setTimeout(async () => {
-      try {
-        const res = await courseApi.checkCode(form.code);
-        const available: boolean = res.data?.data?.available ?? true;
-        setCodeStatus(available ? 'available' : 'taken');
-      } catch {
+    const statusTimer = setTimeout(() => {
+      if (!form.code || form.code.length < 2) {
         setCodeStatus('idle');
+      } else {
+        setCodeStatus('checking');
       }
-    }, 600);
-    return () => { if (codeCheckTimer.current) clearTimeout(codeCheckTimer.current); };
+    }, 0);
+
+    let apiTimer: NodeJS.Timeout;
+    if (form.code && form.code.length >= 2) {
+      apiTimer = setTimeout(async () => {
+        try {
+          const res = await courseApi.checkCode(form.code);
+          const available: boolean = res.data?.data?.available ?? true;
+          setCodeStatus(available ? 'available' : 'taken');
+        } catch {
+          setCodeStatus('idle');
+        }
+      }, 600);
+    }
+
+    return () => {
+      clearTimeout(statusTimer);
+      if (apiTimer) clearTimeout(apiTimer);
+    };
   }, [form.code]);
 
   // Generate a unique code suggestion based on title
