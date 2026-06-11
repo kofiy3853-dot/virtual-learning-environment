@@ -87,5 +87,8 @@ export function useQuizDetail(
     queryKey: [...queryKeys.quizzes.detail(quizId ?? ''), role.isStudent, role.isTeacher],
     queryFn: () => fetchQuizDetail(quizId!, role),
     enabled: Boolean(quizId) && enabled,
+    // Auto-refresh every 15s for teachers so new student submissions appear without manual reload
+    refetchInterval: role.isTeacher ? 15000 : false,
+    refetchIntervalInBackground: false,
   });
 }

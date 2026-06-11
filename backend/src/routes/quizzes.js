@@ -65,7 +65,7 @@ quizRouter.post('/quizzes/:id/submit',
   submitAttempt
 );
 quizRouter.get('/quizzes/:id/my-attempt', protect, authorize('student'), getMyAttempt);
-quizRouter.get('/quizzes/:id/attempts', protect, authorize('teacher'), getAllAttempts);
+quizRouter.get('/quizzes/:id/attempts', protect, authorize('teacher', 'admin'), getAllAttempts);
 quizRouter.patch('/attempts/:id/grade', protect, authorize('teacher'), validate(schemas.gradeAttempt), gradeAttempt);
 quizRouter.delete('/quizzes/:quizId/attempts/:studentId', protect, authorize('teacher', 'admin'), resetAttempt);
 

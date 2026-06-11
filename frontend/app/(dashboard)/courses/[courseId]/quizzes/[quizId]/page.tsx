@@ -1027,7 +1027,7 @@ export default function QuizDetailPage() {
           </div>
 
           {/* Attempts (Teacher) */}
-          {isTeacher && allAttempts.length > 0 && (
+          {isTeacher && (
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Submissions</h3>
@@ -1035,8 +1035,11 @@ export default function QuizDetailPage() {
                   <Users size={12} /> {allAttempts.length}
                 </div>
               </div>
-              <div className="space-y-3">
-                {allAttempts.slice(0, 5).map((a) => (
+              {allAttempts.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-3">No submissions yet</p>
+              ) : (
+              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                {allAttempts.map((a) => (
                   <div key={a._id} className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center text-xs font-bold shrink-0">
@@ -1044,13 +1047,24 @@ export default function QuizDetailPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-slate-900 truncate max-w-[100px]">{a.student?.name ?? 'Student'}</p>
-                        <p className="text-[10px] text-slate-400 capitalize">{a.status}</p>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded capitalize ${
+                          a.status === 'graded'
+                            ? 'bg-emerald-50 text-emerald-600'
+                            : a.status === 'submitted'
+                            ? 'bg-amber-50 text-amber-600'
+                            : 'bg-blue-50 text-blue-500'
+                        }`}>{a.status}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <p className="text-sm font-bold text-slate-700">
-                        {a.score !== undefined && a.score !== null ? a.score : (a.status === 'in_progress' ? '—' : 0)}
-                        <span className="text-xs text-slate-400 font-normal"> /{quiz.totalMarks}</span>
+                      <p className={`text-sm font-bold ${
+                        a.status === 'graded' ? 'text-emerald-600' :
+                        a.status === 'submitted' ? 'text-amber-600' : 'text-slate-400'
+                      }`}>
+                        {a.status === 'in_progress'
+                          ? <span className="text-[10px] font-medium text-slate-400">In Progress</span>
+                          : <>{a.score ?? 0}<span className="text-xs text-slate-400 font-normal"> /{quiz.totalMarks}</span></>
+                        }
                       </p>
                       {a.status === 'submitted' && (
                         <button
@@ -1088,6 +1102,7 @@ export default function QuizDetailPage() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
 
