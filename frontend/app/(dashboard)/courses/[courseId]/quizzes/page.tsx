@@ -6,10 +6,14 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useCourseQuizzes } from '@/hooks/queries/useCourseResources';
+import { useQueryClient } from '@tanstack/react-query';
+import { quizApi } from '@/utils/api/extraApis';
+import { queryKeys } from '@/lib/queryKeys';
+import toast from 'react-hot-toast';
 import {
   Clock, Trophy, Plus,
   ArrowRight, Inbox, Search,
-  Target, FlaskConical, CheckCircle2
+  Target, FlaskConical, CheckCircle2, Trash2, Loader2
 } from 'lucide-react';
 
 interface Quiz {
@@ -28,6 +32,7 @@ interface Quiz {
 export default function QuizzesPage() {
   const { courseId } = useParams() as { courseId: string };
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const isStudent = user?.role === 'student';
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
@@ -36,6 +41,21 @@ export default function QuizzesPage() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteQuiz = async (quizId: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    setDeletingId(quizId);
+    try {
+      await quizApi.deleteQuiz(quizId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.list(courseId) });
+      toast.success('Quiz deleted');
+    } catch {
+      toast.error('Failed to delete quiz');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filteredQuizzes = useMemo(() => {
     let result = (quizzes as Quiz[]).filter((q: Quiz) =>
@@ -268,12 +288,27 @@ export default function QuizzesPage() {
                 )}
               </div>
 
-              <Link
-                href={`/courses/${courseId}/quizzes/${q._id}`}
-                className="btn btn-primary w-full justify-center gap-2 text-xs font-bold shadow-sm mt-auto"
-              >
-                {isTeacher ? 'Manage' : isStudent ? 'Start Quiz' : 'View'} <ArrowRight size={14} />
-              </Link>
+              <div className="flex gap-2 mt-auto">
+                <Link
+                  href={`/courses/${courseId}/quizzes/${q._id}`}
+                  className="btn btn-primary flex-1 justify-center gap-2 text-xs font-bold shadow-sm"
+                >
+                  {isTeacher ? 'Manage' : isStudent ? 'Start Quiz' : 'View'} <ArrowRight size={14} />
+                </Link>
+                {isTeacher && (
+                  <button
+                    onClick={() => handleDeleteQuiz(q._id, q.title)}
+                    disabled={deletingId === q._id}
+                    aria-label={`Delete quiz ${q.title}`}
+                    className="w-10 h-10 rounded-xl border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center transition-all disabled:opacity-50 shrink-0"
+                    title="Delete quiz"
+                  >
+                    {deletingId === q._id
+                      ? <Loader2 size={15} className="animate-spin" />
+                      : <Trash2 size={15} />}
+                  </button>
+                )}
+              </div>
             </motion.div>
           ))}
         </div>
