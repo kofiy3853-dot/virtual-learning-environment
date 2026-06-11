@@ -42,11 +42,11 @@ const CourseSchema = new mongoose.Schema({
   faculty: {
     type: String,
     enum: ['FAST', 'FBMS', 'FOE', 'FHAS', 'FBNE'],
-    required: true,
+    default: null,
   },
   department: {
     type: String,
-    required: true,
+    default: null,
   },
   level: { type: Number, enum: [100, 200, 300, 400], default: 100 },
   startDate: { type: Date },
