@@ -294,14 +294,17 @@ h4 { font-size: 0.875rem; font-weight: 600; }  /* 14px */
 }
 
 /* ─── SCROLLBAR ──────────────────────────────────────────────────────────── */
-.scrollbar-premium::-webkit-scrollbar { width: 4px; }
+.scrollbar-premium::-webkit-scrollbar { width: 6px; }
 .scrollbar-premium::-webkit-scrollbar-track { background: transparent; }
 .scrollbar-premium::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+  background: #cbd5e1;
   border-radius: 10px;
 }
 .dark .scrollbar-premium::-webkit-scrollbar-thumb { background: #30363d; }
-.scrollbar-premium::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+.scrollbar-premium::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ─── STAT CARDS ─────────────────────────────────────────────────────────── */
 .stat-card {

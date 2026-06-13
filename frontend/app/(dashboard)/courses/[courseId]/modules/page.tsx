@@ -245,7 +245,7 @@ export default function ModulesPage() {
   };
 
   return (
-    <div className="space-y-8 pb-12 max-w-6xl mx-auto">
+    <div className="space-y-8 pb-12 max-w-6xl mx-auto font-sans">
       
       {/* Overview Block */}
       <section className="bg-white rounded-3xl border border-slate-200 p-6 lg:p-8 shadow-sm relative overflow-hidden">

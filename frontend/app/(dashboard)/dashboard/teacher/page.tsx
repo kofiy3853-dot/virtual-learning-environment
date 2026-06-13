@@ -103,7 +103,7 @@ export default function TeacherDashboard() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5 pb-10">
+    <div className="max-w-6xl mx-auto space-y-5 pb-10 font-sans">
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
