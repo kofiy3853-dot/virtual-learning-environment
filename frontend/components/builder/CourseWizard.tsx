@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense, useReducer } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, Calendar, Layout, Users, Settings, Clock, Plus, Trash2, 
@@ -13,6 +14,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { courseApi } from '@/utils/api/courseApi';
 import { adminApi } from '@/utils/api/adminApi';
+import { queryKeys } from '@/lib/queryKeys';
 import toast from 'react-hot-toast';
 
 interface StudentOption {
@@ -173,6 +175,7 @@ function formReducer(state: CourseFormState, action: FormAction): CourseFormStat
 
 function CourseWizardContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   
@@ -655,6 +658,9 @@ function CourseWizardContent() {
 
       // 6. Clear draft from localStorage on success
       try { localStorage.removeItem('courseWizard_draft'); } catch { /* ignore */ }
+
+      // 7. Invalidate courses cache so new course appears immediately
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
 
       toast.success(`Course "${coursePayload.title}" created successfully!`, { id: submitToast });
 
