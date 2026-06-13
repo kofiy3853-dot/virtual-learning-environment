@@ -257,6 +257,7 @@ function CourseWizardContent() {
 
   // Code uniqueness check
   const [codeStatus, setCodeStatus] = useState<'idle' | 'checking' | 'taken' | 'available'>('idle');
+  const [codeCheckTrigger, setCodeCheckTrigger] = useState(0);
   const codeCheckTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch actual students from API with pagination
@@ -367,7 +368,7 @@ function CourseWizardContent() {
       clearTimeout(statusTimer);
       if (apiTimer) clearTimeout(apiTimer);
     };
-  }, [form.code]);
+  }, [form.code, codeCheckTrigger]);
 
   // Handle thumbnail file upload
   const handleThumbnailFile = useCallback((file: File) => {
@@ -848,19 +849,18 @@ function CourseWizardContent() {
                             {codeStatus === 'checking'  && <SpinnerIcon size={14} className="animate-spin text-slate-400" />}
                             {codeStatus === 'available' && <CheckCircle2 size={14} className="text-emerald-500" />}
                             {codeStatus === 'taken'     && <AlertCircle size={14} className="text-red-500" />}
-                            {codeStatus === 'idle' && form.code && form.code.length >= 2 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  // Trigger re-check by dispatching a fake change
-                                  dispatch({ type: 'SET_FIELD', field: 'code', value: form.code });
-                                }}
-                                className="p-1 text-slate-400 hover:text-primary-600 transition-colors"
-                                title="Re-check code availability"
-                              >
-                                <RefreshCw size={14} />
-                              </button>
-                            )}
+                             {codeStatus === 'idle' && form.code && form.code.length >= 2 && (
+                               <button
+                                 type="button"
+                                 onClick={() => {
+                                   setCodeCheckTrigger(prev => prev + 1);
+                                 }}
+                                 className="p-1 text-slate-400 hover:text-primary-600 transition-colors"
+                                 title="Re-check code availability"
+                               >
+                                 <RefreshCw size={14} />
+                               </button>
+                             )}
                           </div>
                         </div>
                         {codeStatus === 'taken' && (
