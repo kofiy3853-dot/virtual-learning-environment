@@ -1,4 +1,6 @@
 'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,7 +23,8 @@ const statusColor: Record<string, { bg: string; text: string; border: string }> 
 };
 
 export default function CoursesPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -36,6 +39,13 @@ export default function CoursesPage() {
 
   const isStudent = user?.role === 'student';
   const isTeacher = user?.role === 'teacher';
+
+  // Redirect teachers to their dedicated course management page
+  useEffect(() => {
+    if (!authLoading && isTeacher) {
+      router.replace('/teacher/courses');
+    }
+  }, [authLoading, isTeacher, router]);
 
   const catalogParams = {
     ...(search ? { search } : {}),
