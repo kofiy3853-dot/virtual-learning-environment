@@ -47,7 +47,7 @@ interface CourseFormState {
   thumbnail: string;
   faculty: 'FAST' | 'FBMS' | 'FOE' | 'FHAS' | 'FBNE' | '';
   department: string;
-  level: 100 | 200 | 300 | 400;
+  level: 'beginner' | 'intermediate' | 'advanced';
   startDate: string;
   endDate: string;
   schedule: Session[];
@@ -152,7 +152,7 @@ function formReducer(state: CourseFormState, action: FormAction): CourseFormStat
         thumbnail: '',
         faculty: '',
         department: '',
-        level: 100,
+        level: 'beginner',
         startDate: '',
         endDate: '',
         schedule: [],
@@ -195,7 +195,7 @@ function CourseWizardContent() {
     thumbnail: '',
     faculty: '',
     department: '',
-    level: 100,
+        level: 'beginner',
     startDate: '',
     endDate: '',
     schedule: [],
@@ -475,7 +475,7 @@ function CourseWizardContent() {
         description: 'Dive deep into server components, routing architectures, state coordination, and performance engineering inside React 19.',
         faculty: 'FOE',
         department: '',
-        level: 400,
+        level: 'advanced',
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         schedule: [{ id: getUniqueId(), day: 'Monday', time: '10:00 AM - 12:00 PM' }],
@@ -605,6 +605,7 @@ function CourseWizardContent() {
       const semester = form.semester;
 
       // 2. Build full course payload — all collected form fields
+      // Map level (already string: beginner/intermediate/advanced) to backend expected format
       const coursePayload = {
         title: form.title,
         code: form.code,
@@ -940,7 +941,7 @@ function CourseWizardContent() {
                         <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Level *</label>
                           <div className="flex items-center gap-3 h-12">
-                            {([100, 200, 300, 400] as const).map(l => (
+                            {(['beginner', 'intermediate', 'advanced'] as const).map(l => (
                               <button
                                 key={l}
                                 type="button"
@@ -951,7 +952,7 @@ function CourseWizardContent() {
                                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                                 }`}
                               >
-                                Level {l}
+                                {l.charAt(0).toUpperCase() + l.slice(1)}
                               </button>
                             ))}
                           </div>

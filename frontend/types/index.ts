@@ -44,7 +44,7 @@ export interface Course {
   thumbnail?: string;
   faculty: 'FAST' | 'FBMS' | 'FOE' | 'FHAS' | 'FBNE' | 'SGS';
   department: string;
-  level: 100 | 200 | 300 | 400;
+  level: 'beginner' | 'intermediate' | 'advanced';
   startDate?: string;
   endDate?: string;
   enrollmentType?: 'open' | 'invite';
