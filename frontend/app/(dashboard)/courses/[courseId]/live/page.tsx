@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
@@ -46,11 +46,25 @@ export default function LivePage() {
   const [creating, setCreating] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', scheduledAt: '', duration: 60, description: '' });
+  const [isEnrolled, setIsEnrolled] = useState(true);
 
   // Active Jitsi room state
   const [activeRoom, setActiveRoom] = useState<{ roomId: string; sessionId: string; title: string } | null>(null);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
+  const isStudent = user?.role === 'student';
+
+  // Check enrollment for students when sessions are empty
+  useEffect(() => {
+    if (isStudent && !loading && sessions.length === 0) {
+      // Check if enrolled by trying to get student attendance (requires enrollment)
+      courseApi.getStudentAttendance(courseId)
+        .then(res => setIsEnrolled(res.data?.success !== false))
+        .catch(() => setIsEnrolled(false));
+    } else {
+      setIsEnrolled(true);
+    }
+  }, [isStudent, loading, sessions.length, courseId]);
 
   const invalidateSessions = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.courses.liveSessions(courseId) });
@@ -75,7 +89,7 @@ export default function LivePage() {
   const handleStart = async (session: LiveSession) => {
     setActingId(session._id);
     try {
-      const res = await courseApi.startLiveSession(session._id);
+      const res = await courseApi.startLiveSession(courseId, session._id);
       await invalidateSessions();
       // Use providerRoomId from the API response (most reliable source)
       const started = res.data.data;
@@ -97,7 +111,7 @@ export default function LivePage() {
   const handleEnd = async (sessionId: string) => {
     setActingId(sessionId);
     try {
-      await courseApi.endLiveSession(sessionId);
+      await courseApi.endLiveSession(courseId, sessionId);
       await invalidateSessions();
       setActiveRoom(null);
       toast.success('Session ended.');
@@ -111,7 +125,7 @@ export default function LivePage() {
   const handleJoin = async (session: LiveSession) => {
     setActingId(session._id);
     try {
-      const res = await courseApi.joinLiveSession(session._id);
+      const res = await courseApi.joinLiveSession(courseId, session._id);
       const { roomId, joinUrl } = res.data.data;
 
       // Use roomId from API first, then fall back to extracting from joinUrl
@@ -273,12 +287,27 @@ export default function LivePage() {
       ) : sessions.length === 0 ? (
         <div className="py-12 text-center bg-white rounded-xl border border-dashed border-slate-200 shadow-sm">
           <Video size={20} className="text-slate-300 mx-auto mb-2" />
-          <h3 className="text-sm font-semibold text-slate-700">No Sessions Yet</h3>
-          <p className="text-[11px] text-slate-400 mt-1">No live sessions have been scheduled.</p>
-          {isTeacher && (
-            <button onClick={() => setShowForm(true)} className="btn btn-primary btn-sm mt-4 gap-1.5">
-              <Plus size={13} /> Schedule First Session
-            </button>
+          {isStudent && !isEnrolled ? (
+            <>
+              <h3 className="text-sm font-semibold text-slate-700">Enroll to Access Live Sessions</h3>
+              <p className="text-[11px] text-slate-400 mt-1">You must be enrolled in this course to view and join live sessions.</p>
+              <button
+                onClick={() => window.location.href = `/courses/${courseId}`}
+                className="btn btn-primary btn-sm mt-4 gap-1.5"
+              >
+                <Video size={13} /> Go to Course & Enroll
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-sm font-semibold text-slate-700">No Sessions Yet</h3>
+              <p className="text-[11px] text-slate-400 mt-1">No live sessions have been scheduled.</p>
+              {isTeacher && (
+                <button onClick={() => setShowForm(true)} className="btn btn-primary btn-sm mt-4 gap-1.5">
+                  <Plus size={13} /> Schedule First Session
+                </button>
+              )}
+            </>
           )}
         </div>
       ) : (

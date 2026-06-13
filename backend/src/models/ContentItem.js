@@ -35,5 +35,6 @@ const ContentItemSchema = new mongoose.Schema({
 });
 
 ContentItemSchema.index({ module: 1 });
+ContentItemSchema.index({ module: 1, order: 1 });
 
 module.exports = mongoose.model('ContentItem', ContentItemSchema);

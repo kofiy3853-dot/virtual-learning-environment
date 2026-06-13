@@ -346,10 +346,11 @@ exports.changePassword = async (req, res, next) => {
 // @route   POST /api/auth/logout
 // @access  Private
 exports.logout = async (req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('token', 'none', {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 0, // Immediately expire
   });
   res.status(200).json({ success: true, message: 'Logged out successfully' });
@@ -359,10 +360,11 @@ exports.logout = async (req, res) => {
 const sendTokenResponse = (user, statusCode, res) => {
   const token = user.getSignedJwtToken();
 
+  const isProduction = process.env.NODE_ENV === 'production';
   const cookieOptions = {
     httpOnly: true,                                      // Not accessible via document.cookie — XSS safe
-    secure: true,                                        // MUST be true for SameSite: 'none'
-    sameSite: 'none',                                    // Required for cross-domain (Vercel -> Render)
+    secure: isProduction,                                // true in production (HTTPS), false in dev
+    sameSite: isProduction ? 'none' : 'lax',             // 'none' for cross-domain in prod, 'lax' for dev
     maxAge: 7 * 24 * 60 * 60 * 1000,                    // 7 days in ms
   };
 

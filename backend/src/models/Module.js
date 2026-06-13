@@ -30,4 +30,8 @@ const ModuleSchema = new mongoose.Schema({
   },
 });
 
+// Optimize common queries
+ModuleSchema.index({ course: 1 });
+ModuleSchema.index({ course: 1, order: 1 });
+
 module.exports = mongoose.model('Module', ModuleSchema);

@@ -26,7 +26,17 @@ exports.createLiveSession = asyncHandler(async (req, res) => {
 });
 
 exports.getLiveSessions = asyncHandler(async (req, res) => {
-  const sessions = await LiveSession.find({ course: req.params.id }).sort('-scheduledAt');
+  const courseId = req.params.id;
+
+  // If student, only return sessions for courses they're enrolled in
+  if (req.user.role === 'student') {
+    const enrollment = await Enrollment.findOne({ student: req.user.id, course: courseId, status: 'active' });
+    if (!enrollment) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+  }
+
+  const sessions = await LiveSession.find({ course: courseId }).sort('-scheduledAt');
   res.status(200).json({ success: true, data: sessions });
 });
 
@@ -62,6 +72,19 @@ exports.endSession = asyncHandler(async (req, res) => {
 exports.joinSession = asyncHandler(async (req, res) => {
   const session = await LiveSession.findById(req.params.id);
   if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
+
+  // Verify session belongs to the course in URL (mergeParams makes courseId available)
+  if (session.course.toString() !== req.params.courseId) {
+    return res.status(404).json({ success: false, message: 'Session not found' });
+  }
+
+  // If student, verify enrollment
+  if (req.user.role === 'student') {
+    const enrollment = await Enrollment.findOne({ student: req.user.id, course: session.course, status: 'active' });
+    if (!enrollment) {
+      return res.status(403).json({ success: false, message: 'You must be enrolled in this course to join' });
+    }
+  }
 
   const now = new Date();
   const earlyAccessTime = new Date(session.scheduledAt.getTime() - 5 * 60 * 1000);

@@ -25,4 +25,9 @@ const AnnouncementSchema = new mongoose.Schema({
   },
 });
 
+// Optimize common queries
+AnnouncementSchema.index({ course: 1 });
+AnnouncementSchema.index({ author: 1 });
+AnnouncementSchema.index({ course: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Announcement', AnnouncementSchema);

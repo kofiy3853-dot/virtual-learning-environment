@@ -38,20 +38,14 @@ const authRoutes = require('./routes/auth');
 const courseRoutes = require('./routes/courses');
 const courseNestedRoutes = require('./routes/courseNested');
 const enrollmentRoutes = require('./routes/enrollments');
-const moduleRoutes = require('./routes/modules');
-const contentRoutes = require('./routes/content');
-const assignmentRoutes = require('./routes/assignments');
-const submissionRoutes = require('./routes/submissions');
 const gradeRoutes = require('./routes/grades');
-const quizRoutes = require('./routes/quizzes');
-const attendanceRoutes = require('./routes/attendance');
 const communicationRoutes = require('./routes/communication');
-const liveRoutes = require('./routes/liveSessions');
 const studentRoutes = require('./routes/students');
 const teacherRoutes = require('./routes/teachers');
 const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/aiRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
+const contentRoutes = require('./routes/content');
 
 // Connect to MongoDB
 connectDB();
@@ -152,7 +146,6 @@ app.use(timeoutHandler(TIMEOUTS.GLOBAL_MS));
 
 // AI routes get a longer timeout (provider fallback chain can take up to 2 min)
 app.use('/api/v1/ai', timeoutHandler(TIMEOUTS.AI_MS));
-app.use('/api/ai', timeoutHandler(TIMEOUTS.AI_MS));
 
 // ─── GLOBAL RATE LIMITING ───────────────────────────────────────────────────
 // Protects every endpoint on the API
@@ -191,9 +184,9 @@ const unauthorizedLimiter = rateLimit({
 });
 
 if (!process.env.JEST_WORKER_ID) {
-  app.use('/api', globalLimiter);
-  app.use('/api', unauthorizedLimiter);
-  app.use('/api/auth', authLimiter);
+  app.use('/api/v1', globalLimiter);
+  app.use('/api/v1', unauthorizedLimiter);
+  app.use('/api/v1/auth', authLimiter);
 }
 
 // Root Route (Health Check)
@@ -207,50 +200,19 @@ app.get('/', (req, res) => {
   });
 });
 
-// ─── API ROUTES ──────────────────────────────────────────────────────────────
-app.use('/api/auth', authRoutes);
+// ─── API ROUTES (v1 only) ──────────────────────────────────────────────────────
 app.use('/api/v1/auth', authRoutes);
-
-
-// Standard API routes
-app.use('/api/teachers', teacherRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/courses/:id', courseNestedRoutes);
-app.use('/api/enrollments', enrollmentRoutes);
-app.use('/api/modules', moduleRoutes);
-app.use('/api/content', contentRoutes);
-app.use('/api/submissions', submissionRoutes);
-app.use('/api/grades', gradeRoutes);
-app.use('/api/attendance', attendanceRoutes);
-app.use('/api/communication', communicationRoutes);
-app.use('/api/live-sessions', liveRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/certificates', certificateRoutes);
-
-// Versioned API routes (v1)
 app.use('/api/v1/teachers', teacherRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/courses', courseRoutes);
 app.use('/api/v1/courses/:id', courseNestedRoutes);
 app.use('/api/v1/enrollments', enrollmentRoutes);
-app.use('/api/v1/modules', moduleRoutes);
-app.use('/api/v1/content', contentRoutes);
-app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/v1/grades', gradeRoutes);
-app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/communication', communicationRoutes);
-app.use('/api/v1/live-sessions', liveRoutes);
 app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/certificates', certificateRoutes);
-
-// Helper for nested and root routes that don't have standard prefix
-app.use('/api', assignmentRoutes);
-app.use('/api', quizRoutes);
-app.use('/api/v1', assignmentRoutes);
-app.use('/api/v1', quizRoutes);
+app.use('/api/v1/content', contentRoutes);
 
 // API Documentation
 app.use('/api-docs', require('./routes/docs'));

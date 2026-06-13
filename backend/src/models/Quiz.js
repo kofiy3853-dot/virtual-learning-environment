@@ -40,4 +40,9 @@ const QuizSchema = new mongoose.Schema({
   },
 });
 
+// Optimize common queries
+QuizSchema.index({ course: 1 });
+QuizSchema.index({ course: 1, startTime: -1 });
+QuizSchema.index({ isPublished: 1 });
+
 module.exports = mongoose.model('Quiz', QuizSchema);

@@ -86,6 +86,29 @@ exports.deleteContent = async (req, res, next) => {
   });
 };
 
+// @desc    Get single content item
+// @route   GET /api/content/:id
+// @access  Private
+exports.getContent = async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'Invalid ID' });
+  }
+
+  const content = await ContentItem.findById(req.params.id).populate({
+    path: 'module',
+    populate: { path: 'course' }
+  });
+
+  if (!content) {
+    return res.status(404).json({ success: false, message: 'Content not found' });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: content,
+  });
+};
+
 // @desc    Toggle completion status of content item for current student
 // @route   POST /api/content/:id/complete
 // @access  Private (Student)

@@ -80,22 +80,22 @@ export default function ModulesPage() {
   const loadContent = useCallback(async (moduleId: string) => {
     if (content[moduleId]) return;
     try {
-      const res = await courseApi.getModuleContent(moduleId);
+      const res = await courseApi.getModuleContent(courseId, moduleId);
       setContent(p => ({ ...p, [moduleId]: res.data.data || [] }));
     } catch { 
       setContent(p => ({ ...p, [moduleId]: [] })); 
     }
-  }, [content]);
+  }, [content, courseId]);
 
   useEffect(() => {
     if (modules.length === 0) return;
     setExpanded((prev) => (Object.keys(prev).length ? prev : { [modules[0]._id]: true }));
     const firstId = modules[0]._id;
     if (content[firstId]) return;
-    courseApi.getModuleContent(firstId).then((res) => {
+    courseApi.getModuleContent(courseId, firstId).then((res) => {
       setContent((p) => ({ ...p, [firstId]: res.data.data || [] }));
     });
-  }, [modules, content]);
+  }, [modules, content, courseId]);
 
   const toggleModule = (moduleId: string) => {
     const willOpen = !expanded[moduleId];
@@ -145,7 +145,7 @@ export default function ModulesPage() {
       fd.append('title', file.name.replace(/\.[^.]+$/, ''));
       fd.append('type', type);
       fd.append('order', String((content[moduleId]?.length || 0) + 1));
-      const res = await courseApi.uploadContent(moduleId, fd);
+      const res = await courseApi.uploadContent(courseId, moduleId, fd);
       setContent(p => ({ ...p, [moduleId]: [...(p[moduleId] || []), res.data.data] }));
       toast.success('Course material uploaded successfully.');
     } catch (e) {

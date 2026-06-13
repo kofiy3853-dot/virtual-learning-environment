@@ -29,4 +29,8 @@ const AssignmentSchema = new mongoose.Schema({
   },
 });
 
+// Optimize common queries
+AssignmentSchema.index({ course: 1 });
+AssignmentSchema.index({ course: 1, dueDate: 1 });
+
 module.exports = mongoose.model('Assignment', AssignmentSchema);

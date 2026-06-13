@@ -89,7 +89,7 @@ export default function AttendancePage() {
     setActiveSessionId(sessionId);
     setShowMarkModal(true);
     try {
-      const res = await courseApi.getSessionRecords(sessionId);
+      const res = await courseApi.getSessionRecords(courseId, sessionId);
       const existingRecords = res.data.data || [];
       const initialMarking: Record<string, AttendanceStatus> = {};
       
@@ -112,7 +112,7 @@ export default function AttendancePage() {
         studentId,
         status
       }));
-      await courseApi.markAttendance(activeSessionId, records);
+      await courseApi.markAttendance(courseId, activeSessionId, records);
       toast.success('Attendance saved successfully');
       setShowMarkModal(false);
     } catch (err) {

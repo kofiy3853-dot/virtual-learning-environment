@@ -49,4 +49,10 @@ const LiveSessionSchema = new mongoose.Schema({
   },
 });
 
+// Optimize common queries
+LiveSessionSchema.index({ course: 1 });
+LiveSessionSchema.index({ teacher: 1 });
+LiveSessionSchema.index({ course: 1, scheduledAt: -1 });
+LiveSessionSchema.index({ status: 1 });
+
 module.exports = mongoose.model('LiveSession', LiveSessionSchema);

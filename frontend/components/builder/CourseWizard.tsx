@@ -337,14 +337,28 @@ function CourseWizardContent() {
     }, 0);
 
     let apiTimer: NodeJS.Timeout;
+    // Track the code at the time of the API call to prevent stale responses
+    let checkedCode = '';
     if (form.code && form.code.length >= 2) {
+      checkedCode = form.code;
       apiTimer = setTimeout(async () => {
         try {
-          const res = await courseApi.checkCode(form.code);
-          const available: boolean = res.data?.data?.available ?? true;
-          setCodeStatus(available ? 'available' : 'taken');
-        } catch {
-          setCodeStatus('idle');
+          const res = await courseApi.checkCode(checkedCode);
+          // Only update state if this is still the current code being checked
+          if (checkedCode === form.code) {
+            const available: boolean = res.data?.data?.available ?? true;
+            setCodeStatus(available ? 'available' : 'taken');
+          }
+        } catch (err: unknown) {
+          // Only update state if this is still the current code
+          if (checkedCode === form.code) {
+            const e = err as { response?: { status?: number } };
+            // Don't overwrite status on auth errors (interceptor handles redirect)
+            // or network errors - keep 'checking' so user can retry
+            if (e.response?.status !== 401) {
+              setCodeStatus('idle');
+            }
+          }
         }
       }, 600);
     }
@@ -571,6 +585,7 @@ function CourseWizardContent() {
         !form.code           ? 'Please enter a course code.' :
         codeStatus === 'taken'    ? `Course code "${form.code}" is already taken. Please use a different code.` :
         codeStatus === 'checking' ? 'Please wait — checking code availability...' :
+        codeStatus === 'idle'     ? 'Code check did not complete. Please wait a moment or click "Suggest" to generate a new code.' :
                                     'Please enter and verify a unique course code.'
       );
       setCurrentStep(0);
@@ -829,10 +844,23 @@ function CourseWizardContent() {
                               'border-slate-200 focus:border-primary-500'
                             }`}
                           />
-                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                             {codeStatus === 'checking'  && <SpinnerIcon size={14} className="animate-spin text-slate-400" />}
                             {codeStatus === 'available' && <CheckCircle2 size={14} className="text-emerald-500" />}
                             {codeStatus === 'taken'     && <AlertCircle size={14} className="text-red-500" />}
+                            {codeStatus === 'idle' && form.code && form.code.length >= 2 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  // Trigger re-check by dispatching a fake change
+                                  dispatch({ type: 'SET_FIELD', field: 'code', value: form.code });
+                                }}
+                                className="p-1 text-slate-400 hover:text-primary-600 transition-colors"
+                                title="Re-check code availability"
+                              >
+                                <RefreshCw size={14} />
+                              </button>
+                            )}
                           </div>
                         </div>
                         {codeStatus === 'taken' && (
@@ -843,6 +871,11 @@ function CourseWizardContent() {
                         )}
                         {codeStatus === 'available' && (
                           <p className="text-xs text-emerald-600 font-medium mt-1.5">✓ Code is available</p>
+                        )}
+                        {codeStatus === 'idle' && form.code && form.code.length >= 2 && (
+                          <p className="text-xs text-amber-600 font-medium mt-1.5 flex items-center gap-1">
+                            <AlertCircle size={11} /> Code check incomplete. Click the refresh icon to re-check.
+                          </p>
                         )}
                       </div>
 

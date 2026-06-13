@@ -36,4 +36,9 @@ const DiscussionSchema = new mongoose.Schema({
   },
 });
 
+// Optimize common queries
+DiscussionSchema.index({ course: 1 });
+DiscussionSchema.index({ author: 1 });
+DiscussionSchema.index({ course: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Discussion', DiscussionSchema);

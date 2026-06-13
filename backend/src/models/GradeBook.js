@@ -20,4 +20,7 @@ const GradeBookSchema = new mongoose.Schema({
   },
 });
 
+// Optimize common queries
+GradeBookSchema.index({ course: 1 });
+
 module.exports = mongoose.model('GradeBook', GradeBookSchema);

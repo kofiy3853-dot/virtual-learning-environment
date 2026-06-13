@@ -24,4 +24,9 @@ const AttendanceSessionSchema = new mongoose.Schema({
   },
 });
 
+// Optimize common queries
+AttendanceSessionSchema.index({ course: 1 });
+AttendanceSessionSchema.index({ teacher: 1 });
+AttendanceSessionSchema.index({ course: 1, date: -1 });
+
 module.exports = mongoose.model('AttendanceSession', AttendanceSessionSchema);

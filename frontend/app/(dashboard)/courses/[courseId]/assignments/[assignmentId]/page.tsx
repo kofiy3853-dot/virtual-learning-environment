@@ -67,13 +67,13 @@ export default function AssignmentDetailPage() {
     const load = async () => {
       if (!assignmentId) return;
       try {
-        const aRes = await courseApi.getAssignment(assignmentId);
+        const aRes = await courseApi.getAssignment(courseId, assignmentId);
         if (!active) return;
         setAssignment(aRes.data.data);
 
         if (isStudent) {
           try {
-            const sRes = await courseApi.getMySubmission(assignmentId);
+            const sRes = await courseApi.getMySubmission(courseId, assignmentId);
             if (!active) return;
             const sub = sRes.data.data;
             if (sub) setSubmission({ ...sub, files: sub.fileUrls || sub.files || [] });
@@ -82,7 +82,7 @@ export default function AssignmentDetailPage() {
 
         if (isTeacher) {
           try {
-            const sRes = await courseApi.getSubmissions(assignmentId);
+            const sRes = await courseApi.getSubmissions(courseId, assignmentId);
             if (!active) return;
             setAllSubmissions(
               (sRes.data.data || []).map((s: Submission) => ({ ...s, files: s.fileUrls || s.files || [] }))
@@ -104,7 +104,7 @@ export default function AssignmentDetailPage() {
     fd.append('textContent', textContent);
     files.forEach(f => fd.append('files', f));
     try {
-      const res = await courseApi.submitAssignment(assignmentId, fd);
+      const res = await courseApi.submitAssignment(courseId, assignmentId, fd);
       const sub = res.data.data;
       setSubmission({ ...sub, files: sub.fileUrls || sub.files || [] });
       toast.success('Assignment submitted successfully.');
@@ -129,7 +129,7 @@ export default function AssignmentDetailPage() {
     }
     setGradingInProgress(true);
     try {
-      await courseApi.gradeSubmission(selectedSubmission._id, { grade: num, feedback: feedbackInput });
+      await courseApi.gradeSubmission(courseId, selectedSubmission._id, { grade: num, feedback: feedbackInput });
       setAllSubmissions(prev =>
         prev.map(s => s._id === selectedSubmission._id ? { ...s, grade: num, feedback: feedbackInput, status: 'graded' } : s)
       );
