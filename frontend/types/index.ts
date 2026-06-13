@@ -42,7 +42,7 @@ export interface Course {
   modules?: Module[];
   // Extended wizard fields
   thumbnail?: string;
-  faculty: 'FAST' | 'FBMS' | 'FOE' | 'FHAS' | 'FBNE';
+  faculty: 'FAST' | 'FBMS' | 'FOE' | 'FHAS' | 'FBNE' | 'SGS';
   department: string;
   level: 100 | 200 | 300 | 400;
   startDate?: string;
