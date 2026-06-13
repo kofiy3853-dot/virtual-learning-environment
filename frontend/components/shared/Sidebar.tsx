@@ -155,7 +155,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             </p>
             <div className="space-y-0.5">
               {section.items.map((item: NavItem) => {
-                const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== `/dashboard/${user?.role}`);
+                const isActive = pathname === item.href || 
+                  (item.href !== '/dashboard/student' && item.href !== '/teacher' && item.href !== '/dashboard/admin' && 
+                   pathname.startsWith(item.href + '/'));
                 const hasBadge = item.label === 'Notifications' && unreadCount > 0;
 
                 return (
