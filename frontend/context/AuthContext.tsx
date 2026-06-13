@@ -39,19 +39,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const relay = getRelayToken();
     if (relay) {
       setAuthToken(relay);
-    } else {
-      // No token at all — skip the network call
-      setLoading(false);
-      return;
     }
-
+    // Always attempt getMe — withCredentials: true sends HttpOnly cookie automatically
+    // This handles cases where relay cookie is missing but backend session is valid
     authApi.getMe()
       .then(res => {
         setUser(res.data.data);
       })
-      .catch(() => {
-        clearSession();
-        setUser(null);
+      .catch(err => {
+        // Only clear session on actual auth failure (not network errors)
+        // Network errors (backend down) shouldn't log out the user
+        if (err?.response?.status === 401) {
+          clearSession();
+          setUser(null);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
