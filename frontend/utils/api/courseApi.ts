@@ -15,6 +15,7 @@ export const courseApi = {
   getMyCourses: ()             => api.get('/api/v1/students/me/courses'),
   getModules:  (id: string)    => api.get(`/api/v1/courses/${id}/modules`),
   createModule:(id: string, data: Partial<Module>)   => api.post(`/api/v1/courses/${id}/modules`, data),
+  updateModule: (moduleId: string, data: Partial<Module>) => api.put(`/api/v1/modules/${moduleId}`, data),
   createLesson:(id: string, modId: string, formData: FormData) => api.post(`/api/v1/courses/${id}/modules/${modId}/lessons`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
@@ -53,6 +54,7 @@ export const courseApi = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   deleteContent: (contentId: string) => api.delete(`/api/v1/content/${contentId}`),
+  toggleContentComplete: (contentId: string) => api.post(`/api/v1/content/${contentId}/complete`),
   getMySubmissions: (courseId: string) => api.get(`/api/v1/courses/${courseId}/my-submissions`),
   getStudentGrades: (courseId: string) => api.get(`/api/v1/students/me/grades/${courseId}`),
   getStudentFinalGrade: (courseId: string) => api.get(`/api/v1/students/me/grades/${courseId}/final`),

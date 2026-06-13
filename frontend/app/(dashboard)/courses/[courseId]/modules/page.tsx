@@ -2,27 +2,22 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { courseApi } from '@/utils/api/courseApi';
 import { useCourse } from '@/hooks/queries/useCourse';
-import { useCourseModules } from '@/hooks/queries/useCourseModules';
+import { useCourseModules, useAllModuleContent, ContentItem, CourseOutline, CourseOutlineModule } from '@/hooks/queries/useCourseModules';
+import { useUploadContent, useDeleteContent, useToggleContentComplete, useCreateModule, useUpdateModule } from '@/hooks/queries/useModuleMutations';
 import { 
   FileText, Video, Presentation, FileCode2, Image as ImageIcon, 
   ChevronDown, Plus, Trash2, Paperclip, Loader2, BookOpen,
   Calendar, Layers, Filter, Search, Info, AlertCircle,
-  ArrowRight, Download, CheckCircle2, X, CircleCheck, Sparkles
+  ArrowRight, Download, CheckCircle2, X, CircleCheck, Sparkles,
+  Play, Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '@/utils/api/axiosInstance';
 import { aiApi } from '@/utils/api/aiApi';
 
-interface ContentItem {
-  _id: string;
-  title: string;
-  type: 'pdf' | 'video' | 'slide' | 'note' | 'image';
-  fileUrl: string;
-}
 const CONTENT_CONFIG = {
   pdf:   { icon: FileText,     bg: 'bg-rose-50',    text: 'text-rose-600',    border: 'border-rose-100',    label: 'Lecture PDF' },
   video: { icon: Video,        bg: 'bg-blue-50',    text: 'text-blue-600',    border: 'border-blue-100',    label: 'Video Lecture' },
@@ -37,22 +32,34 @@ const CONTENT_CONFIG = {
  */
 function getOpenableUrl(url: string): string {
   if (!url) return '#';
-  // Already a proper http URL that isn't Cloudinary raw — return as-is
   if (!url.includes('res.cloudinary.com')) return url;
-  // Convert /raw/upload/ to /image/upload/ for PDFs so browser can open them
   return url.replace('/raw/upload/', '/image/upload/');
+}
+
+function getVideoEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  // Vimeo
+  const vmMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vmMatch) return `https://player.vimeo.com/video/${vmMatch[1]}`;
+  // Direct video file (mp4, webm)
+  if (url.match(/\.(mp4|webm|ogg)(\?|$)/i)) return url;
+  return null;
 }
 
 export default function ModulesPage() {
   const { courseId } = useParams() as { courseId: string };
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   
   const { data: course } = useCourse(courseId);
   const { data: modules = [], isLoading: modulesLoading, refetch: refetchModules } = useCourseModules(courseId);
+  const { data: allContent = {}, isLoading: contentLoading } = useAllModuleContent(courseId, modules.map(m => m._id));
+  
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [content, setContent] = useState<Record<string, ContentItem[]>>({});
   const [searchQuery, setSearchQuery] = useState('');
-  // Track which content IDs the student has marked complete (local optimistic state)
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [toggling, setToggling] = useState<string | null>(null);
   
@@ -60,11 +67,29 @@ export default function ModulesPage() {
   const [modForm, setModForm] = useState({ title: '', description: '', weekNumber: '', order: '' });
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [courseOutline, setCourseOutline] = useState<any>(null);
-  const [generatingDesc, setGeneratingDesc] = useState<string | null>(null); // moduleId or 'new'
+  const [courseOutline, setCourseOutline] = useState<CourseOutline | null>(null);
+  const [generatingDesc, setGeneratingDesc] = useState<string | null>(null);
+  const [showVideoModal, setShowVideoModal] = useState<{ url: string; title: string } | null>(null);
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
   const isStudent = user?.role === 'student';
+
+  const uploadMutation = useUploadContent();
+  const deleteMutation = useDeleteContent();
+  const toggleCompleteMutation = useToggleContentComplete();
+  const createModuleMutation = useCreateModule();
+  const updateModuleMutation = useUpdateModule();
+
+  // Sync completed state from server data
+  useEffect(() => {
+    const newCompleted = new Set<string>();
+    Object.values(allContent).flat().forEach(item => {
+      if (item.completedBy?.includes(user?._id || '')) {
+        newCompleted.add(item._id);
+      }
+    });
+    setCompleted(newCompleted);
+  }, [allContent, user?._id]);
 
   // Load saved AI outline for this course
   useEffect(() => {
@@ -77,30 +102,15 @@ export default function ModulesPage() {
       .catch(() => {});
   }, [courseId]);
 
-  const loadContent = useCallback(async (moduleId: string) => {
-    if (content[moduleId]) return;
-    try {
-      const res = await courseApi.getModuleContent(courseId, moduleId);
-      setContent(p => ({ ...p, [moduleId]: res.data.data || [] }));
-    } catch { 
-      setContent(p => ({ ...p, [moduleId]: [] })); 
-    }
-  }, [content, courseId]);
-
+  // Auto-expand first module
   useEffect(() => {
     if (modules.length === 0) return;
-    setExpanded((prev) => (Object.keys(prev).length ? prev : { [modules[0]._id]: true }));
-    const firstId = modules[0]._id;
-    if (content[firstId]) return;
-    courseApi.getModuleContent(courseId, firstId).then((res) => {
-      setContent((p) => ({ ...p, [firstId]: res.data.data || [] }));
-    });
-  }, [modules, content, courseId]);
+    setExpanded(prev => (Object.keys(prev).length ? prev : { [modules[0]._id]: true }));
+  }, [modules]);
 
   const toggleModule = (moduleId: string) => {
     const willOpen = !expanded[moduleId];
     setExpanded(p => ({ ...p, [moduleId]: willOpen }));
-    if (willOpen) loadContent(moduleId);
   };
 
   const handleCreateModule = async (e: React.FormEvent) => {
@@ -111,16 +121,17 @@ export default function ModulesPage() {
     }
     setCreating(true);
     try {
-      await courseApi.createModule(courseId, {
-        title: modForm.title,
-        description: modForm.description,
-        weekNumber: parseInt(modForm.weekNumber),
-        order: parseInt(modForm.order) || modules.length + 1,
+      await createModuleMutation.mutateAsync({
+        courseId,
+        data: {
+          title: modForm.title,
+          description: modForm.description,
+          weekNumber: parseInt(modForm.weekNumber),
+          order: parseInt(modForm.order) || modules.length + 1,
+        }
       });
-      await refetchModules();
       setModForm({ title: '', description: '', weekNumber: '', order: '' });
       setShowModForm(false);
-      toast.success('Syllabus module created successfully.');
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
       toast.error(err.response?.data?.message || 'Failed to create module.');
@@ -138,55 +149,33 @@ export default function ModulesPage() {
       png: 'image', jpg: 'image', jpeg: 'image' 
     };
     const type = typeMap[ext] || 'note';
-    setUploading(moduleId);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('title', file.name.replace(/\.[^.]+$/, ''));
-      fd.append('type', type);
-      fd.append('order', String((content[moduleId]?.length || 0) + 1));
-      const res = await courseApi.uploadContent(courseId, moduleId, fd);
-      setContent(p => ({ ...p, [moduleId]: [...(p[moduleId] || []), res.data.data] }));
-      toast.success('Course material uploaded successfully.');
-    } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Failed to upload material.');
-    } finally { setUploading(null); if (e.target) e.target.value = ''; }
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('title', file.name.replace(/\.[^.]+$/, ''));
+    fd.append('type', type);
+    fd.append('order', String(((allContent[moduleId] || [])?.length || 0) + 1));
+    uploadMutation.mutate({ courseId, moduleId, data: fd }, {
+      onSuccess: () => { setUploading(null); if (e.target) e.target.value = ''; },
+      onError: () => { setUploading(null); if (e.target) e.target.value = ''; }
+    });
   };
 
-  const handleDeleteContent = async (moduleId: string, contentId: string) => {
+  const handleDeleteContent = (moduleId: string, contentId: string) => {
     if (!window.confirm('Are you sure you want to delete this resource from the module?')) return;
-    try {
-      await courseApi.deleteContent(contentId);
-      setContent(p => ({ ...p, [moduleId]: p[moduleId].filter(c => c._id !== contentId) }));
-      toast.success('Resource deleted.');
-    } catch { 
-      toast.error('Failed to delete resource.'); 
-    }
+    deleteMutation.mutate(contentId);
   };
 
-  const handleToggleComplete = async (contentId: string) => {
+  const handleToggleComplete = (contentId: string) => {
     setToggling(contentId);
     const wasCompleted = completed.has(contentId);
-    // Optimistic update
     setCompleted(prev => {
       const next = new Set(prev);
       if (wasCompleted) next.delete(contentId); else next.add(contentId);
       return next;
     });
-    try {
-      await api.post(`/api/content/${contentId}/complete`);
-    } catch {
-      // Revert on failure
-      setCompleted(prev => {
-        const next = new Set(prev);
-        if (wasCompleted) next.add(contentId); else next.delete(contentId);
-        return next;
-      });
-      toast.error('Failed to update progress.');
-    } finally {
-      setToggling(null);
-    }
+    toggleCompleteMutation.mutate(contentId, {
+      onSettled: () => setToggling(null)
+    });
   };
 
   const filteredModules = modules.filter(m => 
@@ -204,12 +193,10 @@ export default function ModulesPage() {
         []
       );
       const data = res.data?.data;
-      // Build a plain-text description from the AI JSON response
       const desc = data?.introduction
         || (data?.sections?.[0]?.content)
         || (typeof data === 'string' ? data : `Week ${weekNumber}: ${moduleTitle}`);
-      // Save to MongoDB via the update module endpoint
-      await api.put(`/api/v1/modules/${moduleId}`, { description: desc });
+      await updateModuleMutation.mutateAsync({ courseId, moduleId, data: { description: desc } });
       await refetchModules();
       toast.success('Module description generated and saved.');
     } catch {
@@ -282,7 +269,7 @@ export default function ModulesPage() {
       </section>
 
       {/* AI Course Outline — shown when a saved outline exists */}
-      {courseOutline?.modules?.length > 0 && (
+      {courseOutline && courseOutline.modules?.length > 0 && (
         <section className="bg-white rounded-3xl border border-violet-100 p-6 lg:p-8 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center">
@@ -468,7 +455,7 @@ export default function ModulesPage() {
         <div className="space-y-4">
           {filteredModules.sort((a,b) => a.weekNumber - b.weekNumber).map((mod, idx) => {
             const isOpen = expanded[mod._id];
-            const items = content[mod._id] || [];
+            const items = allContent[mod._id] || [];
             return (
               <motion.div 
                 initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
@@ -595,6 +582,17 @@ export default function ModulesPage() {
                                   </div>
 
                                   <div className="flex items-center gap-2 shrink-0 md:opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 duration-300">
+                                    {/* Video preview */}
+                                    {item.type === 'video' && getVideoEmbedUrl(item.fileUrl) && (
+                                      <button
+                                        onClick={() => setShowVideoModal({ url: getVideoEmbedUrl(item.fileUrl)!, title: item.title })}
+                                        className="w-9 h-9 rounded-xl bg-blue-500 text-white hover:bg-blue-600 shadow-md shadow-blue-500/10 flex items-center justify-center transition-all active:scale-90"
+                                        title={`Preview ${item.title}`}
+                                        aria-label={`Preview ${item.title}`}
+                                      >
+                                        <Play size={14} />
+                                      </button>
+                                    )}
                                     {/* Student: mark as complete */}
                                     {isStudent && (
                                       <button
@@ -678,9 +676,60 @@ export default function ModulesPage() {
                 </AnimatePresence>
               </motion.div>
             );
-          })}
+          }          )}
         </div>
       )}
+
+      {/* Video Preview Modal */}
+      <AnimatePresence>
+        {showVideoModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowVideoModal(null)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-4xl bg-white rounded-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900 truncate pr-4">{showVideoModal.title}</h3>
+              <button
+                onClick={() => setShowVideoModal(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                aria-label="Close video preview"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="aspect-video bg-black">
+              {showVideoModal.url.match(/youtube\.com\/embed|vimeo\.com\/video/) ? (
+                <iframe
+                  src={showVideoModal.url}
+                  title={showVideoModal.title}
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  src={showVideoModal.url}
+                  controls
+                  className="w-full h-full"
+                  autoPlay
+                />
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </div>
   );
 }
